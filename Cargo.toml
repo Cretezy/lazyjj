@@ -1,9 +1,17 @@
 [package]
 name = "lazyjj"
+description = "TUI for Jujutsu/jj"
 version = "0.1.0"
 edition = "2021"
-readme = "README.md"
 license = "Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/Cretezy/lazyjj"
+
+
+[package.metadata.binstall]
+# `cargo binstall` gets confused by the `v` before versions in archive name.
+pkg-url = "{ repo }/releases/download/v{ version }/lazyjj-v{ version }-{ target }.{ archive-format }"
+
 
 [dependencies]
 ansi-to-tui = "4.0.1"

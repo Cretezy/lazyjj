@@ -26,7 +26,7 @@ https://github.com/Cretezy/lazyjj/assets/2672503/b5e6b4f1-ebdb-448f-af9e-361e86f
 
 With [`cargo binstall`](https://github.com/cargo-bins/cargo-binstall): `cargo binstall lazyjj`
 
-With `cargo install`: `cargo install lazyjj` (this may take a few moments to compile)
+With `cargo install`: `cargo +nightly install lazyjj` (required nightly, may take a few moments to compile)
 
 With pre-built binaries: [View releases](https://github.com/Cretezy/lazyjj/releases)
 

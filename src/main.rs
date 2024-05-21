@@ -1,4 +1,4 @@
-#![feature(iter_intersperse, let_chains)]
+#![feature(let_chains)]
 
 extern crate anyhow;
 extern crate lazy_static;

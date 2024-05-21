@@ -1,0 +1,62 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions: read-all
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+
+jobs:
+  build-test:
+    name: Build & Test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4.1.6
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.6.7
+      - name: Install jj
+        run: cargo binstall --no-confirm --strategies crate-meta-data jj-cli
+      - name: Build lazyjj
+        run: cargo +nightly build --all-targets --verbose
+      - name: Test
+        run: cargo +nightly test --all-targets --verbose
+        env:
+          RUST_BACKTRACE: 1
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.1.6
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy
+      - name: Clippy
+        run: cargo +nightly clippy --workspace --all-targets --verbose
+
+  rustfmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.1.6
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - run: cargo +nightly fmt --all -- --check

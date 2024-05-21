@@ -204,7 +204,7 @@ impl Component for CommandLog {
             self.commands_height = chunks[0].height.saturating_sub(2);
 
             let help = Paragraph::new(vec![
-                "j/j: scroll down/up | J/K: scroll down by ½ page".into(),
+                "j/k: scroll down/up | J/K: scroll down by ½ page".into(),
                 "@: latest command".into(),
             ])
             .fg(Color::DarkGray);
