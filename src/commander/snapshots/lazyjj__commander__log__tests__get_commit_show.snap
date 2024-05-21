@@ -1,0 +1,5 @@
+---
+source: src/commander/log.rs
+expression: show
+---
+"Commit ID: [COMMIT_ID]\nChange ID: [Change ID]\nAuthor: lazyjj <lazyjj@example.com> (([DATE_TIME]))\nCommitter: lazyjj <lazyjj@example.com> (([DATE_TIME]))\n\n    (no description set)\n\nAdded regular file README:\n        1: AAA"

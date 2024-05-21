@@ -1,0 +1,27 @@
+[package]
+name = "lazyjj"
+version = "0.1.0"
+edition = "2021"
+readme = "README.md"
+license = "Apache-2.0"
+
+[dependencies]
+ansi-to-tui = "4.0.1"
+anyhow = "1.0.86"
+chrono = "0.4.38"
+clap = { version = "4.5.4", features = ["derive"] }
+crossterm = "0.27.0"
+insta = { version = "1.39.0", features = ["filters"] }
+itertools = "0.13.0"
+lazy_static = "1.4.0"
+ratatui = { version = "0.26.3", features = [
+  "serde",
+  "unstable-rendered-line-info",
+] }
+regex = "1.10.4"
+serde = { version = "1.0.202", features = ["derive"] }
+tempdir = "0.3.7"
+thiserror = "1.0.61"
+toml = "0.8.13"
+tui-textarea = "0.4.0"
+tui_confirm_dialog = "0.2.0"

@@ -1,0 +1,5 @@
+---
+source: src/commander/log.rs
+expression: log.graph
+---
+"@  [LINE]\n│  (empty) (no description set)\n◉  [LINE]\n"
