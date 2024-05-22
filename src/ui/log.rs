@@ -296,7 +296,7 @@ impl Component for Log<'_> {
             self.log_height = panel_chunks[0].height.saturating_sub(2);
 
             let help = Paragraph::new(vec![
-                "j/j: scroll down/up | J/K: scroll down by ½ page | Enter: see files | @: current change | r: revset"
+                "j/k: scroll down/up | J/K: scroll down by ½ page | Enter: see files | @: current change | r: revset"
                     .into(),
                 "d: describe change | e: edit change | n: new change | N: new with message | a: abandon change".into(),
             ]).fg(Color::DarkGray);

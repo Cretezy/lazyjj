@@ -9,9 +9,8 @@ use crate::env::Env;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local};
 use std::{
-    error::Error,
     ffi::OsStr,
-    fmt, io,
+    io,
     process::{Command, Output},
     string::FromUtf8Error,
     sync::Arc,
@@ -28,12 +27,8 @@ impl DiffFormat {
     }
 }
 
-/// Representation of an error returned by the jj CLI (non-zero status code).
-#[derive(Debug)]
-struct JjError(String, Option<i32>);
-
 #[derive(Debug, Error)]
-enum CommandError {
+pub enum CommandError {
     #[error("Error getting output")]
     Output(#[from] io::Error),
     #[error("Non-zero return status")]
@@ -41,14 +36,6 @@ enum CommandError {
     #[error("Error parsing output")]
     FromUtf8(#[from] FromUtf8Error),
 }
-
-impl fmt::Display for JjError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl Error for JjError {}
 
 #[derive(Clone, Debug)]
 pub struct CommandLogItem {

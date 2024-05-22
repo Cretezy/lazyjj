@@ -235,7 +235,7 @@ impl Component for Files {
             self.files_height = panel_chunks[0].height - 2;
 
             let help = Paragraph::new(vec![
-                "j/j: scroll down/up | J/K: scroll down by ½ page".into(),
+                "j/k: scroll down/up | J/K: scroll down by ½ page".into(),
                 "@: view current change files".into(),
             ])
             .fg(Color::DarkGray);

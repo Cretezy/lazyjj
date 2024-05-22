@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  release:
+    types: [created]
+
+permissions: read-all
+
+env:
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  publish:
+    name: Publish
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [linux-musl, macos-x86_64, macos-aarch64, win-msvc]
+        include:
+          - build: linux-musl
+            os: ubuntu-20.04
+            target: x86_64-unknown-linux-musl
+          - build: macos-x86_64
+            os: macos-11
+            target: x86_64-apple-darwin
+          - build: macos-aarch64
+            os: macos-14
+            target: aarch64-apple-darwin
+          - build: win-msvc
+            os: windows-2022
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4.1.6
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          target: ${{ matrix.target }}
+      - name: Build release binary
+        run: cargo build --target ${{ matrix.target }} --verbose --release
+      - name: Build archive
+        shell: bash
+        run: |
+          # TODO: Create a third action to combine both in one archive
+          outdir="target/${{ matrix.target }}/release"
+          name="lazyjj-${{ github.event.release.tag_name }}-${{ matrix.target }}"
+          cd "$outdir"
+          ls # Debug
+          if [ "${{ matrix.os }}" = "windows-2022" ]; then
+            7z a "../../../$name.zip" lazyjj.exe
+            echo "ASSET=$name.zip" >> $GITHUB_ENV
+          else
+            tar czf "../../../$name.tar.gz" lazyjj
+            echo "ASSET=$name.tar.gz" >> $GITHUB_ENV
+          fi
+      - name: Upload release archive
+        uses: shogo82148/actions-upload-release-asset@v1.7.5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ${{ env.ASSET }}
+          asset_name: ${{ env.ASSET }}
+          asset_content_type: application/octet-stream
