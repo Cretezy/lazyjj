@@ -4,9 +4,14 @@ extern crate anyhow;
 extern crate lazy_static;
 extern crate thiserror;
 
-use std::{env::current_dir, fs::canonicalize, io};
+use std::{
+    env::current_dir,
+    fs::canonicalize,
+    io::{self, ErrorKind},
+    process::Command,
+};
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::Parser;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
@@ -48,6 +53,13 @@ fn main() -> Result<()> {
         }
         None => current_dir()?,
     };
+
+    // Check that jj exists
+    if let Err(err) = Command::new("jj").arg("help").spawn()
+        && let ErrorKind::NotFound = err.kind()
+    {
+        bail!("jj command not found. Please make sure it is installed: https://martinvonz.github.io/jj/latest/install-and-setup");
+    }
 
     // Setup environment
     let env = Env::new(path)?;
