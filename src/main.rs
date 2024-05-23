@@ -55,7 +55,7 @@ fn main() -> Result<()> {
     };
 
     // Check that jj exists
-    if let Err(err) = Command::new("jj").arg("help").spawn()
+    if let Err(err) = Command::new("jj").arg("help").output()
         && let ErrorKind::NotFound = err.kind()
     {
         bail!("jj command not found. Please make sure it is installed: https://martinvonz.github.io/jj/latest/install-and-setup");
