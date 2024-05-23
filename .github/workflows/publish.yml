@@ -10,8 +10,8 @@ env:
   CARGO_INCREMENTAL: 0
 
 jobs:
-  publish:
-    name: Publish
+  publish-binaries:
+    name: Publish binaries
     permissions:
       contents: write
     strategy:
@@ -64,3 +64,22 @@ jobs:
           asset_path: ${{ env.ASSET }}
           asset_name: ${{ env.ASSET }}
           asset_content_type: application/octet-stream
+  publish-aur:
+    name: Publish AUR
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4.1.6
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          target: ${{ matrix.target }}
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.6.7
+      - name: Install cargo-aur
+        run: cargo binstall cargo-aur
+      - name: Build AUR
+        run: cargo aur --musl
+      - uses: actions/upload-artifact@v4.3.3
+        with:
+          name: aur
+          path: target/cargo-aur/
