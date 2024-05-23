@@ -76,7 +76,7 @@ jobs:
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@v1.6.7
       - name: Install cargo-aur
-        run: cargo binstall cargo-aur
+        run: cargo binstall --no-confirm cargo-aur
       - name: Build AUR
         run: cargo aur --musl
       - uses: actions/upload-artifact@v4.3.3

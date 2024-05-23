@@ -30,6 +30,8 @@ With `cargo install`: `cargo +nightly install lazyjj` (requires nightly, may tak
 
 With pre-built binaries: [View releases](https://github.com/Cretezy/lazyjj/releases)
 
+From the AUR: `yay -S lazyjj-bin`
+
 ## Configuration
 
 You can optionally configure the following options through your jj config:
