@@ -32,7 +32,7 @@ use crate::{
     app::{App, Tab},
     commander::Commander,
     env::Env,
-    ui::ui,
+    ui::{ui, ComponentAction},
 };
 
 /// Simple program to greet a person
@@ -116,7 +116,7 @@ fn run_app<B: Backend>(
             // Note: This could be refactor such that the event handling in the else block only
             // runs if nothing is returned from the current tab's handler.
             if app.textarea_active {
-                if let Some(component_action) =
+                if let ComponentInputResult::HandledAction(component_action) =
                     app.get_current_component_mut().input(commander, event)?
                 {
                     app.handle_action(component_action, commander)?;
@@ -127,35 +127,42 @@ fn run_app<B: Backend>(
                     continue;
                 }
 
-                // Close
-                if key.code == KeyCode::Char('q')
-                    || (key.modifiers.contains(KeyModifiers::CONTROL)
-                        && (key.code == KeyCode::Char('c')))
-                    || key.code == KeyCode::Esc
-                {
-                    return Ok(());
-                }
-
-                // Tab switching
-                if let Some((_, tab)) = Tab::VALUES.iter().enumerate().find(|(i, _)| {
-                    key.code
-                        == KeyCode::Char(
-                            char::from_digit((*i as u32) + 1u32, 10)
-                                .expect("Tab index could not be converted to digit"),
-                        )
-                }) {
-                    app.current_tab = *tab;
-                    app.get_current_component_mut().reset(commander)?;
-                    continue;
-                }
-
-                // Current tab input handling
-                if let Some(component_action) =
-                    app.get_current_component_mut().input(commander, event)?
-                {
-                    app.handle_action(component_action, commander)?;
-                }
+                match app.get_current_component_mut().input(commander, event)? {
+                    ComponentInputResult::HandledAction(component_action) => {
+                        app.handle_action(component_action, commander)?
+                    }
+                    ComponentInputResult::Handled => {}
+                    ComponentInputResult::NotHandled => {
+                        // Close
+                        if key.code == KeyCode::Char('q')
+                            || (key.modifiers.contains(KeyModifiers::CONTROL)
+                                && (key.code == KeyCode::Char('c')))
+                            || key.code == KeyCode::Esc
+                        {
+                            return Ok(());
+                        }
+                        //
+                        // Tab switching
+                        if let Some((_, tab)) = Tab::VALUES.iter().enumerate().find(|(i, _)| {
+                            key.code
+                                == KeyCode::Char(
+                                    char::from_digit((*i as u32) + 1u32, 10)
+                                        .expect("Tab index could not be converted to digit"),
+                                )
+                        }) {
+                            app.current_tab = *tab;
+                            app.get_current_component_mut().reset(commander)?;
+                            continue;
+                        }
+                    }
+                };
             }
         }
     }
+}
+
+enum ComponentInputResult {
+    Handled,
+    HandledAction(ComponentAction),
+    NotHandled,
 }
