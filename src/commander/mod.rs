@@ -178,7 +178,7 @@ pub fn get_output_args(color: bool, quiet: bool) -> Vec<String> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::env::{Config, Env};
+    use crate::env::{Env, JjConfig};
 
     use tempdir::TempDir;
 
@@ -217,7 +217,7 @@ pub mod tests {
 
             let env = Env {
                 root: directory.path().to_string_lossy().to_string(),
-                config: Config::default(),
+                config: JjConfig::default(),
             };
 
             let mut commander = Commander::new(&env);
