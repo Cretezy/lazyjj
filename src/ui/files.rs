@@ -6,7 +6,7 @@ use crate::{
         log::Head,
         Commander,
     },
-    env::{DiffFormat, JjConfig},
+    env::{Config, DiffFormat},
     ui::{details_panel::DetailsPanel, Component, ComponentAction},
 };
 
@@ -29,7 +29,7 @@ pub struct Files {
     diff_output: Option<String>,
     diff_format: DiffFormat,
 
-    config: JjConfig,
+    config: Config,
 }
 
 fn get_current_file_index(current_file: &Option<String>, files_output: &[File]) -> Option<usize> {
