@@ -8,7 +8,7 @@ use ratatui::{prelude::*, widgets::*};
 
 use crate::{
     commander::{CommandLogItem, Commander},
-    env::Config,
+    env::JjConfig,
     ui::{details_panel::DetailsPanel, Component, ComponentAction},
 };
 
@@ -21,7 +21,7 @@ pub struct CommandLog {
 
     output_panel: DetailsPanel,
 
-    config: Config,
+    config: JjConfig,
 }
 
 impl CommandLog {

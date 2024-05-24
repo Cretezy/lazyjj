@@ -11,7 +11,7 @@ use crate::{
         log::{Head, LogOutput},
         Commander,
     },
-    env::{Config, DiffFormat},
+    env::{DiffFormat, JjConfig},
     ui::{
         details_panel::DetailsPanel,
         message_popup::MessagePopup,
@@ -48,7 +48,7 @@ pub struct Log<'a> {
     describe_textarea: Option<TextArea<'a>>,
     describe_after_new: bool,
 
-    config: Config,
+    config: JjConfig,
 }
 
 fn get_head_index(head: &Head, log_output: &Result<LogOutput>) -> Option<usize> {
