@@ -1,3 +1,5 @@
+pub mod branch_set_popup;
+pub mod branches;
 pub mod command_log;
 pub mod details_panel;
 pub mod files;
@@ -5,8 +7,12 @@ pub mod log;
 pub mod message_popup;
 pub mod utils;
 
+use crate::{
+    app::{App, Tab},
+    commander::{log::Head, Commander},
+    ComponentInputResult,
+};
 use anyhow::Result;
-
 use crossterm::event::Event;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -14,12 +20,6 @@ use ratatui::{
     symbols, Frame,
 };
 use ratatui::{prelude::*, widgets::*};
-
-use crate::{
-    app::{App, Tab},
-    commander::{log::Head, Commander},
-    ComponentInputResult,
-};
 
 pub enum ComponentAction {
     ViewFiles(Head),
@@ -30,7 +30,7 @@ pub enum ComponentAction {
 
 pub trait Component {
     // Called when switching to tab
-    fn reset(&mut self, _commander: &mut Commander) -> Result<()> {
+    fn switch(&mut self, _commander: &mut Commander) -> Result<()> {
         Ok(())
     }
 
@@ -56,6 +56,7 @@ impl App<'_> {
         match self.current_tab {
             Tab::Log => &mut self.log,
             Tab::Files => &mut self.files,
+            Tab::Branches => &mut self.branches,
             Tab::CommandLog => &mut self.command_log,
         }
     }

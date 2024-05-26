@@ -1,5 +1,5 @@
 use crate::{
-    commander::{log::Head, CommandError, Commander},
+    commander::{ids::CommitId, log::Head, CommandError, Commander},
     env::DiffFormat,
 };
 
@@ -49,20 +49,19 @@ impl DiffType {
 lazy_static! {
     // Example line: `A README.md`, `M src/main.rs`, `D Hello World`
     static ref FILES_REGEX: Regex = Regex::new(r"(.) (.*)").unwrap();
-    static ref CONFLICTS_REGEX: Regex = Regex::new(r"(.*)   .*").unwrap();
+    static ref CONFLICTS_REGEX: Regex = Regex::new(r"(.*)    .*").unwrap();
 }
 
 impl Commander {
     /// Get list of changes files in a change. Parses the output.
     /// Maps to `jj diff --summary -r <revision>`
-    pub fn get_files(&mut self, head: &Head) -> Result<Vec<File>> {
+    pub fn get_files(&mut self, head: &Head) -> Result<Vec<File>, CommandError> {
         Ok(self
             .execute_jj_command(
                 vec!["diff", "-r", head.commit_id.as_str(), "--summary"],
                 false,
                 true,
-            )
-            .context("Failed getting diff files")?
+            )?
             .lines()
             .map(|line| {
                 let captured = FILES_REGEX.captures(line);
@@ -86,9 +85,9 @@ impl Commander {
 
     /// Get list of changes files in a change. Parses the output.
     /// Maps to `jj diff --summary -r <revision>`
-    pub fn get_conflicts(&mut self, head: &Head) -> Result<Vec<Conflict>> {
+    pub fn get_conflicts(&mut self, commit_id: &CommitId) -> Result<Vec<Conflict>> {
         let output = self.execute_jj_command(
-            vec!["resolve", "--list", "-r", head.commit_id.as_str()],
+            vec!["resolve", "--list", "-r", commit_id.as_str()],
             false,
             true,
         );
@@ -123,7 +122,7 @@ impl Commander {
         head: &Head,
         current_file: &str,
         diff_format: &DiffFormat,
-    ) -> Result<String> {
+    ) -> Result<String, CommandError> {
         self.execute_jj_command(
             vec![
                 "diff",
@@ -135,7 +134,6 @@ impl Commander {
             true,
             true,
         )
-        .context("Failed getting file diff")
     }
 }
 
@@ -271,6 +269,45 @@ mod tests {
                 &DiffFormat::Git
             )?);
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn get_conflicts() -> Result<()> {
+        let mut test_repo = TestRepo::new()?;
+
+        let file_path = test_repo.directory.path().join("README");
+
+        let head0 = test_repo.commander.get_current_head()?;
+
+        // First change
+        test_repo.commander.run_new(&head0.commit_id)?;
+        let head1 = test_repo.commander.get_current_head()?;
+        fs::write(&file_path, b"AAA")?;
+
+        test_repo.commander.run_new(&head0.commit_id)?;
+        let head2 = test_repo.commander.get_current_head()?;
+        fs::write(&file_path, b"BBB")?;
+
+        test_repo.commander.execute_void_jj_command([
+            "rebase",
+            "-s",
+            head2.change_id.as_str(),
+            "-d",
+            head1.change_id.as_str(),
+        ])?;
+
+        let head = test_repo.commander.get_current_head()?;
+
+        let conflicts = test_repo.commander.get_conflicts(&head.commit_id)?;
+
+        assert_eq!(
+            conflicts,
+            [Conflict {
+                path: "README".to_owned()
+            }]
+        );
 
         Ok(())
     }

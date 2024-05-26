@@ -40,6 +40,8 @@ You can optionally configure the following options through your jj config:
 - `lazyjj.higlight-color`: Changes the highlight color. Can use named colors. Defaults to `#323264`
 - `lazyjj.diff-format`: Change the default diff format. Can be `color-words` or `git`. Defaults to `color_words`
   - If `lazyjj.diff-format` is not set but `ui.diff.format` is, the latter will be used
+- `lazyjj.branch-prefix`: Change the branch name prefix for generated branch names. Defaults to `push-`
+  - If `lazyjj.branch-prefix` is not set but `git.push-branch-prefix` is, the latter will be used
 
 Example: `jj config set --user lazyjj.diff-format "color-words"` (for storing in [user config file](https://martinvonz.github.io/jj/latest/config/#user-config-file), repo config is also supported)
 
@@ -77,12 +79,22 @@ To use a different repository: `lazyjj --path ~/path/to/repo`
 - Describe the highlighted change with `d` (`jj describe`)
   - Save with `Ctrl+s`
   - Cancel with `Esc`
+- Set a branch to the highlighted change with `b`
+  - Scroll in branch list with `j`/`k`
+  - Create a new branch with `c`
+  - Use auto-generated name with `g`
 
 ### Files tab
 
 - Select current change with `@`
 - Change right panel diff format between color words (default) and Git with `p`
 - Toggle right panel wrapping with `w`
+
+### Branches tab
+
+- Create a branch with `c`
+- Rename a branch with `r`
+- Delete a branch with `d`
 
 ### Command log tab
 

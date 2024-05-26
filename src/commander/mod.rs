@@ -1,3 +1,4 @@
+pub mod branches;
 pub mod files;
 pub mod ids;
 pub mod jj;
@@ -6,8 +7,13 @@ pub mod log;
 use crate::env::DiffFormat;
 use crate::env::Env;
 
+use ansi_to_tui::IntoText;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, TimeDelta};
+use ratatui::{
+    style::{Color, Stylize},
+    text::{Line, Text},
+};
 use std::{
     ffi::OsStr,
     io,
@@ -23,18 +29,32 @@ impl DiffFormat {
             DiffFormat::ColorWords => "--color-words",
             DiffFormat::Git => "--git",
             DiffFormat::Summary => "--summary",
+            DiffFormat::Stat => "--stat",
         }
     }
 }
 
 #[derive(Debug, Error)]
 pub enum CommandError {
-    #[error("Error getting output")]
+    #[error("Error getting output: {0}")]
     Output(#[from] io::Error),
-    #[error("Non-zero return status")]
+    #[error("{0}")]
     Status(String, Option<i32>),
-    #[error("Error parsing output")]
+    #[error("Error parsing UTF-8 output: {0}")]
     FromUtf8(#[from] FromUtf8Error),
+}
+
+impl CommandError {
+    pub fn into_text<'a>(&self, title: &'a str) -> Result<Text<'a>, ansi_to_tui::Error> {
+        Ok(Text::from(
+            [
+                vec![Line::raw(title).bold().fg(Color::Red)],
+                vec![Line::raw(""), Line::raw("")],
+                self.to_string().into_text()?.lines,
+            ]
+            .concat(),
+        ))
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -134,7 +154,7 @@ impl Commander {
     }
 
     /// Execute a jj command without using the output.
-    pub fn execute_void_jj_command<I, S>(&mut self, args: I) -> Result<()>
+    pub fn execute_void_jj_command<I, S>(&mut self, args: I) -> Result<(), CommandError>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,

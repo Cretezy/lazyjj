@@ -9,10 +9,11 @@ use tui_textarea::{CursorMove, TextArea};
 use crate::{
     commander::{
         log::{Head, LogOutput},
-        Commander,
+        CommandError, Commander,
     },
     env::{Config, DiffFormat},
     ui::{
+        branch_set_popup::BranchSetPopup,
         details_panel::DetailsPanel,
         message_popup::MessagePopup,
         utils::{centered_rect, centered_rect_line_height},
@@ -27,7 +28,7 @@ const ABANDON_POPUP_ID: u16 = 3;
 
 /// Log tab. Shows `jj log` in left panel and shows selected change details of in right panel.
 pub struct Log<'a> {
-    log_output: Result<LogOutput>,
+    log_output: Result<LogOutput, CommandError>,
     log_list_state: ListState,
     log_height: u16,
 
@@ -35,7 +36,7 @@ pub struct Log<'a> {
     log_revset_textarea: Option<TextArea<'a>>,
 
     head_panel: DetailsPanel,
-    head_output: Result<String>,
+    head_output: Result<String, CommandError>,
     head: Head,
 
     diff_format: DiffFormat,
@@ -46,13 +47,15 @@ pub struct Log<'a> {
 
     message_popup: Option<MessagePopup<'a>>,
 
+    set_branch: Option<BranchSetPopup<'a>>,
+
     describe_textarea: Option<TextArea<'a>>,
     describe_after_new: bool,
 
     config: Config,
 }
 
-fn get_head_index(head: &Head, log_output: &Result<LogOutput>) -> Option<usize> {
+fn get_head_index(head: &Head, log_output: &Result<LogOutput, CommandError>) -> Option<usize> {
     match log_output {
         Ok(log_output) => log_output
             .heads
@@ -101,6 +104,8 @@ impl Log<'_> {
 
             message_popup: None,
 
+            set_branch: None,
+
             describe_textarea: None,
             describe_after_new: false,
 
@@ -147,6 +152,12 @@ impl Log<'_> {
 
 #[allow(clippy::invisible_characters)]
 impl Component for Log<'_> {
+    fn switch(&mut self, commander: &mut Commander) -> Result<()> {
+        self.refresh_log_output(commander);
+        self.refresh_head_output(commander);
+        Ok(())
+    }
+
     fn update(&mut self, commander: &mut Commander) -> Result<Option<ComponentAction>> {
         let latest_head = commander.get_head_latest(&self.head)?;
         if latest_head != self.head {
@@ -168,8 +179,7 @@ impl Component for Log<'_> {
                     let mut actions = vec![ComponentAction::ChangeHead(self.head.clone())];
                     if self.describe_after_new {
                         self.describe_after_new = false;
-                        let mut textarea = TextArea::default();
-                        textarea.move_cursor(CursorMove::End);
+                        let textarea = TextArea::default();
                         self.describe_textarea = Some(textarea);
                         actions.push(ComponentAction::SetTextAreaActive(true));
                     }
@@ -269,16 +279,7 @@ impl Component for Log<'_> {
 
                     log_lines
                 }
-                Err(err) => {
-                    format!(
-                        "{}\n\n\n{}",
-                        &err.to_string(),
-                        err.source()
-                            .map_or("".to_string(), |source| source.to_string())
-                    )
-                    .into_text()?
-                    .lines
-                }
+                Err(err) => err.into_text("Error getting log")?.lines,
             };
 
             let title = match &self.log_revset {
@@ -299,7 +300,7 @@ impl Component for Log<'_> {
             let help = Paragraph::new(vec![
                 "j/k: scroll down/up | J/K: scroll down by ½ page | Enter: see files | @: current change | r: revset"
                     .into(),
-                "d: describe change | e: edit change | n: new change | N: new with message | a: abandon change".into(),
+                "d: describe change | e: edit change | n: new change | N: new with message | a: abandon change | b: set branch".into(),
             ]).fg(Color::DarkGray);
             f.render_widget(help, panel_chunks[1]);
         }
@@ -312,20 +313,15 @@ impl Component for Log<'_> {
                 .split(chunks[1]);
 
             let head_content = match self.head_output.as_ref() {
-                Ok(head_output) => head_output,
-                Err(err) => &format!(
-                    "{}\n\n\n{}",
-                    &err.to_string(),
-                    err.source()
-                        .map_or("".to_string(), |source| source.to_string())
-                ),
+                Ok(head_output) => head_output.into_text()?.lines,
+                Err(err) => err.into_text("Error getting head details")?.lines,
             };
             let head_block = Block::bordered()
                 .title(format!(" Details for {} ", self.head.change_id))
                 .border_type(BorderType::Rounded);
             let head = self
                 .head_panel
-                .render(head_content.into_text()?, head_block.inner(chunks[1]))
+                .render(head_content, head_block.inner(chunks[1]))
                 .block(head_block);
 
             f.render_widget(head, panel_chunks[0]);
@@ -422,6 +418,13 @@ impl Component for Log<'_> {
             }
         }
 
+        // Draw branch select
+        {
+            if let Some(set_branch) = self.set_branch.as_mut() {
+                set_branch.render(f, area);
+            }
+        }
+
         Ok(())
     }
 
@@ -460,7 +463,7 @@ impl Component for Log<'_> {
             if let Event::Key(key) = event {
                 match key.code {
                     KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        let log_revset = log_revset_textarea.lines().join("");
+                        let log_revset = log_revset_textarea.lines().join("\n");
                         self.log_revset = if log_revset.trim().is_empty() {
                             None
                         } else {
@@ -501,6 +504,18 @@ impl Component for Log<'_> {
                     || message_popup.input(key)
                 {
                     self.message_popup = None;
+                }
+
+                return Ok(ComponentInputResult::Handled);
+            }
+            if let Some(set_branch) = self.set_branch.as_mut() {
+                if key.code == KeyCode::Char('q')
+                    || key.code == KeyCode::Esc
+                    || set_branch.input(event, commander)?
+                {
+                    self.set_branch = None;
+                    self.refresh_log_output(commander);
+                    self.refresh_head_output(commander)
                 }
 
                 return Ok(ComponentInputResult::Handled);
@@ -645,6 +660,14 @@ impl Component for Log<'_> {
                     return Ok(ComponentInputResult::HandledAction(
                         ComponentAction::SetTextAreaActive(true),
                     ));
+                }
+                KeyCode::Char('b') => {
+                    self.set_branch = Some(BranchSetPopup::new(
+                        self.config.clone(),
+                        commander,
+                        Some(self.head.change_id.clone()),
+                        self.head.commit_id.clone(),
+                    ))
                 }
                 KeyCode::Enter => {
                     return Ok(ComponentInputResult::HandledAction(

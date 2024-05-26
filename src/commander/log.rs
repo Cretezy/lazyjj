@@ -1,7 +1,7 @@
 use crate::{
     commander::{
         ids::{ChangeId, CommitId},
-        {Commander, RemoveEndLine},
+        CommandError, Commander, RemoveEndLine,
     },
     env::DiffFormat,
 };
@@ -77,7 +77,7 @@ fn parse_head(text: &str) -> Result<Head> {
 impl Commander {
     /// Get log. Returns human readable log and mapping to log line to head.
     /// Maps to `jj log`
-    pub fn get_log(&mut self, revset: &Option<String>) -> Result<LogOutput> {
+    pub fn get_log(&mut self, revset: &Option<String>) -> Result<LogOutput, CommandError> {
         let mut args = vec![];
 
         if let Some(revset) = revset {
@@ -86,17 +86,15 @@ impl Commander {
         }
 
         // Force builtin_log_compact which uses 2 lines per change
-        let graph = self
-            .execute_jj_command(
-                [
-                    vec!["log", "--template", "builtin_log_compact"],
-                    args.clone(),
-                ]
-                .concat(),
-                true,
-                true,
-            )
-            .context("Failed getting log")?;
+        let graph = self.execute_jj_command(
+            [
+                vec!["log", "--template", "builtin_log_compact"],
+                args.clone(),
+            ]
+            .concat(),
+            true,
+            true,
+        )?;
 
         let graph_heads: Vec<Option<Head>> = self
             .execute_jj_command(
@@ -112,8 +110,7 @@ impl Commander {
                 .concat(),
                 false,
                 true,
-            )
-            .context("Failed getting log heads")?
+            )?
             .lines()
             .map(|line| parse_head(line).ok())
             .collect();
@@ -133,14 +130,13 @@ impl Commander {
         &mut self,
         commit_id: &CommitId,
         diff_format: &DiffFormat,
-    ) -> Result<String> {
+    ) -> Result<String, CommandError> {
         Ok(self
             .execute_jj_command(
                 vec!["show", commit_id.as_str(), diff_format.get_arg()],
                 true,
                 true,
-            )
-            .context("Failed getting commit details")?
+            )?
             .remove_end_line())
     }
 
