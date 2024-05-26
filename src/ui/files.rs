@@ -8,6 +8,7 @@ use crate::{
     },
     env::{Config, DiffFormat},
     ui::{details_panel::DetailsPanel, Component, ComponentAction},
+    ComponentInputResult,
 };
 
 use ansi_to_tui::IntoText;
@@ -275,14 +276,10 @@ impl Component for Files {
         Ok(())
     }
 
-    fn input(
-        &mut self,
-        commander: &mut Commander,
-        event: Event,
-    ) -> Result<Option<ComponentAction>> {
+    fn input(&mut self, commander: &mut Commander, event: Event) -> Result<ComponentInputResult> {
         if let Event::Key(key) = event {
             if self.diff_panel.input(key) {
-                return Ok(None);
+                return Ok(ComponentInputResult::Handled);
             }
 
             match key.code {
@@ -313,10 +310,10 @@ impl Component for Files {
                     let head = &commander.get_current_head()?;
                     self.set_head(commander, head)?;
                 }
-                _ => {}
+                _ => return Ok(ComponentInputResult::NotHandled),
             };
         }
 
-        Ok(None)
+        Ok(ComponentInputResult::Handled)
     }
 }

@@ -18,6 +18,7 @@ use ratatui::{prelude::*, widgets::*};
 use crate::{
     app::{App, Tab},
     commander::{log::Head, Commander},
+    ComponentInputResult,
 };
 
 pub enum ComponentAction {
@@ -39,8 +40,7 @@ pub trait Component {
 
     fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()>;
 
-    fn input(&mut self, commander: &mut Commander, event: Event)
-        -> Result<Option<ComponentAction>>;
+    fn input(&mut self, commander: &mut Commander, event: Event) -> Result<ComponentInputResult>;
 }
 
 impl App<'_> {

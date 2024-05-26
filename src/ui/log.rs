@@ -1,9 +1,9 @@
-use anyhow::Result;
-use tui_confirm_dialog::{ButtonLabel, ConfirmDialog, ConfirmDialogState, Listener};
-
+#![allow(clippy::borrow_interior_mutable_const)]
 use ansi_to_tui::IntoText;
+use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
+use tui_confirm_dialog::{ButtonLabel, ConfirmDialog, ConfirmDialogState, Listener};
 use tui_textarea::{CursorMove, TextArea};
 
 use crate::{
@@ -18,6 +18,7 @@ use crate::{
         utils::{centered_rect, centered_rect_line_height},
         Component, ComponentAction,
     },
+    ComponentInputResult,
 };
 
 const NEW_POPUP_ID: u16 = 1;
@@ -425,11 +426,7 @@ impl Component for Log<'_> {
     }
 
     #[allow(clippy::collapsible_if)]
-    fn input(
-        &mut self,
-        commander: &mut Commander,
-        event: Event,
-    ) -> Result<Option<ComponentAction>> {
+    fn input(&mut self, commander: &mut Commander, event: Event) -> Result<ComponentInputResult> {
         if let Some(describe_textarea) = self.describe_textarea.as_mut() {
             if let Event::Key(key) = event {
                 match key.code {
@@ -442,17 +439,21 @@ impl Component for Log<'_> {
                         self.refresh_log_output(commander);
                         self.refresh_head_output(commander);
                         self.describe_textarea = None;
-                        return Ok(Some(ComponentAction::SetTextAreaActive(false)));
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetTextAreaActive(false),
+                        ));
                     }
                     KeyCode::Esc => {
                         self.describe_textarea = None;
-                        return Ok(Some(ComponentAction::SetTextAreaActive(false)));
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetTextAreaActive(false),
+                        ));
                     }
                     _ => {}
                 }
             }
             describe_textarea.input(event);
-            return Ok(None);
+            return Ok(ComponentInputResult::Handled);
         }
 
         if let Some(log_revset_textarea) = self.log_revset_textarea.as_mut() {
@@ -467,32 +468,46 @@ impl Component for Log<'_> {
                         };
                         self.refresh_log_output(commander);
                         self.log_revset_textarea = None;
-                        return Ok(Some(ComponentAction::SetTextAreaActive(false)));
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetTextAreaActive(false),
+                        ));
                     }
                     KeyCode::Esc => {
                         self.log_revset_textarea = None;
-                        return Ok(Some(ComponentAction::SetTextAreaActive(false)));
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetTextAreaActive(false),
+                        ));
                     }
                     _ => {}
                 }
             }
             log_revset_textarea.input(event);
-            return Ok(None);
+            return Ok(ComponentInputResult::Handled);
         }
 
         if let Event::Key(key) = event {
-            if self.popup.is_opened() && self.popup.handle(key) {
-                return Ok(None);
+            if self.popup.is_opened() {
+                if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc {
+                    self.popup = ConfirmDialogState::default();
+                } else {
+                    self.popup.handle(key);
+                }
+
+                return Ok(ComponentInputResult::Handled);
             }
             if let Some(message_popup) = &self.message_popup {
-                if message_popup.input(key) {
+                if key.code == KeyCode::Char('q')
+                    || key.code == KeyCode::Esc
+                    || message_popup.input(key)
+                {
                     self.message_popup = None;
                 }
-                return Ok(None);
+
+                return Ok(ComponentInputResult::Handled);
             }
 
             if self.head_panel.input(key) {
-                return Ok(None);
+                return Ok(ComponentInputResult::Handled);
             }
 
             match key.code {
@@ -535,7 +550,6 @@ impl Component for Log<'_> {
                             Line::from(format!("New parent: {}", self.head.change_id.as_str())),
                         ]),
                     )
-                    .modal(true)
                     .with_yes_button(ButtonLabel::YES.clone())
                     .with_no_button(ButtonLabel::NO.clone())
                     .with_listener(Some(self.popup_tx.clone()))
@@ -563,7 +577,6 @@ impl Component for Log<'_> {
                                 Line::from(format!("Change: {}", self.head.change_id.as_str())),
                             ]),
                         )
-                        .modal(true)
                         .with_yes_button(ButtonLabel::YES.clone())
                         .with_no_button(ButtonLabel::NO.clone())
                         .with_listener(Some(self.popup_tx.clone()))
@@ -588,7 +601,6 @@ impl Component for Log<'_> {
                                 Line::from(format!("Change: {}", self.head.change_id.as_str())),
                             ]),
                         )
-                        .modal(true)
                         .with_yes_button(ButtonLabel::YES.clone())
                         .with_no_button(ButtonLabel::NO.clone())
                         .with_listener(Some(self.popup_tx.clone()))
@@ -614,7 +626,9 @@ impl Component for Log<'_> {
                         );
                         textarea.move_cursor(CursorMove::End);
                         self.describe_textarea = Some(textarea);
-                        return Ok(Some(ComponentAction::SetTextAreaActive(true)));
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetTextAreaActive(true),
+                        ));
                     }
                 }
                 KeyCode::Char('r') => {
@@ -628,15 +642,19 @@ impl Component for Log<'_> {
                     );
                     textarea.move_cursor(CursorMove::End);
                     self.log_revset_textarea = Some(textarea);
-                    return Ok(Some(ComponentAction::SetTextAreaActive(true)));
+                    return Ok(ComponentInputResult::HandledAction(
+                        ComponentAction::SetTextAreaActive(true),
+                    ));
                 }
                 KeyCode::Enter => {
-                    return Ok(Some(ComponentAction::ViewFiles(self.head.clone())));
+                    return Ok(ComponentInputResult::HandledAction(
+                        ComponentAction::ViewFiles(self.head.clone()),
+                    ));
                 }
-                _ => {}
+                _ => return Ok(ComponentInputResult::NotHandled),
             };
         }
 
-        Ok(None)
+        Ok(ComponentInputResult::Handled)
     }
 }

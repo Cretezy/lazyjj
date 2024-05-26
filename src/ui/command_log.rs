@@ -9,7 +9,8 @@ use ratatui::{prelude::*, widgets::*};
 use crate::{
     commander::{CommandLogItem, Commander},
     env::Config,
-    ui::{details_panel::DetailsPanel, Component, ComponentAction},
+    ui::{details_panel::DetailsPanel, Component},
+    ComponentInputResult,
 };
 
 /// Command log tab. Shows list of commands exectured by lazyjj in left panel and selected command
@@ -240,14 +241,10 @@ impl Component for CommandLog {
     }
 
     #[allow(clippy::collapsible_if)]
-    fn input(
-        &mut self,
-        _commander: &mut Commander,
-        event: Event,
-    ) -> Result<Option<ComponentAction>> {
+    fn input(&mut self, _commander: &mut Commander, event: Event) -> Result<ComponentInputResult> {
         if let Event::Key(key) = event {
             if self.output_panel.input(key) {
-                return Ok(None);
+                return Ok(ComponentInputResult::Handled);
             }
 
             match key.code {
@@ -266,10 +263,10 @@ impl Component for CommandLog {
                 KeyCode::Char('@') => {
                     self.scroll_commands(isize::MIN);
                 }
-                _ => {}
+                _ => return Ok(ComponentInputResult::NotHandled),
             };
         }
 
-        Ok(None)
+        Ok(ComponentInputResult::Handled)
     }
 }
