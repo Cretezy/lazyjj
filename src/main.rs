@@ -151,7 +151,7 @@ fn run_app<B: Backend>(
                                 )
                         }) {
                             app.current_tab = *tab;
-                            app.get_current_component_mut().reset(commander)?;
+                            app.get_current_component_mut().switch(commander)?;
                             continue;
                         }
                     }

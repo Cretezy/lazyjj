@@ -4,10 +4,10 @@ use crate::{
     commander::{
         files::{Conflict, File},
         log::Head,
-        Commander,
+        CommandError, Commander,
     },
     env::{Config, DiffFormat},
-    ui::{details_panel::DetailsPanel, Component, ComponentAction},
+    ui::{details_panel::DetailsPanel, Component},
     ComponentInputResult,
 };
 
@@ -20,27 +20,34 @@ pub struct Files {
     head: Head,
     is_current_head: bool,
 
-    files_output: Vec<File>,
+    files_output: Result<Vec<File>, CommandError>,
     conflicts_output: Vec<Conflict>,
     files_list_state: ListState,
     files_height: u16,
 
     pub file: Option<String>,
     diff_panel: DetailsPanel,
-    diff_output: Option<String>,
+    diff_output: Result<Option<String>, CommandError>,
     diff_format: DiffFormat,
 
     config: Config,
 }
 
-fn get_current_file_index(current_file: &Option<String>, files_output: &[File]) -> Option<usize> {
-    current_file.as_ref().and_then(|current_file| {
+fn get_current_file_index(
+    current_file: Option<&String>,
+    files_output: Result<&Vec<File>, &CommandError>,
+) -> Option<usize> {
+    if let Some(current_file) = current_file
+        && let Ok(files_output) = files_output
+    {
         files_output.iter().position(|file| {
             file.path
                 .as_ref()
                 .map_or(false, |path| path == current_file)
         })
-    })
+    } else {
+        None
+    }
 }
 
 impl Files {
@@ -50,16 +57,21 @@ impl Files {
 
         let diff_format = commander.env.config.diff_format();
 
-        let files_output = commander.get_files(&head)?;
-        let conflicts_output = commander.get_conflicts(&head)?;
-        let current_file = files_output.first().and_then(|change| change.path.clone());
+        let files_output = commander.get_files(&head);
+        let conflicts_output = commander.get_conflicts(&head.commit_id)?;
+        let current_file = files_output
+            .as_ref()
+            .ok()
+            .and_then(|files_output| files_output.first().and_then(|change| change.path.clone()));
         let diff_output = current_file
             .as_ref()
             .map(|current_change| commander.get_file_diff(&head, current_change, &diff_format))
-            .map_or(Ok(None), |r| r.map(Some))?;
+            .map_or(Ok(None), |r| r.map(Some));
 
-        let files_list_state = ListState::default()
-            .with_selected(get_current_file_index(&current_file, &files_output));
+        let files_list_state = ListState::default().with_selected(get_current_file_index(
+            current_file.as_ref(),
+            files_output.as_ref(),
+        ));
 
         Ok(Self {
             head,
@@ -85,22 +97,22 @@ impl Files {
         self.is_current_head = self.head == commander.get_current_head()?;
 
         self.refresh_files(commander)?;
-        self.file = self
-            .files_output
-            .first()
-            .and_then(|change| change.path.clone());
+        self.file =
+            self.files_output.as_ref().ok().and_then(|files_output| {
+                files_output.first().and_then(|change| change.path.clone())
+            });
         self.refresh_diff(commander)?;
 
         Ok(())
     }
 
     pub fn get_current_file_index(&self) -> Option<usize> {
-        get_current_file_index(&self.file, &self.files_output)
+        get_current_file_index(self.file.as_ref(), self.files_output.as_ref())
     }
 
     pub fn refresh_files(&mut self, commander: &mut Commander) -> Result<()> {
-        self.files_output = commander.get_files(&self.head)?;
-        self.conflicts_output = commander.get_conflicts(&self.head)?;
+        self.files_output = commander.get_files(&self.head);
+        self.conflicts_output = commander.get_conflicts(&self.head.commit_id)?;
         Ok(())
     }
 
@@ -111,38 +123,40 @@ impl Files {
             .map(|current_file| {
                 commander.get_file_diff(&self.head, current_file, &self.diff_format)
             })
-            .map_or(Ok(None), |r| r.map(Some))?;
+            .map_or(Ok(None), |r| r.map(Some));
         self.diff_panel.scroll = 0;
         Ok(())
     }
 
     fn scroll_files(&mut self, commander: &mut Commander, scroll: isize) -> Result<()> {
-        let files: &Vec<File> = self.files_output.as_ref();
-        let current_file_index = self.get_current_file_index();
-        let next_file = match current_file_index {
-            Some(current_file_index) => files.get(
-                current_file_index
-                    .saturating_add_signed(scroll)
-                    .min(files.len() - 1),
-            ),
-            None => files.first(),
+        if let Ok(files) = self.files_output.as_ref() {
+            let current_file_index = self.get_current_file_index();
+            let next_file = match current_file_index {
+                Some(current_file_index) => files.get(
+                    current_file_index
+                        .saturating_add_signed(scroll)
+                        .min(files.len() - 1),
+                ),
+                None => files.first(),
+            }
+            .map(|x| x.to_owned());
+            if let Some(next_file) = next_file
+                && next_file.path.is_some()
+            {
+                self.file.clone_from(&next_file.path);
+                self.refresh_diff(commander)?;
+            }
         }
-        .map(|x| x.to_owned());
-        if let Some(next_file) = next_file
-            && next_file.path.is_some()
-        {
-            self.file.clone_from(&next_file.path);
-            self.refresh_diff(commander)?;
-        }
-
         Ok(())
     }
 }
 
 impl Component for Files {
-    fn update(&mut self, commander: &mut Commander) -> Result<Option<ComponentAction>> {
+    fn switch(&mut self, commander: &mut Commander) -> Result<()> {
         self.is_current_head = self.head == commander.get_current_head()?;
-        Ok(None)
+        self.refresh_files(commander)?;
+        self.refresh_diff(commander)?;
+        Ok(())
     }
 
     fn draw(
@@ -164,50 +178,56 @@ impl Component for Files {
 
             let current_file_index = self.get_current_file_index();
 
-            let files_lines: Vec<Line> = self
-                .files_output
-                .iter()
-                .enumerate()
-                .flat_map(|(i, file)| {
-                    file.line
-                        .to_text()
-                        .unwrap()
+            let mut lines: Vec<Line> = match self.files_output.as_ref() {
+                Ok(files_output) => {
+                    let files_lines = files_output
                         .iter()
-                        .map(|line| {
-                            let mut line = line.to_owned();
+                        .enumerate()
+                        .flat_map(|(i, file)| {
+                            file.line
+                                .to_text()
+                                .unwrap()
+                                .iter()
+                                .map(|line| {
+                                    let mut line = line.to_owned();
 
-                            if let Some(diff_type) = file.diff_type.as_ref() {
-                                line.spans = line
-                                    .spans
-                                    .iter_mut()
-                                    .map(|span| span.to_owned().fg(diff_type.color()))
-                                    .collect();
-                            }
+                                    if let Some(diff_type) = file.diff_type.as_ref() {
+                                        line.spans = line
+                                            .spans
+                                            .iter_mut()
+                                            .map(|span| span.to_owned().fg(diff_type.color()))
+                                            .collect();
+                                    }
 
-                            if current_file_index
-                                .map_or(false, |current_file_index| i == current_file_index)
-                            {
-                                line = line.bg(self.config.highlight_color());
+                                    if current_file_index
+                                        .map_or(false, |current_file_index| i == current_file_index)
+                                    {
+                                        line = line.bg(self.config.highlight_color());
 
-                                line.spans = line
-                                    .spans
-                                    .iter_mut()
-                                    .map(|span| span.to_owned().bg(self.config.highlight_color()))
-                                    .collect();
-                            }
+                                        line.spans = line
+                                            .spans
+                                            .iter_mut()
+                                            .map(|span| {
+                                                span.to_owned().bg(self.config.highlight_color())
+                                            })
+                                            .collect();
+                                    }
 
-                            line
+                                    line
+                                })
+                                .collect::<Vec<Line>>()
                         })
-                        .collect::<Vec<Line>>()
-                })
-                .collect();
+                        .collect::<Vec<Line>>();
 
-            let mut lines = if files_lines.is_empty() {
-                vec![Line::from(" No changed files in change")
-                    .fg(Color::DarkGray)
-                    .italic()]
-            } else {
-                files_lines
+                    if files_lines.is_empty() {
+                        vec![Line::from(" No changed files in change")
+                            .fg(Color::DarkGray)
+                            .italic()]
+                    } else {
+                        files_lines
+                    }
+                }
+                Err(err) => err.into_text("Error getting files")?.lines,
             };
 
             let title_change = if self.is_current_head {
@@ -253,16 +273,14 @@ impl Component for Files {
             let diff_block = Block::bordered()
                 .title(" Diff ")
                 .border_type(BorderType::Rounded);
+            let diff_content = match self.diff_output.as_ref() {
+                Ok(Some(diff_content)) => diff_content.into_text()?,
+                Ok(None) => Text::default(),
+                Err(err) => err.into_text("Error getting diff")?,
+            };
             let diff = self
                 .diff_panel
-                .render(
-                    self.diff_output
-                        .as_ref()
-                        .map_or(Text::from(""), |diff_output| {
-                            diff_output.into_text().unwrap()
-                        }),
-                    diff_block.inner(chunks[1]),
-                )
+                .render(diff_content, diff_block.inner(chunks[1]))
                 .block(diff_block);
             f.render_widget(diff, panel_chunks[0]);
 

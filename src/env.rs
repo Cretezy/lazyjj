@@ -13,8 +13,12 @@ pub struct Config {
     lazyjj_highlight_color: Option<Color>,
     #[serde(rename = "lazyjj.diff-format")]
     lazyjj_diff_format: Option<DiffFormat>,
+    #[serde(rename = "lazyjj.branch-prefix")]
+    lazyjj_branch_prefix: Option<String>,
     #[serde(rename = "ui.diff.format")]
     ui_diff_format: Option<DiffFormat>,
+    #[serde(rename = "git.push-branch-prefix")]
+    git_push_branch_prefix: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -22,6 +26,7 @@ pub struct Config {
 pub struct JjConfig {
     lazyjj: Option<JjConfigLazyjj>,
     ui: Option<JjConfigUi>,
+    git: Option<JjConfigGit>,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -29,6 +34,7 @@ pub struct JjConfig {
 pub struct JjConfigLazyjj {
     highlight_color: Option<Color>,
     diff_format: Option<DiffFormat>,
+    branch_prefix: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -43,6 +49,12 @@ pub struct JjConfigUiDiff {
     format: Option<DiffFormat>,
 }
 
+#[derive(Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "kebab-case")]
+pub struct JjConfigGit {
+    push_branch_prefix: Option<String>,
+}
+
 impl Config {
     pub fn diff_format(&self) -> DiffFormat {
         self.lazyjj_diff_format
@@ -52,6 +64,14 @@ impl Config {
     pub fn highlight_color(&self) -> Color {
         self.lazyjj_highlight_color
             .unwrap_or(Color::Rgb(50, 50, 150))
+    }
+
+    pub fn branch_prefix(&self) -> String {
+        self.lazyjj_branch_prefix.clone().unwrap_or(
+            self.git_push_branch_prefix
+                .clone()
+                .unwrap_or("push-".to_owned()),
+        )
     }
 }
 
@@ -80,7 +100,6 @@ impl Env {
                 .arg("config")
                 .arg("list")
                 .arg("--template")
-                .arg("--include-defaults")
                 .arg("'\"' ++ name ++ '\"' ++ '=' ++ value ++ '\n'")
                 .args(get_output_args(false, true))
                 .current_dir(&root)
@@ -96,7 +115,6 @@ impl Env {
                     Command::new("jj")
                         .arg("config")
                         .arg("list")
-                        .arg("--include-defaults")
                         .args(get_output_args(false, true))
                         .current_dir(&root)
                         .output()
@@ -114,9 +132,14 @@ impl Env {
                             .lazyjj
                             .as_ref()
                             .and_then(|lazyjj| lazyjj.diff_format),
+                        lazyjj_branch_prefix: config
+                            .lazyjj
+                            .as_ref()
+                            .and_then(|lazyjj| lazyjj.branch_prefix.clone()),
                         ui_diff_format: config
                             .ui
                             .and_then(|ui| ui.diff.and_then(|diff| diff.format)),
+                        git_push_branch_prefix: config.git.and_then(|git| git.push_branch_prefix),
                     })?
             }
         };
@@ -132,4 +155,5 @@ pub enum DiffFormat {
     ColorWords,
     Git,
     Summary,
+    Stat,
 }
