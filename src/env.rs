@@ -6,6 +6,7 @@ use serde::Deserialize;
 
 use crate::commander::{get_output_args, RemoveEndLine};
 
+// TODO: After 0.18, remove Config and replace with JjConfig
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Config {
     #[serde(rename = "lazyjj.highlight-color")]
@@ -14,6 +15,32 @@ pub struct Config {
     lazyjj_diff_format: Option<DiffFormat>,
     #[serde(rename = "ui.diff.format")]
     ui_diff_format: Option<DiffFormat>,
+}
+
+#[derive(Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "kebab-case")]
+pub struct JjConfig {
+    lazyjj: Option<JjConfigLazyjj>,
+    ui: Option<JjConfigUi>,
+}
+
+#[derive(Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "kebab-case")]
+pub struct JjConfigLazyjj {
+    highlight_color: Option<Color>,
+    diff_format: Option<DiffFormat>,
+}
+
+#[derive(Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "kebab-case")]
+pub struct JjConfigUi {
+    diff: Option<JjConfigUiDiff>,
+}
+
+#[derive(Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "kebab-case")]
+pub struct JjConfigUiDiff {
+    format: Option<DiffFormat>,
 }
 
 impl Config {
@@ -76,7 +103,21 @@ impl Env {
                         .context("Failed to get jj config")?
                         .stdout,
                 )?;
-                toml::from_str::<Config>(&config_toml).context("Failed to parse jj config")?
+                toml::from_str::<JjConfig>(&config_toml)
+                    .context("Failed to parse jj config")
+                    .map(|config| Config {
+                        lazyjj_highlight_color: config
+                            .lazyjj
+                            .as_ref()
+                            .and_then(|lazyjj| lazyjj.highlight_color),
+                        lazyjj_diff_format: config
+                            .lazyjj
+                            .as_ref()
+                            .and_then(|lazyjj| lazyjj.diff_format),
+                        ui_diff_format: config
+                            .ui
+                            .and_then(|ui| ui.diff.and_then(|diff| diff.format)),
+                    })?
             }
         };
 
