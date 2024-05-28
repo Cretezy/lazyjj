@@ -71,6 +71,13 @@ impl CommandLog {
                                 .fg(Color::Cyan),
                         ]),
                     );
+                    output_lines.push(
+                        Line::default().spans([
+                            Span::raw("Duration: "),
+                            Span::raw(format!("{}ms", command.duration.num_milliseconds()))
+                                .fg(Color::Cyan),
+                        ]),
+                    );
                     output_lines.push(Line::default());
 
                     let mut has_output = false;

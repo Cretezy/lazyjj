@@ -7,7 +7,7 @@ use crate::env::DiffFormat;
 use crate::env::Env;
 
 use anyhow::{Context, Result};
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, TimeDelta};
 use std::{
     ffi::OsStr,
     io,
@@ -43,6 +43,7 @@ pub struct CommandLogItem {
     pub args: Vec<String>,
     pub output: Arc<Result<Output>>,
     pub time: DateTime<Local>,
+    pub duration: TimeDelta,
 }
 
 /// Struct used to interact with the jj cli using commanders.
@@ -78,7 +79,9 @@ impl Commander {
             .map(|arg| arg.to_str().unwrap_or("").to_owned())
             .collect();
 
+        let time = Local::now();
         let output = command.output();
+        let duration = Local::now() - time;
 
         self.command_history.push(CommandLogItem {
             program,
@@ -91,7 +94,8 @@ impl Commander {
                     err.to_string(),
                 ))),
             }),
-            time: Local::now(),
+            time,
+            duration,
         });
 
         let output = output?;
