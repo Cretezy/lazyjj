@@ -41,7 +41,8 @@ impl Display for HeadParseError {
 
 // Template which outputs `[change_id|commit_id|divergent]`. Used to parse data from log and other
 // commands which supports templating.
-const HEAD_TEMPLATE: &str = r#""[" ++ change_id ++ "|" ++ commit_id ++ "|" ++ divergent ++ "|" ++ if(immutable, "true", "false") ++ "]""#;
+const HEAD_TEMPLATE: &str =
+    r#""[" ++ change_id ++ "|" ++ commit_id ++ "|" ++ divergent ++ "|" ++ immutable ++ "]""#;
 lazy_static! {
     // Regex to parse HEAD_TEMPLATE
     static ref HEAD_TEMPLATE_REGEX: Regex = Regex::new(r"\[(.*)\|(.*)\|(.*)\|(.*)\]").unwrap();
@@ -104,7 +105,7 @@ impl Commander {
                         "log",
                         "--template",
                         // Match builtin_log_compact with 2 lines per change
-                        &format!(r#"{0} ++ "\n" ++ {0}"#, HEAD_TEMPLATE),
+                        &format!(r#"{0} ++ " " ++ branches ++"\n" ++ {0}"#, HEAD_TEMPLATE),
                     ],
                     args,
                 ]
@@ -421,7 +422,7 @@ mod tests {
         let mut test_repo = TestRepo::new()?;
 
         let head = test_repo.commander.get_current_head()?;
-        // Create a branch advances from an empty change
+        // Git doesn't support branch pointing to root commit, so it will advance
         let branch = test_repo.commander.create_branch("main")?;
 
         assert_eq!(test_repo.commander.get_branch_head(&branch)?, head);
