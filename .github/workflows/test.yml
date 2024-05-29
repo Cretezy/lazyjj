@@ -18,7 +18,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-14, windows-latest]
+        build: [linux-musl, macos-x86_64, macos-aarch64, win-msvc]
+        include:
+          - build: linux-musl
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
+          - build: macos-x86_64
+            os: macos-11
+            target: x86_64-apple-darwin
+          - build: macos-aarch64
+            os: macos-14
+            target: aarch64-apple-darwin
+          - build: win-msvc
+            os: windows-2022
+            target: x86_64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
 
     timeout-minutes: 15
@@ -27,14 +40,37 @@ jobs:
       - uses: actions/checkout@v4.1.6
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
+        with:
+          target: ${{ matrix.target }}
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@v1.6.7
       - name: Install jj
         run: cargo binstall --no-confirm --strategies crate-meta-data jj-cli
       - name: Build lazyjj
-        run: cargo +nightly build --all-targets --verbose
+        run: cargo build --target ${{ matrix.target }} --verbose --release
+      - name: Build archive
+        shell: bash
+        run: |
+          # TODO: Create a third action to combine both in one archive
+          short_sha=`echo ${GITHUB_SHA} | cut -c1-8`
+          outdir="target/${{ matrix.target }}/release"
+          name="lazyjj-$short_sha-${{ matrix.target }}"
+          cd "$outdir"
+          ls # Debug
+          if [ "${{ matrix.os }}" = "windows-2022" ]; then
+            7z a "../../../$name.zip" lazyjj.exe
+            echo "ASSET=$name.zip" >> $GITHUB_ENV
+          else
+            tar czf "../../../$name.tar.gz" lazyjj
+            echo "ASSET=$name.tar.gz" >> $GITHUB_ENV
+          fi
+      - name: Upload archive
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: ${{ env.ASSET }}
+          path: ${{ env.ASSET }}
       - name: Test
-        run: cargo +nightly test --all-targets --verbose
+        run: cargo test --all-targets --verbose
         env:
           RUST_BACKTRACE: 1
 
@@ -48,7 +84,7 @@ jobs:
         with:
           components: clippy
       - name: Clippy
-        run: cargo +nightly clippy --workspace --all-targets --verbose
+        run: cargo clippy --workspace --all-targets --verbose
 
   rustfmt:
     name: Format
@@ -59,4 +95,4 @@ jobs:
         uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
-      - run: cargo +nightly fmt --all -- --check
+      - run: cargo fmt --all -- --check
