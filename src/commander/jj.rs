@@ -78,6 +78,11 @@ impl Commander {
         self.execute_void_jj_command(vec!["branch", "delete", name])
     }
 
+    /// Forget branch. Maps to `jj branch forget <name>`
+    pub fn forget_branch(&mut self, name: &str) -> Result<(), CommandError> {
+        self.execute_void_jj_command(vec!["branch", "forget", name])
+    }
+
     /// Track branch. Maps to `jj branch track <branch>@<remote>`
     pub fn track_branch(&mut self, branch: &Branch) -> Result<(), CommandError> {
         self.execute_void_jj_command(vec!["branch", "track", &branch.to_string()])
@@ -317,6 +322,23 @@ mod tests {
         assert_eq!(branches, [branch.clone()]);
 
         test_repo.commander.delete_branch(&branch.name)?;
+
+        let branches = test_repo.commander.get_branches_list(false)?;
+        assert_eq!(branches, []);
+
+        Ok(())
+    }
+
+    #[test]
+    fn forget_branch() -> Result<()> {
+        let mut test_repo = TestRepo::new()?;
+
+        let branch = test_repo.commander.create_branch("test")?;
+
+        let branches = test_repo.commander.get_branches_list(false)?;
+        assert_eq!(branches, [branch.clone()]);
+
+        test_repo.commander.forget_branch(&branch.name)?;
 
         let branches = test_repo.commander.get_branches_list(false)?;
         assert_eq!(branches, []);

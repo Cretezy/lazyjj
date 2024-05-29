@@ -14,11 +14,16 @@ https://github.com/Cretezy/lazyjj/assets/2672503/b5e6b4f1-ebdb-448f-af9e-361e86f
   - Abandon changes with `a`
   - Toggle between color words and git diff with `p`
   - See different revset with `r`
+  - Set a branch to selected change with `b`
 - Files
   - View files in current change and diff in side panel
   - See a change's files from the log tab with `Enter`
   - View conflicts list in current change
   - Toggle between color words and git diff with `p`
+- Branches
+  - View list of branches, including from all remotes with `a`
+  - Create with `c`, rename with `r`, delete with `d`, forget with `f`
+  - Track branches with `t`, untrack branches with `T`
 - Command log: View every command lazyjj executes
 - Config: Configure lazyjj with your jj config
 
@@ -92,9 +97,13 @@ To use a different repository: `lazyjj --path ~/path/to/repo`
 
 ### Branches tab
 
+- Show branches with all remotes with `a`
 - Create a branch with `c`
 - Rename a branch with `r`
 - Delete a branch with `d`
+- Forget a branch with `f`
+- Track a branch with `t` (only works for branches with remotes)
+- Untrack a branch with `T` (only works for branches with remotes)
 
 ### Command log tab
 
