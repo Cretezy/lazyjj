@@ -1,4 +1,4 @@
-name: Test
+name: Test & Build
 
 on:
   push:
@@ -13,8 +13,8 @@ env:
   CARGO_PROFILE_DEV_DEBUG: 0
 
 jobs:
-  build-test:
-    name: Build & Test
+  test:
+    name: Test
     strategy:
       fail-fast: false
       matrix:
@@ -46,6 +46,40 @@ jobs:
         uses: cargo-bins/cargo-binstall@v1.6.7
       - name: Install jj
         run: cargo binstall --no-confirm --strategies crate-meta-data jj-cli
+      - name: Test
+        run: cargo test --all-targets --verbose
+        env:
+          RUST_BACKTRACE: 1
+
+  build:
+    name: Build
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [linux-musl, macos-x86_64, macos-aarch64, win-msvc]
+        include:
+          - build: linux-musl
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
+          - build: macos-x86_64
+            os: macos-11
+            target: x86_64-apple-darwin
+          - build: macos-aarch64
+            os: macos-14
+            target: aarch64-apple-darwin
+          - build: win-msvc
+            os: windows-2022
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4.1.6
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          target: ${{ matrix.target }}
       - name: Build lazyjj
         run: cargo build --target ${{ matrix.target }} --verbose --release
       - name: Build archive
@@ -69,10 +103,6 @@ jobs:
         with:
           name: ${{ env.ASSET }}
           path: ${{ env.ASSET }}
-      - name: Test
-        run: cargo test --all-targets --verbose
-        env:
-          RUST_BACKTRACE: 1
 
   clippy:
     name: Clippy
