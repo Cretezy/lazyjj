@@ -24,13 +24,14 @@ https://github.com/Cretezy/lazyjj/assets/2672503/b5e6b4f1-ebdb-448f-af9e-361e86f
 
 ## Setup
 
-With [`cargo binstall`](https://github.com/cargo-bins/cargo-binstall): `cargo binstall lazyjj`
+Make sure you have [`jj`](https://martinvonz.github.io/jj/latest/install-and-setup) installed first.
 
-With `cargo install`: `cargo +nightly install lazyjj` (requires nightly, may take a few moments to compile)
+- With [`cargo binstall`](https://github.com/cargo-bins/cargo-binstall): `cargo binstall lazyjj`
+- With `cargo install`: `cargo +nightly install lazyjj` (requires nightly, may take a few moments to compile)
+- With pre-built binaries: [View releases](https://github.com/Cretezy/lazyjj/releases)
+- From the AUR: `yay -S lazyjj-bin`
 
-With pre-built binaries: [View releases](https://github.com/Cretezy/lazyjj/releases)
-
-From the AUR: `yay -S lazyjj-bin`
+To build and install a pre-release version: `cargo +nightly install --git https://github.com/Cretezy/lazyjj.git --locked`
 
 ## Configuration
 
