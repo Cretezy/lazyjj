@@ -286,7 +286,7 @@ impl Component for Files {
 
             let help = Paragraph::new(vec![
                 "Ctrl+e/Ctrl+y: scroll down/up | Ctrl+d/Ctrl+u: scroll down/up by ½ page".into(),
-                "Ctrl+f/Ctrl+b: scroll down/up by page | p: toggle diff format | w: toggle wrapping".into(),
+                "Ctrl+f/Ctrl+b: scroll down/up by page | w: toggle diff format | W: toggle wrapping".into(),
             ]).fg(Color::DarkGray);
             f.render_widget(help, panel_chunks[1]);
         }
@@ -312,7 +312,7 @@ impl Component for Files {
                         (self.files_height as isize / 2).saturating_neg(),
                     )?;
                 }
-                KeyCode::Char('p') => {
+                KeyCode::Char('w') => {
                     self.diff_format = match self.diff_format {
                         DiffFormat::ColorWords => DiffFormat::Git,
                         _ => DiffFormat::ColorWords,

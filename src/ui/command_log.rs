@@ -238,7 +238,7 @@ impl Component for CommandLog {
 
             let help = Paragraph::new(vec![
                 "Ctrl+e/Ctrl+y: scroll down/up | Ctrl+d/Ctrl+u: scroll down/up by ½ page".into(),
-                "Ctrl+f/Ctrl+b: scroll down/up by page | w: toggle wrapping".into(),
+                "Ctrl+f/Ctrl+b: scroll down/up by page | W: toggle wrapping".into(),
             ])
             .fg(Color::DarkGray);
             f.render_widget(help, panel_chunks[1]);

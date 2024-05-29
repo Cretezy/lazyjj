@@ -92,6 +92,26 @@ impl Commander {
     pub fn untrack_branch(&mut self, branch: &Branch) -> Result<(), CommandError> {
         self.execute_void_jj_command(vec!["branch", "untrack", &branch.to_string()])
     }
+
+    /// Git push. Maps to `jj git push`
+    pub fn git_push(&mut self, all_branches: bool) -> Result<String, CommandError> {
+        let mut args = vec!["git", "push"];
+        if all_branches {
+            args.push("--all");
+        }
+
+        self.execute_jj_command(args, true, true)
+    }
+
+    /// Git fetch. Maps to `jj git fetch`
+    pub fn git_fetch(&mut self, all_remotes: bool) -> Result<String, CommandError> {
+        let mut args = vec!["git", "fetch"];
+        if all_remotes {
+            args.push("--all-remotes");
+        }
+
+        self.execute_jj_command(args, true, true)
+    }
 }
 
 #[cfg(test)]

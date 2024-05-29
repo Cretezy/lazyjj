@@ -46,14 +46,14 @@ pub enum CommandError {
 
 impl CommandError {
     pub fn into_text<'a>(&self, title: &'a str) -> Result<Text<'a>, ansi_to_tui::Error> {
-        Ok(Text::from(
-            [
-                vec![Line::raw(title).bold().fg(Color::Red)],
-                vec![Line::raw(""), Line::raw("")],
-                self.to_string().into_text()?.lines,
-            ]
-            .concat(),
-        ))
+        let mut lines = vec![];
+        if !title.is_empty() {
+            lines.push(Line::raw(title).bold().fg(Color::Red));
+            lines.append(&mut vec![Line::raw(""), Line::raw("")]);
+        }
+        lines.append(&mut self.to_string().into_text()?.lines);
+
+        Ok(Text::from(lines))
     }
 }
 
