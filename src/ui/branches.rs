@@ -30,7 +30,12 @@ struct DeleteBranch {
     name: String,
 }
 
+struct ForgetBranch {
+    name: String,
+}
+
 const DELETE_BRANCH_POPUP_ID: u16 = 1;
+const FORGET_BRANCH_POPUP_ID: u16 = 2;
 
 /// Branches tab. Shows branches in left panel and selected branch current change in right panel.
 pub struct Branches<'a> {
@@ -48,6 +53,7 @@ pub struct Branches<'a> {
     create: Option<CreateBranch<'a>>,
     rename: Option<RenameBranch<'a>>,
     delete: Option<DeleteBranch>,
+    forget: Option<ForgetBranch>,
 
     popup: ConfirmDialogState,
     popup_tx: std::sync::mpsc::Sender<Listener>,
@@ -127,6 +133,7 @@ impl Branches<'_> {
             create: None,
             rename: None,
             delete: None,
+            forget: None,
 
             popup: ConfirmDialogState::default(),
             popup_tx,
@@ -220,6 +227,26 @@ impl Component for Branches<'_> {
                             Err(err) => {
                                 self.message_popup = Some(MessagePopup {
                                     title: "Delete error".into(),
+                                    messages: err.to_string().into_text()?,
+                                });
+                            }
+                        }
+                        return Ok(None);
+                    }
+                }
+                FORGET_BRANCH_POPUP_ID => {
+                    if let Some(forget) = self.forget.as_ref() {
+                        match commander.delete_branch(&forget.name) {
+                            Ok(_) => {
+                                self.refresh_branches(commander);
+                                let branches = Vec::new();
+                                let branches = self.branches_output.as_ref().unwrap_or(&branches);
+                                self.branch = branches.first().map(|branch| branch.to_owned());
+                                self.refresh_branch(commander);
+                            }
+                            Err(err) => {
+                                self.message_popup = Some(MessagePopup {
+                                    title: "Forget error".into(),
                                     messages: err.to_string().into_text()?,
                                 });
                             }
@@ -326,7 +353,7 @@ impl Component for Branches<'_> {
 
             let help = Paragraph::new(vec![
                 "j/k: scroll down/up | J/K: scroll down by ½ page | a: show all remotes".into(),
-                "c: create branch | r: rename branch | d: delete branch | t/T: track/untrack branch".into(),
+                "c: create branch | r: rename branch | d/f: delete/forget branch | t/T: track/untrack branch".into(),
             ])
             .fg(Color::DarkGray);
             f.render_widget(help, panel_chunks[1]);
@@ -702,6 +729,25 @@ impl Component for Branches<'_> {
                             Span::styled(" Delete ", Style::new().bold().cyan()),
                             Text::from(vec![Line::from(format!(
                                 "Are you sure you want to delete the {} branch?",
+                                branch.name
+                            ))]),
+                        )
+                        .with_yes_button(ButtonLabel::YES.clone())
+                        .with_no_button(ButtonLabel::NO.clone())
+                        .with_listener(Some(self.popup_tx.clone()))
+                        .open();
+                    }
+                }
+                KeyCode::Char('f') => {
+                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref() {
+                        self.forget = Some(ForgetBranch {
+                            name: branch.name.clone(),
+                        });
+                        self.popup = ConfirmDialogState::new(
+                            FORGET_BRANCH_POPUP_ID,
+                            Span::styled(" Forget ", Style::new().bold().cyan()),
+                            Text::from(vec![Line::from(format!(
+                                "Are you sure you want to forget the {} branch?",
                                 branch.name
                             ))]),
                         )
