@@ -1,9 +1,11 @@
 #![allow(clippy::borrow_interior_mutable_const)]
 use crate::{
-    commander::{branches::BranchLine, CommandError, Commander},
+    commander::{branches::BranchLine, ids::ChangeId, CommandError, Commander},
     env::{Config, DiffFormat},
     ui::{
-        details_panel::DetailsPanel, message_popup::MessagePopup, utils::centered_rect_line_height,
+        details_panel::DetailsPanel,
+        message_popup::MessagePopup,
+        utils::{centered_rect, centered_rect_line_height},
         Component, ComponentAction,
     },
     ComponentInputResult,
@@ -36,6 +38,8 @@ struct ForgetBranch {
 
 const DELETE_BRANCH_POPUP_ID: u16 = 1;
 const FORGET_BRANCH_POPUP_ID: u16 = 2;
+const NEW_POPUP_ID: u16 = 3;
+const EDIT_POPUP_ID: u16 = 4;
 
 /// Branches tab. Shows branches in left panel and selected branch current change in right panel.
 pub struct Branches<'a> {
@@ -54,6 +58,10 @@ pub struct Branches<'a> {
     rename: Option<RenameBranch<'a>>,
     delete: Option<DeleteBranch>,
     forget: Option<ForgetBranch>,
+
+    describe_textarea: Option<TextArea<'a>>,
+    describe_after_new: bool,
+    describe_after_new_change: Option<ChangeId>,
 
     popup: ConfirmDialogState,
     popup_tx: std::sync::mpsc::Sender<Listener>,
@@ -134,6 +142,10 @@ impl Branches<'_> {
             rename: None,
             delete: None,
             forget: None,
+
+            describe_after_new: false,
+            describe_textarea: None,
+            describe_after_new_change: None,
 
             popup: ConfirmDialogState::default(),
             popup_tx,
@@ -231,7 +243,6 @@ impl Component for Branches<'_> {
                                 });
                             }
                         }
-                        return Ok(None);
                     }
                 }
                 FORGET_BRANCH_POPUP_ID => {
@@ -251,7 +262,28 @@ impl Component for Branches<'_> {
                                 });
                             }
                         }
-                        return Ok(None);
+                    }
+                }
+                NEW_POPUP_ID => {
+                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref() {
+                        commander.run_new(&branch.to_string())?;
+                        let head = commander.get_current_head()?;
+                        if self.describe_after_new {
+                            self.describe_after_new_change = Some(head.change_id);
+                            self.describe_after_new = false;
+                            let textarea = TextArea::default();
+                            self.describe_textarea = Some(textarea);
+                            return Ok(Some(ComponentAction::SetTextAreaActive(true)));
+                        } else {
+                            return Ok(Some(ComponentAction::ViewLog(head)));
+                        }
+                    }
+                }
+                EDIT_POPUP_ID => {
+                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref() {
+                        commander.run_edit(&branch.to_string())?;
+                        let head = commander.get_current_head()?;
+                        return Ok(Some(ComponentAction::ViewLog(head)));
                     }
                 }
                 _ => {}
@@ -275,7 +307,7 @@ impl Component for Branches<'_> {
         {
             let panel_chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Fill(1), Constraint::Length(2)])
+                .constraints([Constraint::Fill(1), Constraint::Length(3)])
                 .split(chunks[0]);
 
             let current_branch_index = self.get_current_branch_index();
@@ -340,20 +372,18 @@ impl Component for Branches<'_> {
                 branch_lines
             };
 
-            let files = List::new(lines)
-                .block(
-                    Block::bordered()
-                        .title(" Branches ")
-                        .border_type(BorderType::Rounded),
-                )
-                .scroll_padding(3);
+            let branches_block = Block::bordered()
+                .title(" Branches ")
+                .border_type(BorderType::Rounded);
+            self.branches_height = branches_block.inner(panel_chunks[0]).height;
+            let branches = List::new(lines).block(branches_block).scroll_padding(3);
             *self.branches_list_state.selected_mut() = current_branch_index;
-            f.render_stateful_widget(files, panel_chunks[0], &mut self.branches_list_state);
-            self.branches_height = panel_chunks[0].height - 2;
+            f.render_stateful_widget(branches, panel_chunks[0], &mut self.branches_list_state);
 
             let help = Paragraph::new(vec![
                 "j/k: scroll down/up | J/K: scroll down by ½ page | a: show all remotes".into(),
                 "c: create branch | r: rename branch | d/f: delete/forget branch | t/T: track/untrack branch".into(),
+                "Enter: view in log | n: new from branch | N: new and describe | e: edit branch".into(),
             ])
             .fg(Color::DarkGray);
             f.render_widget(help, panel_chunks[1]);
@@ -526,6 +556,39 @@ impl Component for Branches<'_> {
             }
         }
 
+        // Draw describe textarea
+        {
+            if let Some(describe_textarea) = self.describe_textarea.as_mut() {
+                let block = Block::bordered()
+                    .title(Span::styled(" Describe ", Style::new().bold().cyan()))
+                    .title_alignment(Alignment::Center)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(Color::Green));
+                let area = centered_rect(area, 50, 50);
+                f.render_widget(Clear, area);
+                f.render_widget(&block, area);
+
+                let popup_chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([Constraint::Fill(1), Constraint::Length(2)])
+                    .split(block.inner(area));
+
+                f.render_widget(describe_textarea.widget(), popup_chunks[0]);
+
+                let help = Paragraph::new(vec!["Ctrl+s: save | Escape: cancel".into()])
+                    .fg(Color::DarkGray)
+                    .alignment(Alignment::Center)
+                    .block(
+                        Block::default()
+                            .borders(Borders::TOP)
+                            .border_type(BorderType::Rounded)
+                            .border_style(Style::default().fg(Color::DarkGray)),
+                    );
+
+                f.render_widget(help, popup_chunks[1]);
+            }
+        }
+
         Ok(())
     }
 
@@ -643,6 +706,40 @@ impl Component for Branches<'_> {
             return Ok(ComponentInputResult::Handled);
         }
 
+        if let Some(describe_textarea) = self.describe_textarea.as_mut()
+            && let Some(describe_after_new_change) = self.describe_after_new_change.as_ref()
+        {
+            if let Event::Key(key) = event {
+                match key.code {
+                    KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        // TODO: Handle error
+                        commander.run_describe(
+                            describe_after_new_change.as_str(),
+                            &describe_textarea.lines().join("\n"),
+                        )?;
+                        self.describe_textarea = None;
+                        self.describe_after_new_change = None;
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::Multiple(vec![
+                                ComponentAction::SetTextAreaActive(false),
+                                ComponentAction::ViewLog(commander.get_current_head()?),
+                            ]),
+                        ));
+                    }
+                    KeyCode::Esc => {
+                        self.describe_textarea = None;
+                        self.describe_after_new_change = None;
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetTextAreaActive(false),
+                        ));
+                    }
+                    _ => {}
+                }
+            }
+            describe_textarea.input(event);
+            return Ok(ComponentInputResult::Handled);
+        }
+
         if let Event::Key(key) = event {
             if self.popup.is_opened() {
                 if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc {
@@ -757,9 +854,11 @@ impl Component for Branches<'_> {
                         .open();
                     }
                 }
+                // TODO: Ask for confirmation?
                 KeyCode::Char('t') => {
                     if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref()
                         && branch.remote.is_some()
+                        && branch.present
                     {
                         commander.track_branch(branch)?;
                         self.refresh_branches(commander);
@@ -769,12 +868,71 @@ impl Component for Branches<'_> {
                 KeyCode::Char('T') => {
                     if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref()
                         && branch.remote.is_some()
+                        && branch.present
                     {
                         commander.untrack_branch(branch)?;
                         self.refresh_branches(commander);
                         self.refresh_branch(commander);
                     }
                 }
+                KeyCode::Char('n') | KeyCode::Char('N') => {
+                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref()
+                        && branch.present
+                    {
+                        self.popup = ConfirmDialogState::new(
+                            NEW_POPUP_ID,
+                            Span::styled(" New ", Style::new().bold().cyan()),
+                            Text::from(vec![
+                                Line::from("Are you sure you want to create a new change?"),
+                                Line::from(format!("Branch: {}", branch)),
+                            ]),
+                        )
+                        .with_yes_button(ButtonLabel::YES.clone())
+                        .with_no_button(ButtonLabel::NO.clone())
+                        .with_listener(Some(self.popup_tx.clone()))
+                        .open();
+
+                        self.describe_after_new = key.code == KeyCode::Char('N');
+                    }
+                }
+                KeyCode::Char('e') => {
+                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref()
+                        && branch.present
+                    {
+                        if commander.check_revision_immutable(&branch.to_string())? {
+                            self.message_popup = Some(MessagePopup {
+                                title: "Edit".into(),
+                                messages: vec![
+                                    "The change cannot be edited because it is immutable.".into(),
+                                ]
+                                .into(),
+                            });
+                        } else {
+                            self.popup = ConfirmDialogState::new(
+                                EDIT_POPUP_ID,
+                                Span::styled(" Edit ", Style::new().bold().cyan()),
+                                Text::from(vec![
+                                    Line::from("Are you sure you want to edit an existing change?"),
+                                    Line::from(format!("Branch: {}", branch)),
+                                ]),
+                            )
+                            .with_yes_button(ButtonLabel::YES.clone())
+                            .with_no_button(ButtonLabel::NO.clone())
+                            .with_listener(Some(self.popup_tx.clone()))
+                            .open();
+                        }
+                    }
+                }
+                KeyCode::Enter => {
+                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref()
+                        && branch.present
+                    {
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::ViewLog(commander.get_branch_head(branch)?),
+                        ));
+                    }
+                }
+
                 _ => return Ok(ComponentInputResult::NotHandled),
             };
         }

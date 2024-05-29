@@ -54,6 +54,12 @@ impl App<'_> {
         })
     }
 
+    pub fn set_tab(&mut self, commander: &mut Commander, tab: Tab) -> Result<()> {
+        self.current_tab = tab;
+        self.get_current_component_mut().switch(commander)?;
+        Ok(())
+    }
+
     pub fn handle_action(
         &mut self,
         component_action: ComponentAction,
@@ -62,8 +68,11 @@ impl App<'_> {
         match component_action {
             ComponentAction::ViewFiles(head) => {
                 self.files.set_head(commander, &head)?;
-                self.current_tab = Tab::Files;
-                self.get_current_component_mut().switch(commander)?;
+                self.set_tab(commander, Tab::Files)?;
+            }
+            ComponentAction::ViewLog(head) => {
+                self.log.set_head(commander, head);
+                self.set_tab(commander, Tab::Log)?;
             }
             ComponentAction::ChangeHead(head) => {
                 self.files.set_head(commander, &head)?;

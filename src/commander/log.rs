@@ -1,5 +1,6 @@
 use crate::{
     commander::{
+        branches::Branch,
         ids::{ChangeId, CommitId},
         CommandError, Commander, RemoveEndLine,
     },
@@ -40,7 +41,7 @@ impl Display for HeadParseError {
 
 // Template which outputs `[change_id|commit_id|divergent]`. Used to parse data from log and other
 // commands which supports templating.
-const HEAD_TEMPLATE: &str = r#""[" ++ change_id ++ "|" ++ commit_id ++ "|" ++ if(divergent, "true", "false") ++ "|" ++ if(immutable, "true", "false") ++ "]""#;
+const HEAD_TEMPLATE: &str = r#""[" ++ change_id ++ "|" ++ commit_id ++ "|" ++ divergent ++ "|" ++ if(immutable, "true", "false") ++ "]""#;
 lazy_static! {
     // Regex to parse HEAD_TEMPLATE
     static ref HEAD_TEMPLATE_REGEX: Regex = Regex::new(r"\[(.*)\|(.*)\|(.*)\|(.*)\]").unwrap();
@@ -272,6 +273,53 @@ impl Commander {
             .with_context(|| format!("Failed getting commit description: {commit_id}"))?
             .remove_end_line())
     }
+
+    /// Check if a revision is immutable
+    /// Maps to `jj log -r <revision> -T immutable`
+    pub fn check_revision_immutable(&mut self, revision: &str) -> Result<bool> {
+        Ok(self
+            .execute_jj_command(
+                vec![
+                    "log",
+                    "--no-graph",
+                    "--template",
+                    "immutable",
+                    "-r",
+                    revision,
+                    "--limit",
+                    "1",
+                ],
+                false,
+                true,
+            )
+            .with_context(|| format!("Failed checking if revision is immutable: {revision}"))?
+            .remove_end_line()
+            == "true")
+    }
+
+    /// Get branch head
+    /// Maps to `jj log -r <branch>[@<remote>]`
+    pub fn get_branch_head(&mut self, branch: &Branch) -> Result<Head> {
+        parse_head(
+            &self
+                .execute_jj_command(
+                    vec![
+                        "log",
+                        "--no-graph",
+                        "--template",
+                        &format!(r#"{} ++ "\n""#, HEAD_TEMPLATE),
+                        "-r",
+                        &branch.to_string(),
+                        "--limit",
+                        "1",
+                    ],
+                    false,
+                    true,
+                )
+                .context("Failed getting branch head")?
+                .remove_end_line(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -355,6 +403,28 @@ mod tests {
         assert_ne!(old_head, new_head);
 
         assert_eq!(new_head, test_repo.commander.get_head_latest(&old_head)?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn check_revision_immutable() -> Result<()> {
+        let mut test_repo = TestRepo::new()?;
+
+        assert!(!(test_repo.commander.check_revision_immutable("@")?));
+
+        Ok(())
+    }
+
+    #[test]
+    fn get_branch_head() -> Result<()> {
+        let mut test_repo = TestRepo::new()?;
+
+        let head = test_repo.commander.get_current_head()?;
+        // Create a branch advances from an empty change
+        let branch = test_repo.commander.create_branch("main")?;
+
+        assert_eq!(test_repo.commander.get_branch_head(&branch)?, head);
 
         Ok(())
     }

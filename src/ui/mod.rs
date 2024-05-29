@@ -23,6 +23,7 @@ use ratatui::{prelude::*, widgets::*};
 
 pub enum ComponentAction {
     ViewFiles(Head),
+    ViewLog(Head),
     ChangeHead(Head),
     SetTextAreaActive(bool),
     Multiple(Vec<ComponentAction>),

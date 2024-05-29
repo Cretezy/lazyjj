@@ -144,9 +144,13 @@ impl Log<'_> {
             None => heads.first(),
         };
         if let Some(next_head) = next_head {
-            next_head.clone_into(&mut self.head);
-            self.refresh_head_output(commander);
+            self.set_head(commander, next_head.clone());
         }
+    }
+
+    pub fn set_head(&mut self, commander: &mut Commander, head: Head) {
+        head.clone_into(&mut self.head);
+        self.refresh_head_output(commander);
     }
 }
 
@@ -172,7 +176,7 @@ impl Component for Log<'_> {
         {
             match res.0 {
                 NEW_POPUP_ID => {
-                    commander.run_new(&self.head.commit_id)?;
+                    commander.run_new(self.head.commit_id.as_str())?;
                     self.head = commander.get_current_head()?;
                     self.refresh_log_output(commander);
                     self.refresh_head_output(commander);
@@ -186,15 +190,13 @@ impl Component for Log<'_> {
                     return Ok(Some(ComponentAction::Multiple(actions)));
                 }
                 EDIT_POPUP_ID => {
-                    // TODO: Handle error
-                    commander.run_edit(&self.head.commit_id)?;
+                    commander.run_edit(self.head.commit_id.as_str())?;
                     self.refresh_log_output(commander);
                     self.refresh_head_output(commander);
                     return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
                 }
                 ABANDON_POPUP_ID => {
                     if self.head == commander.get_current_head()? {
-                        // TODO: Handle error
                         commander.run_abandon(&self.head.commit_id)?;
                         self.refresh_log_output(commander);
                         self.head = commander.get_current_head()?;
@@ -202,7 +204,6 @@ impl Component for Log<'_> {
                         return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
                     } else {
                         let head_parent = commander.get_commit_parent(&self.head.commit_id)?;
-                        // TODO: Handle error
                         commander.run_abandon(&self.head.commit_id)?;
                         self.refresh_log_output(commander);
                         self.head = head_parent;
@@ -434,7 +435,7 @@ impl Component for Log<'_> {
                     KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         // TODO: Handle error
                         commander.run_describe(
-                            &self.head.commit_id,
+                            self.head.commit_id.as_str(),
                             &describe_textarea.lines().join("\n"),
                         )?;
                         self.refresh_log_output(commander);
@@ -568,9 +569,7 @@ impl Component for Log<'_> {
                     .with_listener(Some(self.popup_tx.clone()))
                     .open();
 
-                    if key.code == KeyCode::Char('N') {
-                        self.describe_after_new = true;
-                    }
+                    self.describe_after_new = key.code == KeyCode::Char('N');
                 }
                 KeyCode::Char('e') => {
                     if self.head.immutable {
