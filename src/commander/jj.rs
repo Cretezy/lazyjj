@@ -3,15 +3,15 @@ use crate::commander::{branches::Branch, ids::CommitId, CommandError, Commander}
 use anyhow::{Context, Result};
 
 impl Commander {
-    /// Create a new change after change. Maps to `jj new <revision>`
-    pub fn run_new(&mut self, commit_id: &CommitId) -> Result<()> {
-        self.execute_void_jj_command(vec!["new", commit_id.as_str()])
+    /// Create a new change after revision. Maps to `jj new <revision>`
+    pub fn run_new(&mut self, revision: &str) -> Result<()> {
+        self.execute_void_jj_command(vec!["new", revision])
             .context("Failed executing jj new")
     }
 
-    /// Edit change. Maps to `jj edit <revision>`
-    pub fn run_edit(&mut self, commit_id: &CommitId) -> Result<()> {
-        self.execute_void_jj_command(vec!["edit", commit_id.as_str()])
+    /// Edit change. Maps to `jj edit <commit>`
+    pub fn run_edit(&mut self, revision: &str) -> Result<()> {
+        self.execute_void_jj_command(vec!["edit", revision])
             .context("Failed executing jj edit")
     }
 
@@ -22,8 +22,8 @@ impl Commander {
     }
 
     /// Describe change. Maps to `jj describe <revision> -m <message>`
-    pub fn run_describe(&mut self, commit_id: &CommitId, message: &str) -> Result<()> {
-        self.execute_void_jj_command(vec!["describe", commit_id.as_str(), "-m", message])
+    pub fn run_describe(&mut self, revision: &str, message: &str) -> Result<()> {
+        self.execute_void_jj_command(vec!["describe", revision, "-m", message])
             .context("Failed executing jj describe")
     }
 
@@ -34,6 +34,7 @@ impl Commander {
         Ok(Branch {
             name: name.to_owned(),
             remote: None,
+            present: true,
         })
     }
 
@@ -48,6 +49,7 @@ impl Commander {
         Ok(Branch {
             name: name.to_owned(),
             remote: None,
+            present: true,
         })
     }
 
@@ -124,7 +126,7 @@ mod tests {
         let mut test_repo = TestRepo::new()?;
 
         let head = test_repo.commander.get_current_head()?;
-        test_repo.commander.run_new(&head.commit_id)?;
+        test_repo.commander.run_new(head.commit_id.as_str())?;
         assert_eq!(
             test_repo
                 .commander
@@ -146,9 +148,9 @@ mod tests {
         let mut test_repo = TestRepo::new()?;
 
         let head = test_repo.commander.get_current_head()?;
-        test_repo.commander.run_new(&head.commit_id)?;
+        test_repo.commander.run_new(head.commit_id.as_str())?;
         assert_ne!(head, test_repo.commander.get_current_head()?);
-        test_repo.commander.run_edit(&head.commit_id)?;
+        test_repo.commander.run_edit(head.commit_id.as_str())?;
         assert_eq!(
             test_repo
                 .commander
@@ -192,7 +194,9 @@ mod tests {
         let mut test_repo = TestRepo::new()?;
 
         let head = test_repo.commander.get_current_head()?;
-        test_repo.commander.run_describe(&head.commit_id, "AAA")?;
+        test_repo
+            .commander
+            .run_describe(head.commit_id.as_str(), "AAA")?;
         assert_eq!(
             test_repo
                 .commander
@@ -229,7 +233,7 @@ mod tests {
 
         // Create new change, since by default `jj branch create` uses current change
         let head = test_repo.commander.get_current_head()?;
-        test_repo.commander.run_new(&head.commit_id)?;
+        test_repo.commander.run_new(head.commit_id.as_str())?;
         assert_ne!(head, test_repo.commander.get_current_head()?);
 
         let branch = test_repo
@@ -262,7 +266,7 @@ mod tests {
 
         // Create new change, since by default `jj branch create` uses current change
         let old_head = test_repo.commander.get_current_head()?;
-        test_repo.commander.run_new(&old_head.commit_id)?;
+        test_repo.commander.run_new(old_head.commit_id.as_str())?;
         let new_head = test_repo.commander.get_current_head()?;
         assert_ne!(old_head, new_head);
 
@@ -325,7 +329,8 @@ mod tests {
             branches,
             [Branch {
                 name: "test2".to_owned(),
-                remote: None
+                remote: None,
+                present: true,
             }]
         );
 

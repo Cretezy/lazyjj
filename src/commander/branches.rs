@@ -13,6 +13,7 @@ use std::fmt::Display;
 pub struct Branch {
     pub name: String,
     pub remote: Option<String>,
+    pub present: bool,
 }
 
 impl Display for Branch {
@@ -27,10 +28,10 @@ impl Display for Branch {
 }
 
 // Template which outputs `[name@remote]`. Used to parse data from branch list
-const BRANCH_TEMPLATE: &str = r#""[" ++ name ++ "@" ++ remote ++ "]""#;
+const BRANCH_TEMPLATE: &str = r#""[" ++ name ++ "@" ++ remote ++ "|" ++ present ++ "]""#;
 lazy_static! {
     // Regex to parse branch
-    static ref BRANCH_REGEX: Regex = Regex::new(r"^\[(.*)@(.*)\]$").unwrap();
+    static ref BRANCH_REGEX: Regex = Regex::new(r"^\[(.*)@(.*)\|(.*)\]$").unwrap();
 }
 
 fn parse_branch(text: &str) -> Option<Branch> {
@@ -38,9 +39,11 @@ fn parse_branch(text: &str) -> Option<Branch> {
     captured.as_ref().and_then(|captured| {
         let name = captured.get(1);
         let remote = captured.get(2);
+        let present = captured.get(3);
 
         if let Some(name) = name
             && let Some(remote) = remote
+            && let Some(present) = present
         {
             let remote = remote.as_str().to_owned();
             Some(Branch {
@@ -50,6 +53,7 @@ fn parse_branch(text: &str) -> Option<Branch> {
                     Some(remote)
                 },
                 name: name.as_str().to_owned(),
+                present: present.as_str() == "true",
             })
         } else {
             None

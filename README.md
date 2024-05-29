@@ -75,24 +75,24 @@ To use a different repository: `lazyjj --path ~/path/to/repo`
 
 - Select current change with `@`
 - View change files in files tab with `Enter`
-- Display different revset with `r`
+- Display different revset with `r` (`jj log -r`)
 - Change right panel diff format between color words (default) and Git with `w`
 - Toggle right panel wrapping with `W`
 - Create new change after highlighted change with `n` (`jj new`)
   - Create new change and describe with `N` (`jj new -m`)
 - Edit highlighted change `e` (`jj edit`)
-- Abandon a change with `a`
+- Abandon a change with `a` (`jj abandon`)
 - Describe the highlighted change with `d` (`jj describe`)
   - Save with `Ctrl+s`
   - Cancel with `Esc`
-- Set a branch to the highlighted change with `b`
+- Set a branch to the highlighted change with `b` (`jj branch set`)
   - Scroll in branch list with `j`/`k`
   - Create a new branch with `c`
   - Use auto-generated name with `g`
-- Git fetch with `f`
-  - Git fetch all remotes with `F`
-- Git push with `p`
-  - Git push all branches with `P`
+- Git fetch with `f` (`jj git fetch`)
+  - Git fetch all remotes with `F` (`jj git fetch --all-remotes`)
+- Git push with `p` (`jj git push`)
+  - Git push all branches with `P` (`jj git push --all`)
 
 ### Files tab
 
@@ -102,15 +102,17 @@ To use a different repository: `lazyjj --path ~/path/to/repo`
 
 ### Branches tab
 
-- Show branches with all remotes with `a`
-- Create a branch with `c`
-- Rename a branch with `r`
-- Delete a branch with `d`
-- Forget a branch with `f`
-- Track a branch with `t` (only works for branches with remotes)
-- Untrack a branch with `T` (only works for branches with remotes)
+- Show branches with all remotes with `a` (`jj branch list --all`)
+- Create a branch with `c` (`jj branch create`)
+- Rename a branch with `r` (`jj branch rename`)
+- Delete a branch with `d` (`jj branch delete`)
+- Forget a branch with `f` (`jj branch forget`)
+- Track a branch with `t` (only works for branches with remotes) (`jj branch track`)
+- Untrack a branch with `T` (only works for branches with remotes) (`jj branch untrack`)
 - Change right panel diff format between color words (default) and Git with `w`
 - Toggle right panel wrapping with `W`
+- Create a new change after the highlighted branch's change with `n` (`jj new`)
+  - Create a new change and describe with `N` (`jj new -m`)
 
 ### Command log tab
 
