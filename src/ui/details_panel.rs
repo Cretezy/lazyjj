@@ -66,7 +66,7 @@ impl DetailsPanel {
             KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.scroll((self.height as isize).saturating_neg())
             }
-            KeyCode::Char('w') => {
+            KeyCode::Char('W') => {
                 self.wrap = !self.wrap;
             }
             _ => return false,

@@ -230,7 +230,7 @@ impl Component for Log<'_> {
         {
             let panel_chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Fill(1), Constraint::Length(2)])
+                .constraints([Constraint::Fill(1), Constraint::Length(3)])
                 .split(chunks[0]);
 
             let mut scroll_offset = 0;
@@ -287,20 +287,18 @@ impl Component for Log<'_> {
                 None => " Log ",
             };
 
-            let log = List::new(log_lines)
-                .block(
-                    Block::bordered()
-                        .title(title)
-                        .border_type(BorderType::Rounded),
-                )
-                .scroll_padding(7);
+            let log_block = Block::bordered()
+                .title(title)
+                .border_type(BorderType::Rounded);
+            self.log_height = log_block.inner(panel_chunks[0]).height;
+            let log = List::new(log_lines).block(log_block).scroll_padding(7);
             f.render_stateful_widget(log, panel_chunks[0], &mut self.log_list_state);
-            self.log_height = panel_chunks[0].height.saturating_sub(2);
 
             let help = Paragraph::new(vec![
                 "j/k: scroll down/up | J/K: scroll down by ½ page | Enter: see files | @: current change | r: revset"
                     .into(),
                 "d: describe change | e: edit change | n: new change | N: new with message | a: abandon change | b: set branch".into(),
+                "f: git fetch | F: git fetch all remotes | p: git push | P: git push all branches".into(),
             ]).fg(Color::DarkGray);
             f.render_widget(help, panel_chunks[1]);
         }
@@ -328,7 +326,7 @@ impl Component for Log<'_> {
 
             let help = Paragraph::new(vec![
                 "Ctrl+e/Ctrl+y: scroll down/up | Ctrl+d/Ctrl+u: scroll down/up by ½ page".into(),
-                "Ctrl+f/Ctrl+b: scroll down/up by page | p: toggle diff format | w: toggle wrapping".into(),
+                "Ctrl+f/Ctrl+b: scroll down/up by page | w: toggle diff format | W: toggle wrapping".into(),
             ]).fg(Color::DarkGray);
             f.render_widget(help, panel_chunks[1]);
         }
@@ -545,7 +543,7 @@ impl Component for Log<'_> {
                     self.head = commander.get_current_head()?;
                     self.refresh_head_output(commander);
                 }
-                KeyCode::Char('p') => {
+                KeyCode::Char('w') => {
                     self.diff_format = match self.diff_format {
                         DiffFormat::ColorWords => DiffFormat::Git,
                         _ => DiffFormat::ColorWords,
@@ -673,6 +671,46 @@ impl Component for Log<'_> {
                     return Ok(ComponentInputResult::HandledAction(
                         ComponentAction::ViewFiles(self.head.clone()),
                     ));
+                }
+                KeyCode::Char('p') | KeyCode::Char('P') => {
+                    match commander.git_push(key.code == KeyCode::Char('P')) {
+                        Ok(result) if !result.is_empty() => {
+                            self.message_popup = Some(MessagePopup {
+                                title: "Push message".into(),
+                                messages: result.into_text()?,
+                            });
+                        }
+                        Err(err) => {
+                            self.message_popup = Some(MessagePopup {
+                                title: "Push error".into(),
+                                messages: err.into_text("")?,
+                            });
+                        }
+                        _ => (),
+                    }
+
+                    self.refresh_log_output(commander);
+                    self.refresh_head_output(commander);
+                }
+                KeyCode::Char('f') | KeyCode::Char('F') => {
+                    match commander.git_fetch(key.code == KeyCode::Char('F')) {
+                        Ok(result) if !result.is_empty() => {
+                            self.message_popup = Some(MessagePopup {
+                                title: "Fetch message".into(),
+                                messages: result.into_text()?,
+                            });
+                        }
+                        Err(err) => {
+                            self.message_popup = Some(MessagePopup {
+                                title: "Fetch error".into(),
+                                messages: err.into_text("")?,
+                            });
+                        }
+                        _ => (),
+                    }
+
+                    self.refresh_log_output(commander);
+                    self.refresh_head_output(commander);
                 }
                 _ => return Ok(ComponentInputResult::NotHandled),
             };

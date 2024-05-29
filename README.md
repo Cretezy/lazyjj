@@ -15,11 +15,12 @@ https://github.com/Cretezy/lazyjj/assets/2672503/b5e6b4f1-ebdb-448f-af9e-361e86f
   - Toggle between color words and git diff with `p`
   - See different revset with `r`
   - Set a branch to selected change with `b`
+  - Fetch/push with `f`/`p`
 - Files
   - View files in current change and diff in side panel
   - See a change's files from the log tab with `Enter`
   - View conflicts list in current change
-  - Toggle between color words and git diff with `p`
+  - Toggle between color words and git diff with `w`
 - Branches
   - View list of branches, including from all remotes with `a`
   - Create with `c`, rename with `r`, delete with `d`, forget with `f`
@@ -75,8 +76,8 @@ To use a different repository: `lazyjj --path ~/path/to/repo`
 - Select current change with `@`
 - View change files in files tab with `Enter`
 - Display different revset with `r`
-- Change right panel diff format between color words (default) and Git with `p`
-- Toggle right panel wrapping with `w`
+- Change right panel diff format between color words (default) and Git with `w`
+- Toggle right panel wrapping with `W`
 - Create new change after highlighted change with `n` (`jj new`)
   - Create new change and describe with `N` (`jj new -m`)
 - Edit highlighted change `e` (`jj edit`)
@@ -88,12 +89,16 @@ To use a different repository: `lazyjj --path ~/path/to/repo`
   - Scroll in branch list with `j`/`k`
   - Create a new branch with `c`
   - Use auto-generated name with `g`
+- Git fetch with `f`
+  - Git fetch all remotes with `F`
+- Git push with `p`
+  - Git push all branches with `P`
 
 ### Files tab
 
 - Select current change with `@`
-- Change right panel diff format between color words (default) and Git with `p`
-- Toggle right panel wrapping with `w`
+- Change right panel diff format between color words (default) and Git with `w`
+- Toggle right panel wrapping with `W`
 
 ### Branches tab
 
@@ -104,8 +109,10 @@ To use a different repository: `lazyjj --path ~/path/to/repo`
 - Forget a branch with `f`
 - Track a branch with `t` (only works for branches with remotes)
 - Untrack a branch with `T` (only works for branches with remotes)
+- Change right panel diff format between color words (default) and Git with `w`
+- Toggle right panel wrapping with `W`
 
 ### Command log tab
 
 - Select latest command with `@`
-- Toggle right panel wrapping with `w`
+- Toggle right panel wrapping with `W`

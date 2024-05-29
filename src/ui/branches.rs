@@ -236,7 +236,7 @@ impl Component for Branches<'_> {
                 }
                 FORGET_BRANCH_POPUP_ID => {
                     if let Some(forget) = self.forget.as_ref() {
-                        match commander.delete_branch(&forget.name) {
+                        match commander.forget_branch(&forget.name) {
                             Ok(_) => {
                                 self.refresh_branches(commander);
                                 let branches = Vec::new();
@@ -388,7 +388,7 @@ impl Component for Branches<'_> {
 
             let help = Paragraph::new(vec![
                 "Ctrl+e/Ctrl+y: scroll down/up | Ctrl+d/Ctrl+u: scroll down/up by ½ page".into(),
-                "Ctrl+f/Ctrl+b: scroll down/up by page | p: toggle diff format | w: toggle wrapping".into(),
+                "Ctrl+f/Ctrl+b: scroll down/up by page | w: toggle diff format | W: toggle wrapping".into(),
             ]).fg(Color::DarkGray);
             f.render_widget(help, panel_chunks[1]);
         }
@@ -680,7 +680,7 @@ impl Component for Branches<'_> {
                         (self.branches_height as isize / 2).saturating_neg(),
                     );
                 }
-                KeyCode::Char('p') => {
+                KeyCode::Char('w') => {
                     self.diff_format = match self.diff_format {
                         DiffFormat::ColorWords => DiffFormat::Git,
                         _ => DiffFormat::ColorWords,
