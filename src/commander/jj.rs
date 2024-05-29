@@ -77,6 +77,16 @@ impl Commander {
     pub fn delete_branch(&mut self, name: &str) -> Result<(), CommandError> {
         self.execute_void_jj_command(vec!["branch", "delete", name])
     }
+
+    /// Track branch. Maps to `jj branch track <branch>@<remote>`
+    pub fn track_branch(&mut self, branch: &Branch) -> Result<(), CommandError> {
+        self.execute_void_jj_command(vec!["branch", "track", &branch.to_string()])
+    }
+
+    /// Untrack branch. Maps to `jj branch untrack <branch>@<remote>`
+    pub fn untrack_branch(&mut self, branch: &Branch) -> Result<(), CommandError> {
+        self.execute_void_jj_command(vec!["branch", "untrack", &branch.to_string()])
+    }
 }
 
 #[cfg(test)]

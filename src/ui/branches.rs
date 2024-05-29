@@ -326,7 +326,7 @@ impl Component for Branches<'_> {
 
             let help = Paragraph::new(vec![
                 "j/k: scroll down/up | J/K: scroll down by ½ page | a: show all remotes".into(),
-                "c: create branch | r: rename branch | d: delete branch".into(),
+                "c: create branch | r: rename branch | d: delete branch | t/T: track/untrack branch".into(),
             ])
             .fg(Color::DarkGray);
             f.render_widget(help, panel_chunks[1]);
@@ -709,6 +709,24 @@ impl Component for Branches<'_> {
                         .with_no_button(ButtonLabel::NO.clone())
                         .with_listener(Some(self.popup_tx.clone()))
                         .open();
+                    }
+                }
+                KeyCode::Char('t') => {
+                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref()
+                        && branch.remote.is_some()
+                    {
+                        commander.track_branch(branch)?;
+                        self.refresh_branches(commander);
+                        self.refresh_branch(commander);
+                    }
+                }
+                KeyCode::Char('T') => {
+                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref()
+                        && branch.remote.is_some()
+                    {
+                        commander.untrack_branch(branch)?;
+                        self.refresh_branches(commander);
+                        self.refresh_branch(commander);
                     }
                 }
                 _ => return Ok(ComponentInputResult::NotHandled),
