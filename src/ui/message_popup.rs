@@ -1,20 +1,28 @@
-use crossterm::event::{KeyCode, KeyEvent};
+use anyhow::Result;
+use crossterm::event::{Event, KeyCode};
 use ratatui::{
-    layout::Alignment,
+    layout::{Alignment, Rect},
     style::{Color, Style, Stylize},
     text::{Span, Text},
     widgets::{block::Title, BorderType, Borders},
+    Frame,
 };
 use tui_confirm_dialog::PopupMessage;
+
+use crate::{
+    commander::Commander,
+    ui::{Component, ComponentAction},
+    ComponentInputResult,
+};
 
 pub struct MessagePopup<'a> {
     pub title: Title<'a>,
     pub messages: Text<'a>,
 }
 
-impl MessagePopup<'_> {
+impl Component for MessagePopup<'_> {
     /// Render the parent into the area.
-    pub fn render(&self) -> PopupMessage {
+    fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
         let mut title = self.title.clone();
         title.content.spans = [
             vec![Span::raw(" ")],
@@ -25,21 +33,35 @@ impl MessagePopup<'_> {
 
         title.content = title.content.fg(Color::Cyan).bold();
 
-        let popup = tui_confirm_dialog::PopupMessage::new(title, self.messages.clone())
+        let popup = PopupMessage::new(title, self.messages.clone())
             .title_alignment(Alignment::Center)
             .text_alignment(Alignment::Center)
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(Color::Green));
 
-        popup
+        f.render_widget(popup, area);
+
+        Ok(())
     }
 
-    /// Handle input. Returns bool of if to close
-    pub fn input(&self, key: KeyEvent) -> bool {
-        matches!(
-            key.code,
-            KeyCode::Char('y') | KeyCode::Char('n') | KeyCode::Char('o') | KeyCode::Enter
-        )
+    fn input(&mut self, _commander: &mut Commander, event: Event) -> Result<ComponentInputResult> {
+        if let Event::Key(key) = event
+            && matches!(
+                key.code,
+                KeyCode::Char('y')
+                    | KeyCode::Char('n')
+                    | KeyCode::Char('o')
+                    | KeyCode::Enter
+                    | KeyCode::Char('q')
+                    | KeyCode::Esc
+            )
+        {
+            return Ok(ComponentInputResult::HandledAction(
+                ComponentAction::SetPopup(None),
+            ));
+        }
+
+        Ok(ComponentInputResult::NotHandled)
     }
 }

@@ -7,7 +7,7 @@ use crate::{
         CommandError, Commander,
     },
     env::{Config, DiffFormat},
-    ui::{details_panel::DetailsPanel, Component},
+    ui::{details_panel::DetailsPanel, help_popup::HelpPopup, Component, ComponentAction},
     ComponentInputResult,
 };
 
@@ -16,7 +16,7 @@ use crossterm::event::{Event, KeyCode};
 use ratatui::{prelude::*, widgets::*};
 
 /// Files tab. Shows files in selected change in left panel and selected file diff in right panel
-pub struct Files {
+pub struct FilesTab {
     head: Head,
     is_current_head: bool,
 
@@ -50,7 +50,7 @@ fn get_current_file_index(
     }
 }
 
-impl Files {
+impl FilesTab {
     pub fn new(commander: &mut Commander, head: &Head) -> Result<Self> {
         let head = head.clone();
         let is_current_head = head == commander.get_current_head()?;
@@ -151,7 +151,7 @@ impl Files {
     }
 }
 
-impl Component for Files {
+impl Component for FilesTab {
     fn switch(&mut self, commander: &mut Commander) -> Result<()> {
         self.is_current_head = self.head == commander.get_current_head()?;
         self.refresh_files(commander)?;
@@ -171,11 +171,6 @@ impl Component for Files {
 
         // Draw files
         {
-            let panel_chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Fill(1), Constraint::Length(2)])
-                .split(chunks[0]);
-
             let current_file_index = self.get_current_file_index();
 
             let mut lines: Vec<Line> = match self.files_output.as_ref() {
@@ -190,6 +185,9 @@ impl Component for Files {
                                 .iter()
                                 .map(|line| {
                                     let mut line = line.to_owned();
+
+                                    // Add padding at start
+                                    line.spans.insert(0, Span::from(" "));
 
                                     if let Some(diff_type) = file.diff_type.as_ref() {
                                         line.spans = line
@@ -252,27 +250,16 @@ impl Component for Files {
                 )
                 .scroll_padding(3);
             *self.files_list_state.selected_mut() = current_file_index;
-            f.render_stateful_widget(files, panel_chunks[0], &mut self.files_list_state);
-            self.files_height = panel_chunks[0].height - 2;
-
-            let help = Paragraph::new(vec![
-                "j/k: scroll down/up | J/K: scroll down by ½ page".into(),
-                "@: view current change files".into(),
-            ])
-            .fg(Color::DarkGray);
-            f.render_widget(help, panel_chunks[1]);
+            f.render_stateful_widget(files, chunks[0], &mut self.files_list_state);
+            self.files_height = chunks[0].height - 2;
         }
 
         // Draw diff
         {
-            let panel_chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Fill(1), Constraint::Length(2)])
-                .split(chunks[1]);
-
             let diff_block = Block::bordered()
                 .title(" Diff ")
-                .border_type(BorderType::Rounded);
+                .border_type(BorderType::Rounded)
+                .padding(Padding::horizontal(1));
             let diff_content = match self.diff_output.as_ref() {
                 Ok(Some(diff_content)) => diff_content.into_text()?,
                 Ok(None) => Text::default(),
@@ -282,13 +269,7 @@ impl Component for Files {
                 .diff_panel
                 .render(diff_content, diff_block.inner(chunks[1]))
                 .block(diff_block);
-            f.render_widget(diff, panel_chunks[0]);
-
-            let help = Paragraph::new(vec![
-                "Ctrl+e/Ctrl+y: scroll down/up | Ctrl+d/Ctrl+u: scroll down/up by ½ page".into(),
-                "Ctrl+f/Ctrl+b: scroll down/up by page | w: toggle diff format | W: toggle wrapping".into(),
-            ]).fg(Color::DarkGray);
-            f.render_widget(help, panel_chunks[1]);
+            f.render_widget(diff, chunks[1]);
         }
 
         Ok(())
@@ -327,6 +308,30 @@ impl Component for Files {
                 KeyCode::Char('@') => {
                     let head = &commander.get_current_head()?;
                     self.set_head(commander, head)?;
+                }
+                KeyCode::Char('h') | KeyCode::Char('?') => {
+                    return Ok(ComponentInputResult::HandledAction(
+                        ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
+                            vec![
+                                ("j/k".to_owned(), "scroll down/up".to_owned()),
+                                ("J/K".to_owned(), "scroll down by ½ page".to_owned()),
+                                ("@".to_owned(), "view current change files".to_owned()),
+                            ],
+                            vec![
+                                ("Ctrl+e/Ctrl+y".to_owned(), "scroll down/up".to_owned()),
+                                (
+                                    "Ctrl+d/Ctrl+u".to_owned(),
+                                    "scroll down/up by ½ page".to_owned(),
+                                ),
+                                (
+                                    "Ctrl+f/Ctrl+b".to_owned(),
+                                    "scroll down/up by page".to_owned(),
+                                ),
+                                ("w".to_owned(), "toggle diff format".to_owned()),
+                                ("W".to_owned(), "toggle wrapping".to_owned()),
+                            ],
+                        )))),
+                    ))
                 }
                 _ => return Ok(ComponentInputResult::NotHandled),
             };

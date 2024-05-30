@@ -1,10 +1,12 @@
 pub mod branch_set_popup;
-pub mod branches;
-pub mod command_log;
+pub mod branches_tab;
+pub mod command_log_tab;
 pub mod details_panel;
-pub mod files;
-pub mod log;
+pub mod files_tab;
+pub mod help_popup;
+pub mod log_tab;
 pub mod message_popup;
+pub mod styles;
 pub mod utils;
 
 use crate::{
@@ -25,7 +27,7 @@ pub enum ComponentAction {
     ViewFiles(Head),
     ViewLog(Head),
     ChangeHead(Head),
-    SetTextAreaActive(bool),
+    SetPopup(Option<Box<dyn Component>>),
     Multiple(Vec<ComponentAction>),
 }
 
@@ -98,7 +100,7 @@ pub fn ui(f: &mut Frame, app: &mut App) -> Result<()> {
         f.render_widget(tabs, header_chunks[0]);
     }
     {
-        let tabs = Paragraph::new("q: quit | R: refresh | 1/2/3: change tab")
+        let tabs = Paragraph::new("q: quit | h: help | R: refresh | 1/2/3/4: change tab")
             .fg(Color::DarkGray)
             .block(
                 Block::bordered()
@@ -110,5 +112,11 @@ pub fn ui(f: &mut Frame, app: &mut App) -> Result<()> {
         f.render_widget(tabs, header_chunks[1]);
     }
 
-    app.get_current_component_mut().draw(f, chunks[1])
+    app.get_current_component_mut().draw(f, chunks[1])?;
+
+    if let Some(popup) = app.popup.as_mut() {
+        popup.draw(f, f.size())?;
+    }
+
+    Ok(())
 }
