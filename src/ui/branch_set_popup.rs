@@ -73,7 +73,9 @@ fn generate_options(
 }
 
 fn generate_name(git_push_branch_prefix: &str, change_id: &ChangeId) -> String {
-    format!("{git_push_branch_prefix}{change_id}")
+    let mut change_id = change_id.to_string();
+    change_id.truncate(12);
+    format!("{git_push_branch_prefix}{change_id}",)
 }
 
 impl BranchSetPopup<'_> {
