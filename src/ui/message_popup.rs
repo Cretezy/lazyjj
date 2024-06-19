@@ -1,5 +1,5 @@
 use anyhow::Result;
-use crossterm::event::{Event, KeyCode};
+use crossterm::event::Event;
 use ratatui::{
     layout::{Alignment, Rect},
     style::{Color, Style, Stylize},
@@ -9,11 +9,7 @@ use ratatui::{
 };
 use tui_confirm_dialog::PopupMessage;
 
-use crate::{
-    commander::Commander,
-    ui::{Component, ComponentAction},
-    ComponentInputResult,
-};
+use crate::{commander::Commander, ui::Component, ComponentInputResult};
 
 pub struct MessagePopup<'a> {
     pub title: Title<'a>,
@@ -45,23 +41,7 @@ impl Component for MessagePopup<'_> {
         Ok(())
     }
 
-    fn input(&mut self, _commander: &mut Commander, event: Event) -> Result<ComponentInputResult> {
-        if let Event::Key(key) = event
-            && matches!(
-                key.code,
-                KeyCode::Char('y')
-                    | KeyCode::Char('n')
-                    | KeyCode::Char('o')
-                    | KeyCode::Enter
-                    | KeyCode::Char('q')
-                    | KeyCode::Esc
-            )
-        {
-            return Ok(ComponentInputResult::HandledAction(
-                ComponentAction::SetPopup(None),
-            ));
-        }
-
+    fn input(&mut self, _commander: &mut Commander, _event: Event) -> Result<ComponentInputResult> {
         Ok(ComponentInputResult::NotHandled)
     }
 }

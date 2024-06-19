@@ -27,6 +27,7 @@ https://github.com/Cretezy/lazyjj/assets/2672503/b5e6b4f1-ebdb-448f-af9e-361e86f
   - Track branches with `t`, untrack branches with `T`
 - Command log: View every command lazyjj executes
 - Config: Configure lazyjj with your jj config
+- Help: See all key mappings with `h`/`?`
 
 ## Setup
 
@@ -58,6 +59,8 @@ To start lazyjj for the repository in the current directory: `lazyjj`
 To use a different repository: `lazyjj --path ~/path/to/repo`
 
 ## Key mappings
+
+See all key mappings for the current tab with `h` or `?`.
 
 ### Basic navigation
 

@@ -107,7 +107,15 @@ impl App<'_> {
                         && key.kind == event::KeyEventKind::Press
                     {
                         // Close
-                        if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc {
+                        if matches!(
+                            key.code,
+                            KeyCode::Char('y')
+                                | KeyCode::Char('n')
+                                | KeyCode::Char('o')
+                                | KeyCode::Enter
+                                | KeyCode::Char('q')
+                                | KeyCode::Esc
+                        ) {
                             self.popup = None
                         }
                     }

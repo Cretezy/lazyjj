@@ -266,7 +266,6 @@ impl Component for CommandLogTag {
                                     "Ctrl+f/Ctrl+b".to_owned(),
                                     "scroll down/up by page".to_owned(),
                                 ),
-                                ("w".to_owned(), "toggle diff format".to_owned()),
                                 ("W".to_owned(), "toggle wrapping".to_owned()),
                             ],
                         )))),
