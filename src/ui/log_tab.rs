@@ -15,6 +15,7 @@ use crate::{
     ui::{
         branch_set_popup::BranchSetPopup,
         details_panel::DetailsPanel,
+        help_popup::HelpPopup,
         message_popup::MessagePopup,
         utils::{centered_rect, centered_rect_line_height},
         Component, ComponentAction,
@@ -27,7 +28,7 @@ const EDIT_POPUP_ID: u16 = 2;
 const ABANDON_POPUP_ID: u16 = 3;
 
 /// Log tab. Shows `jj log` in left panel and shows selected change details of in right panel.
-pub struct Log<'a> {
+pub struct LogTab<'a> {
     log_output: Result<LogOutput, CommandError>,
     log_list_state: ListState,
     log_height: u16,
@@ -45,9 +46,8 @@ pub struct Log<'a> {
     popup_tx: std::sync::mpsc::Sender<Listener>,
     popup_rx: std::sync::mpsc::Receiver<Listener>,
 
-    message_popup: Option<MessagePopup<'a>>,
-
-    set_branch: Option<BranchSetPopup<'a>>,
+    branch_set_popup_tx: std::sync::mpsc::Sender<bool>,
+    branch_set_popup_rx: std::sync::mpsc::Receiver<bool>,
 
     describe_textarea: Option<TextArea<'a>>,
     describe_after_new: bool,
@@ -71,7 +71,7 @@ fn get_head_index(head: &Head, log_output: &Result<LogOutput, CommandError>) -> 
     }
 }
 
-impl Log<'_> {
+impl LogTab<'_> {
     pub fn new(commander: &mut Commander) -> Result<Self> {
         let diff_format = commander.env.config.diff_format();
 
@@ -83,6 +83,7 @@ impl Log<'_> {
         let head_output = commander.get_commit_show(&head.commit_id, &diff_format);
 
         let (popup_tx, popup_rx) = std::sync::mpsc::channel();
+        let (branch_set_popup_tx, branch_set_popup_rx) = std::sync::mpsc::channel();
 
         Ok(Self {
             log_output,
@@ -102,9 +103,8 @@ impl Log<'_> {
             popup_tx,
             popup_rx,
 
-            message_popup: None,
-
-            set_branch: None,
+            branch_set_popup_tx,
+            branch_set_popup_rx,
 
             describe_textarea: None,
             describe_after_new: false,
@@ -155,7 +155,7 @@ impl Log<'_> {
 }
 
 #[allow(clippy::invisible_characters)]
-impl Component for Log<'_> {
+impl Component for LogTab<'_> {
     fn switch(&mut self, commander: &mut Commander) -> Result<()> {
         self.refresh_log_output(commander);
         self.refresh_head_output(commander);
@@ -180,14 +180,12 @@ impl Component for Log<'_> {
                     self.head = commander.get_current_head()?;
                     self.refresh_log_output(commander);
                     self.refresh_head_output(commander);
-                    let mut actions = vec![ComponentAction::ChangeHead(self.head.clone())];
                     if self.describe_after_new {
                         self.describe_after_new = false;
                         let textarea = TextArea::default();
                         self.describe_textarea = Some(textarea);
-                        actions.push(ComponentAction::SetTextAreaActive(true));
                     }
-                    return Ok(Some(ComponentAction::Multiple(actions)));
+                    return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
                 }
                 EDIT_POPUP_ID => {
                     commander.run_edit(self.head.commit_id.as_str())?;
@@ -214,6 +212,13 @@ impl Component for Log<'_> {
             }
         }
 
+        if let Ok(res) = self.branch_set_popup_rx.try_recv()
+            && res
+        {
+            self.refresh_log_output(commander);
+            self.refresh_head_output(commander)
+        }
+
         Ok(None)
     }
 
@@ -229,11 +234,6 @@ impl Component for Log<'_> {
 
         // Draw log
         {
-            let panel_chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Fill(1), Constraint::Length(3)])
-                .split(chunks[0]);
-
             let mut scroll_offset = 0;
             let log_lines = match self.log_output.as_ref() {
                 Ok(log_output) => {
@@ -244,6 +244,9 @@ impl Component for Log<'_> {
                         .enumerate()
                         .map(|(i, line)| {
                             let mut line = line.to_owned();
+
+                            // Add padding at start
+                            line.spans.insert(0, Span::from(" "));
 
                             let line_head = log_output.graph_heads.get(i).unwrap_or(&None);
 
@@ -291,45 +294,27 @@ impl Component for Log<'_> {
             let log_block = Block::bordered()
                 .title(title)
                 .border_type(BorderType::Rounded);
-            self.log_height = log_block.inner(panel_chunks[0]).height;
+            self.log_height = log_block.inner(chunks[0]).height;
             let log = List::new(log_lines).block(log_block).scroll_padding(7);
-            f.render_stateful_widget(log, panel_chunks[0], &mut self.log_list_state);
-
-            let help = Paragraph::new(vec![
-                "j/k: scroll down/up | J/K: scroll down by ½ page | Enter: see files | @: current change | r: revset"
-                    .into(),
-                "d: describe change | e: edit change | n: new change | N: new with message | a: abandon change | b: set branch".into(),
-                "f: git fetch | F: git fetch all remotes | p: git push | P: git push all branches".into(),
-            ]).fg(Color::DarkGray);
-            f.render_widget(help, panel_chunks[1]);
+            f.render_stateful_widget(log, chunks[0], &mut self.log_list_state);
         }
 
         // Draw change details
         {
-            let panel_chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Fill(1), Constraint::Length(2)])
-                .split(chunks[1]);
-
             let head_content = match self.head_output.as_ref() {
                 Ok(head_output) => head_output.into_text()?.lines,
                 Err(err) => err.into_text("Error getting head details")?.lines,
             };
             let head_block = Block::bordered()
                 .title(format!(" Details for {} ", self.head.change_id))
-                .border_type(BorderType::Rounded);
+                .border_type(BorderType::Rounded)
+                .padding(Padding::horizontal(1));
             let head = self
                 .head_panel
                 .render(head_content, head_block.inner(chunks[1]))
                 .block(head_block);
 
-            f.render_widget(head, panel_chunks[0]);
-
-            let help = Paragraph::new(vec![
-                "Ctrl+e/Ctrl+y: scroll down/up | Ctrl+d/Ctrl+u: scroll down/up by ½ page".into(),
-                "Ctrl+f/Ctrl+b: scroll down/up by page | w: toggle diff format | W: toggle wrapping".into(),
-            ]).fg(Color::DarkGray);
-            f.render_widget(help, panel_chunks[1]);
+            f.render_widget(head, chunks[1]);
         }
 
         // Draw popup
@@ -344,11 +329,6 @@ impl Component for Log<'_> {
                         .underlined(),
                 );
             f.render_stateful_widget(popup, area, &mut self.popup);
-        }
-
-        // Draw messge popup
-        if let Some(message_popup) = &self.message_popup {
-            f.render_widget(message_popup.render(), area);
         }
 
         // Draw describe textarea
@@ -417,13 +397,6 @@ impl Component for Log<'_> {
             }
         }
 
-        // Draw branch select
-        {
-            if let Some(set_branch) = self.set_branch.as_mut() {
-                set_branch.render(f, area);
-            }
-        }
-
         Ok(())
     }
 
@@ -441,15 +414,11 @@ impl Component for Log<'_> {
                         self.refresh_log_output(commander);
                         self.refresh_head_output(commander);
                         self.describe_textarea = None;
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetTextAreaActive(false),
-                        ));
+                        return Ok(ComponentInputResult::Handled);
                     }
                     KeyCode::Esc => {
                         self.describe_textarea = None;
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetTextAreaActive(false),
-                        ));
+                        return Ok(ComponentInputResult::Handled);
                     }
                     _ => {}
                 }
@@ -470,15 +439,11 @@ impl Component for Log<'_> {
                         };
                         self.refresh_log_output(commander);
                         self.log_revset_textarea = None;
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetTextAreaActive(false),
-                        ));
+                        return Ok(ComponentInputResult::Handled);
                     }
                     KeyCode::Esc => {
                         self.log_revset_textarea = None;
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetTextAreaActive(false),
-                        ));
+                        return Ok(ComponentInputResult::Handled);
                     }
                     _ => {}
                 }
@@ -493,28 +458,6 @@ impl Component for Log<'_> {
                     self.popup = ConfirmDialogState::default();
                 } else {
                     self.popup.handle(key);
-                }
-
-                return Ok(ComponentInputResult::Handled);
-            }
-            if let Some(message_popup) = &self.message_popup {
-                if key.code == KeyCode::Char('q')
-                    || key.code == KeyCode::Esc
-                    || message_popup.input(key)
-                {
-                    self.message_popup = None;
-                }
-
-                return Ok(ComponentInputResult::Handled);
-            }
-            if let Some(set_branch) = self.set_branch.as_mut() {
-                if key.code == KeyCode::Char('q')
-                    || key.code == KeyCode::Esc
-                    || set_branch.input(event, commander)?
-                {
-                    self.set_branch = None;
-                    self.refresh_log_output(commander);
-                    self.refresh_head_output(commander)
                 }
 
                 return Ok(ComponentInputResult::Handled);
@@ -573,13 +516,15 @@ impl Component for Log<'_> {
                 }
                 KeyCode::Char('e') => {
                     if self.head.immutable {
-                        self.message_popup = Some(MessagePopup {
-                            title: "Edit".into(),
-                            messages: vec![
-                                "The change cannot be edited because it is immutable.".into()
-                            ]
-                            .into(),
-                        });
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                title: "Edit".into(),
+                                messages: vec![
+                                    "The change cannot be edited because it is immutable.".into(),
+                                ]
+                                .into(),
+                            }))),
+                        ));
                     } else {
                         self.popup = ConfirmDialogState::new(
                             EDIT_POPUP_ID,
@@ -597,13 +542,16 @@ impl Component for Log<'_> {
                 }
                 KeyCode::Char('a') => {
                     if self.head.immutable {
-                        self.message_popup = Some(MessagePopup {
-                            title: "Abandon".into(),
-                            messages: vec![
-                                "The change cannot be abandoned because it is immutable.".into(),
-                            ]
-                            .into(),
-                        });
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                title: "Abandon".into(),
+                                messages: vec![
+                                    "The change cannot be abandoned because it is immutable."
+                                        .into(),
+                                ]
+                                .into(),
+                            }))),
+                        ));
                     } else {
                         self.popup = ConfirmDialogState::new(
                             ABANDON_POPUP_ID,
@@ -621,13 +569,16 @@ impl Component for Log<'_> {
                 }
                 KeyCode::Char('d') => {
                     if self.head.immutable {
-                        self.message_popup = Some(MessagePopup {
-                            title: "Describe".into(),
-                            messages: vec![
-                                "The change cannot be described because it is immutable.".into(),
-                            ]
-                            .into(),
-                        });
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                title: "Describe".into(),
+                                messages: vec![
+                                    "The change cannot be described because it is immutable."
+                                        .into(),
+                                ]
+                                .into(),
+                            }))),
+                        ));
                     } else {
                         let mut textarea = TextArea::new(
                             commander
@@ -638,9 +589,7 @@ impl Component for Log<'_> {
                         );
                         textarea.move_cursor(CursorMove::End);
                         self.describe_textarea = Some(textarea);
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetTextAreaActive(true),
-                        ));
+                        return Ok(ComponentInputResult::Handled);
                     }
                 }
                 KeyCode::Char('r') => {
@@ -654,17 +603,18 @@ impl Component for Log<'_> {
                     );
                     textarea.move_cursor(CursorMove::End);
                     self.log_revset_textarea = Some(textarea);
-                    return Ok(ComponentInputResult::HandledAction(
-                        ComponentAction::SetTextAreaActive(true),
-                    ));
+                    return Ok(ComponentInputResult::Handled);
                 }
                 KeyCode::Char('b') => {
-                    self.set_branch = Some(BranchSetPopup::new(
-                        self.config.clone(),
-                        commander,
-                        Some(self.head.change_id.clone()),
-                        self.head.commit_id.clone(),
-                    ))
+                    return Ok(ComponentInputResult::HandledAction(
+                        ComponentAction::SetPopup(Some(Box::new(BranchSetPopup::new(
+                            self.config.clone(),
+                            commander,
+                            Some(self.head.change_id.clone()),
+                            self.head.commit_id.clone(),
+                            self.branch_set_popup_tx.clone(),
+                        )))),
+                    ));
                 }
                 KeyCode::Enter => {
                     return Ok(ComponentInputResult::HandledAction(
@@ -674,16 +624,20 @@ impl Component for Log<'_> {
                 KeyCode::Char('p') | KeyCode::Char('P') => {
                     match commander.git_push(key.code == KeyCode::Char('P')) {
                         Ok(result) if !result.is_empty() => {
-                            self.message_popup = Some(MessagePopup {
-                                title: "Push message".into(),
-                                messages: result.into_text()?,
-                            });
+                            return Ok(ComponentInputResult::HandledAction(
+                                ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                    title: "Push message".into(),
+                                    messages: result.into_text()?,
+                                }))),
+                            ));
                         }
                         Err(err) => {
-                            self.message_popup = Some(MessagePopup {
-                                title: "Push error".into(),
-                                messages: err.into_text("")?,
-                            });
+                            return Ok(ComponentInputResult::HandledAction(
+                                ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                    title: "Push error".into(),
+                                    messages: err.into_text("")?,
+                                }))),
+                            ));
                         }
                         _ => (),
                     }
@@ -694,22 +648,62 @@ impl Component for Log<'_> {
                 KeyCode::Char('f') | KeyCode::Char('F') => {
                     match commander.git_fetch(key.code == KeyCode::Char('F')) {
                         Ok(result) if !result.is_empty() => {
-                            self.message_popup = Some(MessagePopup {
-                                title: "Fetch message".into(),
-                                messages: result.into_text()?,
-                            });
+                            return Ok(ComponentInputResult::HandledAction(
+                                ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                    title: "Fetch message".into(),
+                                    messages: result.into_text()?,
+                                }))),
+                            ));
                         }
                         Err(err) => {
-                            self.message_popup = Some(MessagePopup {
-                                title: "Fetch error".into(),
-                                messages: err.into_text("")?,
-                            });
+                            return Ok(ComponentInputResult::HandledAction(
+                                ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                    title: "Fetch error".into(),
+                                    messages: err.into_text("")?,
+                                }))),
+                            ));
                         }
                         _ => (),
                     }
 
                     self.refresh_log_output(commander);
                     self.refresh_head_output(commander);
+                }
+                KeyCode::Char('h') | KeyCode::Char('?') => {
+                    return Ok(ComponentInputResult::HandledAction(
+                        ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
+                            vec![
+                                ("j/k".to_owned(), "scroll down/up".to_owned()),
+                                ("J/K".to_owned(), "scroll down by ½ page".to_owned()),
+                                ("Enter".to_owned(), "see files".to_owned()),
+                                ("@".to_owned(), "current change".to_owned()),
+                                ("r".to_owned(), "revset".to_owned()),
+                                ("d".to_owned(), "describe change".to_owned()),
+                                ("e".to_owned(), "edit change".to_owned()),
+                                ("n".to_owned(), "new change".to_owned()),
+                                ("N".to_owned(), "new with message".to_owned()),
+                                ("a".to_owned(), "abandon change".to_owned()),
+                                ("b".to_owned(), "set branch".to_owned()),
+                                ("f".to_owned(), "git fetch".to_owned()),
+                                ("F".to_owned(), "git fetch all remotes".to_owned()),
+                                ("p".to_owned(), "git push".to_owned()),
+                                ("P".to_owned(), "git push all branches".to_owned()),
+                            ],
+                            vec![
+                                ("Ctrl+e/Ctrl+y".to_owned(), "scroll down/up".to_owned()),
+                                (
+                                    "Ctrl+d/Ctrl+u".to_owned(),
+                                    "scroll down/up by ½ page".to_owned(),
+                                ),
+                                (
+                                    "Ctrl+f/Ctrl+b".to_owned(),
+                                    "scroll down/up by page".to_owned(),
+                                ),
+                                ("w".to_owned(), "toggle diff format".to_owned()),
+                                ("W".to_owned(), "toggle wrapping".to_owned()),
+                            ],
+                        )))),
+                    ))
                 }
                 _ => return Ok(ComponentInputResult::NotHandled),
             };

@@ -1,6 +1,5 @@
 #![feature(let_chains)]
 
-extern crate anyhow;
 extern crate lazy_static;
 extern crate thiserror;
 
@@ -14,7 +13,7 @@ use std::{
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
+    event::{self, DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -29,7 +28,7 @@ mod env;
 mod ui;
 
 use crate::{
-    app::{App, Tab},
+    app::App,
     commander::Commander,
     env::Env,
     ui::{ui, ComponentAction},
@@ -98,65 +97,18 @@ fn run_app<B: Backend>(
     app: &mut App,
     commander: &mut Commander,
 ) -> Result<()> {
-    // Loop for: Update -> Draw -> Input
     loop {
-        {
-            // Update current tab
-            if let Some(component_action) = app.get_current_component_mut().update(commander)? {
-                app.handle_action(component_action, commander)?;
-            }
+        // Update current tab
+        if let Some(component_action) = app.get_current_component_mut().update(commander)? {
+            app.handle_action(component_action, commander)?;
+        }
 
-            // Draw
-            terminal.draw(|f| ui(f, app).unwrap())?;
+        // Draw
+        terminal.draw(|f| ui(f, app).unwrap())?;
 
-            // Input
-            let event = event::read()?;
-
-            // Pass through if textarea is active
-            // Note: This could be refactor such that the event handling in the else block only
-            // runs if nothing is returned from the current tab's handler.
-            if app.textarea_active {
-                if let ComponentInputResult::HandledAction(component_action) =
-                    app.get_current_component_mut().input(commander, event)?
-                {
-                    app.handle_action(component_action, commander)?;
-                }
-            } else if let Event::Key(key) = event {
-                // Skip events that are not KeyEventKind::Press
-                if key.kind == event::KeyEventKind::Release {
-                    continue;
-                }
-
-                match app.get_current_component_mut().input(commander, event)? {
-                    ComponentInputResult::HandledAction(component_action) => {
-                        app.handle_action(component_action, commander)?
-                    }
-                    ComponentInputResult::Handled => {}
-                    ComponentInputResult::NotHandled => {
-                        // Close
-                        if key.code == KeyCode::Char('q')
-                            || (key.modifiers.contains(KeyModifiers::CONTROL)
-                                && (key.code == KeyCode::Char('c')))
-                            || key.code == KeyCode::Esc
-                        {
-                            return Ok(());
-                        }
-                        //
-                        // Tab switching
-                        if let Some((_, tab)) = Tab::VALUES.iter().enumerate().find(|(i, _)| {
-                            key.code
-                                == KeyCode::Char(
-                                    char::from_digit((*i as u32) + 1u32, 10)
-                                        .expect("Tab index could not be converted to digit"),
-                                )
-                        }) {
-                            app.current_tab = *tab;
-                            app.get_current_component_mut().switch(commander)?;
-                            continue;
-                        }
-                    }
-                };
-            }
+        // Input
+        if app.input(event::read()?, commander)? {
+            return Ok(());
         }
     }
 }

@@ -9,13 +9,13 @@ use ratatui::{prelude::*, widgets::*};
 use crate::{
     commander::{CommandLogItem, Commander},
     env::Config,
-    ui::{details_panel::DetailsPanel, Component},
+    ui::{details_panel::DetailsPanel, help_popup::HelpPopup, Component, ComponentAction},
     ComponentInputResult,
 };
 
 /// Command log tab. Shows list of commands exectured by lazyjj in left panel and selected command
 /// output in right panel
-pub struct CommandLog {
+pub struct CommandLogTag {
     command_history: Vec<CommandLogItem>,
     commands_list_state: ListState,
     commands_height: u16,
@@ -25,7 +25,7 @@ pub struct CommandLog {
     config: Config,
 }
 
-impl CommandLog {
+impl CommandLogTag {
     pub fn new(commander: &mut Commander) -> Result<Self> {
         let command_history = commander.command_history.clone();
         let selected_index = command_history.first().map(|_| 0);
@@ -139,7 +139,7 @@ impl CommandLog {
 }
 
 #[allow(clippy::invisible_characters)]
-impl Component for CommandLog {
+impl Component for CommandLogTag {
     fn switch(&mut self, commander: &mut Commander) -> Result<()> {
         let command_history = commander.command_history.clone();
         let selected_index = command_history.first().map(|_| 0);
@@ -160,11 +160,6 @@ impl Component for CommandLog {
 
         // Draw commands
         {
-            let panel_chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Fill(1), Constraint::Length(2)])
-                .split(chunks[0]);
-
             let command_lines = self
                 .command_history
                 .iter()
@@ -173,6 +168,7 @@ impl Component for CommandLog {
                 .map(|(i, command)| {
                     let mut line = Line::default()
                         .spans([
+                            " ".into(),
                             Span::raw(command.program.clone()),
                             " ".into(),
                             command.args.join(" ").into(),
@@ -208,40 +204,22 @@ impl Component for CommandLog {
                 )
                 .scroll_padding(3);
 
-            f.render_stateful_widget(commands, panel_chunks[0], &mut self.commands_list_state);
+            f.render_stateful_widget(commands, chunks[0], &mut self.commands_list_state);
             self.commands_height = chunks[0].height.saturating_sub(2);
-
-            let help = Paragraph::new(vec![
-                "j/k: scroll down/up | J/K: scroll down by ½ page".into(),
-                "@: latest command".into(),
-            ])
-            .fg(Color::DarkGray);
-            f.render_widget(help, panel_chunks[1]);
         }
 
         // Draw output
         {
-            let panel_chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Fill(1), Constraint::Length(2)])
-                .split(chunks[1]);
-
             let output_block = Block::bordered()
                 .title(" Output ")
-                .border_type(BorderType::Rounded);
+                .border_type(BorderType::Rounded)
+                .padding(Padding::horizontal(1));
             let output = self
                 .output_panel
                 .render(self.get_output_lines()?, output_block.inner(chunks[1]))
                 .block(output_block);
 
-            f.render_widget(output, panel_chunks[0]);
-
-            let help = Paragraph::new(vec![
-                "Ctrl+e/Ctrl+y: scroll down/up | Ctrl+d/Ctrl+u: scroll down/up by ½ page".into(),
-                "Ctrl+f/Ctrl+b: scroll down/up by page | W: toggle wrapping".into(),
-            ])
-            .fg(Color::DarkGray);
-            f.render_widget(help, panel_chunks[1]);
+            f.render_widget(output, chunks[1]);
         }
 
         Ok(())
@@ -269,6 +247,30 @@ impl Component for CommandLog {
                 }
                 KeyCode::Char('@') => {
                     self.scroll_commands(isize::MIN);
+                }
+                KeyCode::Char('h') | KeyCode::Char('?') => {
+                    return Ok(ComponentInputResult::HandledAction(
+                        ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
+                            vec![
+                                ("j/k".to_owned(), "scroll down/up".to_owned()),
+                                ("J/K".to_owned(), "scroll down by ½ page".to_owned()),
+                                ("@".to_owned(), "latest command".to_owned()),
+                            ],
+                            vec![
+                                ("Ctrl+e/Ctrl+y".to_owned(), "scroll down/up".to_owned()),
+                                (
+                                    "Ctrl+d/Ctrl+u".to_owned(),
+                                    "scroll down/up by ½ page".to_owned(),
+                                ),
+                                (
+                                    "Ctrl+f/Ctrl+b".to_owned(),
+                                    "scroll down/up by page".to_owned(),
+                                ),
+                                ("w".to_owned(), "toggle diff format".to_owned()),
+                                ("W".to_owned(), "toggle wrapping".to_owned()),
+                            ],
+                        )))),
+                    ))
                 }
                 _ => return Ok(ComponentInputResult::NotHandled),
             };

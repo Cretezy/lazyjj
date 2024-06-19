@@ -17,7 +17,12 @@ use crate::{
         Commander,
     },
     env::Config,
-    ui::utils::{centered_rect, centered_rect_line_height},
+    ui::{
+        styles::create_popup_block,
+        utils::{centered_rect, centered_rect_line_height},
+        Component, ComponentAction,
+    },
+    ComponentInputResult,
 };
 
 enum BranchSetOption {
@@ -36,6 +41,7 @@ pub struct BranchSetPopup<'a> {
     list_height: u16,
     config: Config,
     creating: Option<TextArea<'a>>,
+    tx: std::sync::mpsc::Sender<bool>,
 }
 
 fn generate_options(
@@ -84,6 +90,7 @@ impl BranchSetPopup<'_> {
         commander: &mut Commander,
         change_id: Option<ChangeId>,
         commit_id: CommitId,
+        tx: std::sync::mpsc::Sender<bool>,
     ) -> Self {
         Self {
             options: generate_options(commander, change_id.as_ref()),
@@ -93,17 +100,59 @@ impl BranchSetPopup<'_> {
             config,
             commit_id,
             creating: None,
+            tx,
         }
     }
 
-    /// Render the parent into the area.
-    pub fn render(&mut self, f: &mut ratatui::prelude::Frame<'_>, area: Rect) {
+    fn scroll(&mut self, scroll: isize) {
+        self.list_state.select(Some(
+            self.list_state
+                .selected()
+                .map(|selected| selected.saturating_add_signed(scroll))
+                .unwrap_or(0)
+                .min(self.options.len().saturating_sub(1)),
+        ));
+    }
+
+    fn on_creating(&mut self) {
+        self.creating = Some(TextArea::default());
+    }
+
+    fn create_branch(&self, commander: &mut Commander, name: &str) -> Result<()> {
+        if commander
+            .get_branches_list(false)?
+            .iter()
+            .any(|branch| branch.name == name)
+        {
+            commander.set_branch_commit(name, &self.commit_id)?;
+        } else {
+            commander.create_branch_commit(name, &self.commit_id)?;
+        }
+        Ok(())
+    }
+    fn generate_branch(&self, commander: &mut Commander) -> Result<()> {
+        if let Some(change_id) = self.change_id.as_ref() {
+            let generated_name = generate_name(&commander.env.config.branch_prefix(), change_id);
+            if commander
+                .get_branches_list(false)?
+                .iter()
+                .any(|branch| branch.name == generated_name)
+            {
+                commander.set_branch_commit(&generated_name, &self.commit_id)?;
+            } else {
+                commander.create_branch_commit(&generated_name, &self.commit_id)?;
+            }
+            Ok(())
+        } else {
+            bail!("No change ID");
+        }
+    }
+}
+
+impl Component for BranchSetPopup<'_> {
+    fn draw(&mut self, f: &mut ratatui::prelude::Frame<'_>, area: Rect) -> Result<()> {
         if let Some(creating) = self.creating.as_ref() {
-            let block = Block::bordered()
-                .title(Span::styled(" Create branch ", Style::new().bold().cyan()))
-                .title_alignment(Alignment::Center)
-                .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::Green));
+            let block = create_popup_block("Create branch");
             let area = centered_rect_line_height(area, 30, 5);
             f.render_widget(Clear, area);
             f.render_widget(&block, area);
@@ -173,54 +222,16 @@ impl BranchSetPopup<'_> {
 
             f.render_widget(help, popup_chunks[1]);
         }
-    }
 
-    fn scroll(&mut self, scroll: isize) {
-        self.list_state.select(Some(
-            self.list_state
-                .selected()
-                .map(|selected| selected.saturating_add_signed(scroll))
-                .unwrap_or(0)
-                .min(self.options.len().saturating_sub(1)),
-        ));
-    }
-
-    fn on_creating(&mut self) {
-        self.creating = Some(TextArea::default());
-    }
-
-    fn create_branch(&self, commander: &mut Commander, name: &str) -> Result<()> {
-        if commander
-            .get_branches_list(false)?
-            .iter()
-            .any(|branch| branch.name == name)
-        {
-            commander.set_branch_commit(name, &self.commit_id)?;
-        } else {
-            commander.create_branch_commit(name, &self.commit_id)?;
-        }
         Ok(())
-    }
-    fn generate_branch(&self, commander: &mut Commander) -> Result<()> {
-        if let Some(change_id) = self.change_id.as_ref() {
-            let generated_name = generate_name(&commander.env.config.branch_prefix(), change_id);
-            if commander
-                .get_branches_list(false)?
-                .iter()
-                .any(|branch| branch.name == generated_name)
-            {
-                commander.set_branch_commit(&generated_name, &self.commit_id)?;
-            } else {
-                commander.create_branch_commit(&generated_name, &self.commit_id)?;
-            }
-            Ok(())
-        } else {
-            bail!("No change ID");
-        }
     }
 
     /// Handle input. Returns bool of if to close
-    pub fn input(&mut self, event: Event, commander: &mut Commander) -> Result<bool> {
+    fn input(
+        &mut self,
+        commander: &mut Commander,
+        event: Event,
+    ) -> anyhow::Result<crate::ComponentInputResult> {
         if let Some(creating) = self.creating.as_mut() {
             if let Event::Key(key) = event {
                 match key.code {
@@ -230,20 +241,24 @@ impl BranchSetPopup<'_> {
                     {
                         let name = &creating.lines().join("\n");
                         if name.trim().is_empty() {
-                            return Ok(false);
+                            return Ok(ComponentInputResult::Handled);
                         }
 
                         self.create_branch(commander, name)?;
-                        return Ok(true);
+                        self.tx.send(true)?;
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(None),
+                        ));
                     }
                     KeyCode::Esc => {
-                        return Ok(true);
+                        return Ok(ComponentInputResult::Handled);
                     }
                     _ => {}
                 }
             }
+
             creating.input(event);
-            return Ok(false);
+            return Ok(ComponentInputResult::Handled);
         }
 
         if let Event::Key(key) = event {
@@ -262,7 +277,10 @@ impl BranchSetPopup<'_> {
                 }
                 KeyCode::Char('g') => {
                     self.generate_branch(commander)?;
-                    return Ok(true);
+                    self.tx.send(true)?;
+                    return Ok(ComponentInputResult::HandledAction(
+                        ComponentAction::SetPopup(None),
+                    ));
                 }
                 KeyCode::Char('c') => {
                     self.on_creating();
@@ -277,11 +295,17 @@ impl BranchSetPopup<'_> {
                             }
                             BranchSetOption::GeneratedName(_, _) => {
                                 self.generate_branch(commander)?;
-                                return Ok(true);
+                                self.tx.send(true)?;
+                                return Ok(ComponentInputResult::HandledAction(
+                                    ComponentAction::SetPopup(None),
+                                ));
                             }
                             BranchSetOption::Branch(branch) => {
                                 commander.set_branch_commit(&branch.name, &self.commit_id)?;
-                                return Ok(true);
+                                self.tx.send(true)?;
+                                return Ok(ComponentInputResult::HandledAction(
+                                    ComponentAction::SetPopup(None),
+                                ));
                             }
                             BranchSetOption::Error(_) => {
                                 self.options = generate_options(commander, self.change_id.as_ref());
@@ -289,11 +313,18 @@ impl BranchSetPopup<'_> {
                         }
                     }
                 }
-                KeyCode::Char('q') | KeyCode::Esc => return Ok(true),
-                _ => {}
+                KeyCode::Char('q') | KeyCode::Esc => {
+                    self.tx.send(false)?;
+                    return Ok(ComponentInputResult::HandledAction(
+                        ComponentAction::SetPopup(None),
+                    ));
+                }
+                _ => return Ok(ComponentInputResult::NotHandled),
             }
+
+            return Ok(ComponentInputResult::Handled);
         }
 
-        Ok(false)
+        Ok(ComponentInputResult::NotHandled)
     }
 }

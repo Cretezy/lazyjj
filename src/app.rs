@@ -1,10 +1,15 @@
 use crate::{
     commander::Commander,
     env::Env,
-    ui::{branches::Branches, command_log::CommandLog, files::Files, log::Log, ComponentAction},
+    ui::{
+        branches_tab::BranchesTab, command_log_tab::CommandLogTag, files_tab::FilesTab,
+        log_tab::LogTab, Component, ComponentAction,
+    },
+    ComponentInputResult,
 };
 use anyhow::Result;
 use core::fmt;
+use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum Tab {
@@ -32,11 +37,11 @@ impl Tab {
 pub struct App<'a> {
     pub env: Env,
     pub current_tab: Tab,
-    pub log: Log<'a>,
-    pub files: Files,
-    pub branches: Branches<'a>,
-    pub command_log: CommandLog,
-    pub textarea_active: bool,
+    pub log: LogTab<'a>,
+    pub files: FilesTab,
+    pub branches: BranchesTab<'a>,
+    pub command_log: CommandLogTag,
+    pub popup: Option<Box<dyn Component>>,
 }
 
 impl App<'_> {
@@ -46,11 +51,11 @@ impl App<'_> {
         Ok(App {
             env,
             current_tab: Tab::Log,
-            log: Log::new(commander)?,
-            files: Files::new(commander, current_head)?,
-            branches: Branches::new(commander)?,
-            command_log: CommandLog::new(commander)?,
-            textarea_active: false,
+            log: LogTab::new(commander)?,
+            files: FilesTab::new(commander, current_head)?,
+            branches: BranchesTab::new(commander)?,
+            command_log: CommandLogTag::new(commander)?,
+            popup: None,
         })
     }
 
@@ -77,8 +82,8 @@ impl App<'_> {
             ComponentAction::ChangeHead(head) => {
                 self.files.set_head(commander, &head)?;
             }
-            ComponentAction::SetTextAreaActive(textarea_active) => {
-                self.textarea_active = textarea_active;
+            ComponentAction::SetPopup(popup) => {
+                self.popup = popup;
             }
             ComponentAction::Multiple(component_actions) => {
                 for component_action in component_actions.into_iter() {
@@ -88,5 +93,63 @@ impl App<'_> {
         }
 
         Ok(())
+    }
+
+    pub fn input(&mut self, event: Event, commander: &mut Commander) -> Result<bool> {
+        if let Some(popup) = self.popup.as_mut() {
+            match popup.input(commander, event.clone())? {
+                ComponentInputResult::HandledAction(component_action) => {
+                    self.handle_action(component_action, commander)?
+                }
+                ComponentInputResult::Handled => {}
+                ComponentInputResult::NotHandled => {
+                    if let Event::Key(key) = event
+                        && key.kind == event::KeyEventKind::Press
+                    {
+                        // Close
+                        if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc {
+                            self.popup = None
+                        }
+                    }
+                }
+            }
+        } else {
+            match self
+                .get_current_component_mut()
+                .input(commander, event.clone())?
+            {
+                ComponentInputResult::HandledAction(component_action) => {
+                    self.handle_action(component_action, commander)?
+                }
+                ComponentInputResult::Handled => {}
+                ComponentInputResult::NotHandled => {
+                    if let Event::Key(key) = event
+                        && key.kind == event::KeyEventKind::Press
+                    {
+                        // Close
+                        if key.code == KeyCode::Char('q')
+                            || (key.modifiers.contains(KeyModifiers::CONTROL)
+                                && (key.code == KeyCode::Char('c')))
+                            || key.code == KeyCode::Esc
+                        {
+                            return Ok(true);
+                        }
+                        //
+                        // Tab switching
+                        if let Some((_, tab)) = Tab::VALUES.iter().enumerate().find(|(i, _)| {
+                            key.code
+                                == KeyCode::Char(
+                                    char::from_digit((*i as u32) + 1u32, 10)
+                                        .expect("Tab index could not be converted to digit"),
+                                )
+                        }) {
+                            self.set_tab(commander, *tab)?;
+                        }
+                    }
+                }
+            };
+        }
+
+        Ok(false)
     }
 }
