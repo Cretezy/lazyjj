@@ -23,7 +23,7 @@ jobs:
             os: ubuntu-22.04
             target: x86_64-unknown-linux-musl
           - build: macos-x86_64
-            os: macos-11
+            os: macos-13
             target: x86_64-apple-darwin
           - build: macos-aarch64
             os: macos-14
