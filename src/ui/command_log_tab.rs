@@ -3,7 +3,7 @@ use std::borrow::Borrow;
 use anyhow::Result;
 
 use ansi_to_tui::IntoText;
-use crossterm::event::{Event, KeyCode};
+use crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::{prelude::*, widgets::*};
 
 use crate::{
@@ -227,7 +227,9 @@ impl Component for CommandLogTag {
 
     #[allow(clippy::collapsible_if)]
     fn input(&mut self, _commander: &mut Commander, event: Event) -> Result<ComponentInputResult> {
-        if let Event::Key(key) = event {
+        if let Event::Key(key) = event
+            && key.kind == KeyEventKind::Press
+        {
             if self.output_panel.input(key) {
                 return Ok(ComponentInputResult::Handled);
             }

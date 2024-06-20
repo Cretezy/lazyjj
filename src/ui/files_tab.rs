@@ -12,7 +12,7 @@ use crate::{
 };
 
 use ansi_to_tui::IntoText;
-use crossterm::event::{Event, KeyCode};
+use crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::{prelude::*, widgets::*};
 
 /// Files tab. Shows files in selected change in left panel and selected file diff in right panel
@@ -276,7 +276,9 @@ impl Component for FilesTab {
     }
 
     fn input(&mut self, commander: &mut Commander, event: Event) -> Result<ComponentInputResult> {
-        if let Event::Key(key) = event {
+        if let Event::Key(key) = event
+            && key.kind == KeyEventKind::Press
+        {
             if self.diff_panel.input(key) {
                 return Ok(ComponentInputResult::Handled);
             }

@@ -13,7 +13,7 @@ use crate::{
 };
 use ansi_to_tui::IntoText;
 use anyhow::Result;
-use crossterm::event::{Event, KeyCode, KeyModifiers};
+use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
 use tui_confirm_dialog::{ButtonLabel, ConfirmDialog, ConfirmDialogState, Listener};
 use tui_textarea::{CursorMove, TextArea};
@@ -689,7 +689,9 @@ impl Component for BranchesTab<'_> {
             return Ok(ComponentInputResult::Handled);
         }
 
-        if let Event::Key(key) = event {
+        if let Event::Key(key) = event
+            && key.kind == KeyEventKind::Press
+        {
             if self.popup.is_opened() {
                 if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc {
                     self.popup = ConfirmDialogState::default();
