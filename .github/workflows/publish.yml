@@ -39,7 +39,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
       - name: Build release binary
-        run: cargo build --target ${{ matrix.target }} --verbose --release
+        run: cargo build --target ${{ matrix.target }} --verbose --release --locked
       - name: Build archive
         shell: bash
         run: |
