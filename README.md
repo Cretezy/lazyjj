@@ -36,7 +36,7 @@ Make sure you have [`jj`](https://martinvonz.github.io/jj/latest/install-and-set
 - With [`cargo binstall`](https://github.com/cargo-bins/cargo-binstall): `cargo binstall lazyjj`
 - With `cargo install`: `cargo +nightly install lazyjj` (requires nightly, may take a few moments to compile)
 - With pre-built binaries: [View releases](https://github.com/Cretezy/lazyjj/releases)
-- From the AUR: `yay -S lazyjj-bin`
+- For Arch Linux: `pacman -S lazyjj`
 
 To build and install a pre-release version: `cargo +nightly install --git https://github.com/Cretezy/lazyjj.git --locked`
 
