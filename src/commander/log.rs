@@ -13,6 +13,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::fmt::Display;
 use thiserror::Error;
+use tracing::instrument;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Head {
@@ -75,6 +76,7 @@ fn parse_head(text: &str) -> Result<Head> {
 impl Commander {
     /// Get log. Returns human readable log and mapping to log line to head.
     /// Maps to `jj log`
+    #[instrument(level = "trace", skip(self))]
     pub fn get_log(&mut self, revset: &Option<String>) -> Result<LogOutput, CommandError> {
         let mut args = vec![];
 
@@ -124,6 +126,7 @@ impl Commander {
 
     /// Get commit details.
     /// Maps to `jj show <commit>`
+    #[instrument(level = "trace", skip(self))]
     pub fn get_commit_show(
         &mut self,
         commit_id: &CommitId,
@@ -140,6 +143,7 @@ impl Commander {
 
     /// Get the current head.
     /// Maps to `jj log -r @`
+    #[instrument(level = "trace", skip(self))]
     pub fn get_current_head(&mut self) -> Result<Head> {
         parse_head(
             &self
@@ -163,6 +167,7 @@ impl Commander {
     }
 
     /// Get the latest version of a head. Can detect evolution of divergent head.
+    #[instrument(level = "trace", skip(self))]
     pub fn get_head_latest(&mut self, head: &Head) -> Result<Head> {
         // Get all heads which point to the same change ID
         let latest_heads: Vec<Head> = self
@@ -227,6 +232,7 @@ impl Commander {
 
     /// Get a commit's parent.
     /// Maps to `jj log -r <revision>-`
+    #[instrument(level = "trace", skip(self))]
     pub fn get_commit_parent(&mut self, commit_id: &CommitId) -> Result<Head> {
         parse_head(
             &self
@@ -251,6 +257,7 @@ impl Commander {
 
     /// Get commit's description.
     /// Maps to `jj log -r <revision> -T description`
+    #[instrument(level = "trace", skip(self))]
     pub fn get_commit_description(&mut self, commit_id: &CommitId) -> Result<String> {
         Ok(self
             .execute_jj_command(
@@ -273,6 +280,7 @@ impl Commander {
 
     /// Check if a revision is immutable
     /// Maps to `jj log -r <revision> -T immutable`
+    #[instrument(level = "trace", skip(self))]
     pub fn check_revision_immutable(&mut self, revision: &str) -> Result<bool> {
         Ok(self
             .execute_jj_command(
@@ -296,6 +304,7 @@ impl Commander {
 
     /// Get branch head
     /// Maps to `jj log -r <branch>[@<remote>]`
+    #[instrument(level = "trace", skip(self))]
     pub fn get_branch_head(&mut self, branch: &Branch) -> Result<Head> {
         parse_head(
             &self

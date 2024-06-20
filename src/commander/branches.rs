@@ -8,6 +8,7 @@ use lazy_static::lazy_static;
 use ratatui::text::Text;
 use regex::Regex;
 use std::fmt::Display;
+use tracing::instrument;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Branch {
@@ -75,6 +76,7 @@ impl BranchLine {
 impl Commander {
     /// Get branches.
     /// Maps to `jj branch list`
+    #[instrument(level = "trace", skip(self))]
     pub fn get_branches(&mut self, show_all: bool) -> Result<Vec<BranchLine>, CommandError> {
         let mut args = vec![];
         if show_all {
@@ -132,6 +134,7 @@ impl Commander {
         Ok(branches)
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn get_branches_list(&mut self, show_all: bool) -> Result<Vec<Branch>, CommandError> {
         let mut args = vec![
             "branch".to_owned(),
@@ -154,6 +157,7 @@ impl Commander {
 
     /// Get branch details.
     /// Maps to `jj show <branch>`
+    #[instrument(level = "trace", skip(self))]
     pub fn get_branch_show(
         &mut self,
         branch: &Branch,

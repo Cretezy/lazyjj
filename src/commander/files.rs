@@ -7,6 +7,7 @@ use anyhow::{Context, Result};
 use lazy_static::lazy_static;
 use ratatui::style::Color;
 use regex::Regex;
+use tracing::instrument;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct File {
@@ -55,6 +56,7 @@ lazy_static! {
 impl Commander {
     /// Get list of changes files in a change. Parses the output.
     /// Maps to `jj diff --summary -r <revision>`
+    #[instrument(level = "trace", skip(self))]
     pub fn get_files(&mut self, head: &Head) -> Result<Vec<File>, CommandError> {
         Ok(self
             .execute_jj_command(
@@ -85,6 +87,7 @@ impl Commander {
 
     /// Get list of changes files in a change. Parses the output.
     /// Maps to `jj diff --summary -r <revision>`
+    #[instrument(level = "trace", skip(self))]
     pub fn get_conflicts(&mut self, commit_id: &CommitId) -> Result<Vec<Conflict>> {
         let output = self.execute_jj_command(
             vec!["resolve", "--list", "-r", commit_id.as_str()],
@@ -117,6 +120,7 @@ impl Commander {
 
     /// Get diff for file change in a change.
     /// Maps to `jj diff -r <revision> <path>`
+    #[instrument(level = "trace", skip(self))]
     pub fn get_file_diff(
         &mut self,
         head: &Head,

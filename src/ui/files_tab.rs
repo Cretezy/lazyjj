@@ -1,4 +1,5 @@
 use anyhow::Result;
+use tracing::instrument;
 
 use crate::{
     commander::{
@@ -49,6 +50,7 @@ fn get_current_file_index(
 }
 
 impl FilesTab {
+    #[instrument(level = "trace", skip(commander))]
     pub fn new(commander: &mut Commander, head: &Head) -> Result<Self> {
         let head = head.clone();
         let is_current_head = head == commander.get_current_head()?;

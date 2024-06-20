@@ -121,3 +121,20 @@ See all key mappings for the current tab with `h` or `?`.
 
 - Select latest command with `@`
 - Toggle right panel wrapping with `W`
+
+## Development
+
+### Setup
+
+1. Install Rust and
+2. Clone repository
+3. Run with `cargo run`
+4. Build with `cargo build --release` (output in `target/release`)
+5. You can point it to another jj repo with `--path`: `cargo run -- --path ~/other-repo`
+
+### Logging/Tracing
+
+lazyjj has 2 debugging tools:
+
+1. Logging: Enabled by setting `LAZYJJ_LOG=1` when running. Produces a `lazyjj.log` log file
+2. Tracing: Enabled by setting `LAZYJJ_TRACE=1` when running. Produces `trace-*.json` Chrome trace file, for `chrome://tracing` or [ui.perfetto.dev](https://ui.perfetto.dev)
