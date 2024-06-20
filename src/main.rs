@@ -39,6 +39,10 @@ struct Args {
     /// Path to jj repo. Defaults to current directory
     #[arg(short, long)]
     path: Option<String>,
+
+    // Default revset
+    #[arg(short, long)]
+    revisions: Option<String>,
 }
 
 fn main() -> Result<()> {
@@ -59,7 +63,7 @@ fn main() -> Result<()> {
     }
 
     // Setup environment
-    let env = Env::new(path)?;
+    let env = Env::new(path, args.revisions)?;
     let mut commander = Commander::new(&env);
 
     // Check that `jj status` works

@@ -242,6 +242,7 @@ pub mod tests {
             let env = Env {
                 root: directory.path().to_string_lossy().to_string(),
                 config: Config::default(),
+                default_revset: None,
             };
 
             let mut commander = Commander::new(&env);

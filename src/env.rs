@@ -79,10 +79,11 @@ impl Config {
 pub struct Env {
     pub config: Config,
     pub root: String,
+    pub default_revset: Option<String>,
 }
 
 impl Env {
-    pub fn new(path: PathBuf) -> Result<Env> {
+    pub fn new(path: PathBuf, default_revset: Option<String>) -> Result<Env> {
         // Get jj repository root
         let root_output = Command::new("jj")
             .arg("root")
@@ -144,7 +145,11 @@ impl Env {
             }
         };
 
-        Ok(Env { root, config })
+        Ok(Env {
+            root,
+            config,
+            default_revset,
+        })
     }
 }
 

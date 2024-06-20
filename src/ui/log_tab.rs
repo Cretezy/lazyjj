@@ -76,7 +76,8 @@ impl LogTab<'_> {
     pub fn new(commander: &mut Commander) -> Result<Self> {
         let diff_format = commander.env.config.diff_format();
 
-        let log_output = commander.get_log(&None);
+        let log_revset = commander.env.default_revset.clone();
+        let log_output = commander.get_log(&log_revset);
         let head = commander.get_current_head()?;
 
         let log_list_state = ListState::default().with_selected(get_head_index(&head, &log_output));
@@ -98,7 +99,7 @@ impl LogTab<'_> {
             log_list_state,
             log_height: 0,
 
-            log_revset: None,
+            log_revset,
             log_revset_textarea: None,
 
             head,
