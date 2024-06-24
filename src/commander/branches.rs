@@ -40,11 +40,7 @@ fn parse_branch(text: &str) -> Option<Branch> {
         let name = captured.get(1);
         let remote = captured.get(2);
         let present = captured.get(3);
-
-        if let Some(name) = name
-            && let Some(remote) = remote
-            && let Some(present) = present
-        {
+        if let (Some(name), Some(remote), Some(present)) = (name, remote, present) {
             let remote = remote.as_str().to_owned();
             Some(Branch {
                 remote: if remote.is_empty() {

@@ -286,8 +286,10 @@ impl Component for BranchSetPopup<'_> {
                     self.on_creating();
                 }
                 KeyCode::Enter => {
-                    if let Some(index) = self.list_state.selected()
-                        && let Some(action) = self.options.get(index)
+                    if let Some(action) = self
+                        .list_state
+                        .selected()
+                        .and_then(|index| self.options.get(index))
                     {
                         match action {
                             BranchSetOption::CreateBranch => {

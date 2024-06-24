@@ -205,75 +205,77 @@ impl Component for BranchesTab<'_> {
 
     fn update(&mut self, commander: &mut Commander) -> Result<Option<ComponentAction>> {
         // Check for popup action
-        if let Ok(res) = self.popup_rx.try_recv()
-            && res.1.unwrap_or(false)
-        {
-            match res.0 {
-                DELETE_BRANCH_POPUP_ID => {
-                    if let Some(delete) = self.delete.as_ref() {
-                        match commander.delete_branch(&delete.name) {
-                            Ok(_) => {
-                                self.refresh_branches(commander);
-                                let branches = Vec::new();
-                                let branches = self.branches_output.as_ref().unwrap_or(&branches);
-                                self.branch = branches.first().map(|branch| branch.to_owned());
-                                self.refresh_branch(commander);
-                            }
-                            Err(err) => {
-                                return Ok(Some(ComponentAction::SetPopup(Some(Box::new(
-                                    MessagePopup {
-                                        title: "Delete error".into(),
-                                        messages: err.to_string().into_text()?,
-                                    },
-                                )))));
-                            }
-                        }
-                    }
-                }
-                FORGET_BRANCH_POPUP_ID => {
-                    if let Some(forget) = self.forget.as_ref() {
-                        match commander.forget_branch(&forget.name) {
-                            Ok(_) => {
-                                self.refresh_branches(commander);
-                                let branches = Vec::new();
-                                let branches = self.branches_output.as_ref().unwrap_or(&branches);
-                                self.branch = branches.first().map(|branch| branch.to_owned());
-                                self.refresh_branch(commander);
-                            }
-                            Err(err) => {
-                                return Ok(Some(ComponentAction::SetPopup(Some(Box::new(
-                                    MessagePopup {
-                                        title: "Forget error".into(),
-                                        messages: err.to_string().into_text()?,
-                                    },
-                                )))));
+        if let Ok(res) = self.popup_rx.try_recv() {
+            if res.1.unwrap_or(false) {
+                match res.0 {
+                    DELETE_BRANCH_POPUP_ID => {
+                        if let Some(delete) = self.delete.as_ref() {
+                            match commander.delete_branch(&delete.name) {
+                                Ok(_) => {
+                                    self.refresh_branches(commander);
+                                    let branches = Vec::new();
+                                    let branches =
+                                        self.branches_output.as_ref().unwrap_or(&branches);
+                                    self.branch = branches.first().map(|branch| branch.to_owned());
+                                    self.refresh_branch(commander);
+                                }
+                                Err(err) => {
+                                    return Ok(Some(ComponentAction::SetPopup(Some(Box::new(
+                                        MessagePopup {
+                                            title: "Delete error".into(),
+                                            messages: err.to_string().into_text()?,
+                                        },
+                                    )))));
+                                }
                             }
                         }
                     }
-                }
-                NEW_POPUP_ID => {
-                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref() {
-                        commander.run_new(&branch.to_string())?;
-                        let head = commander.get_current_head()?;
-                        if self.describe_after_new {
-                            self.describe_after_new_change = Some(head.change_id);
-                            self.describe_after_new = false;
-                            let textarea = TextArea::default();
-                            self.describe_textarea = Some(textarea);
-                            return Ok(None);
-                        } else {
+                    FORGET_BRANCH_POPUP_ID => {
+                        if let Some(forget) = self.forget.as_ref() {
+                            match commander.forget_branch(&forget.name) {
+                                Ok(_) => {
+                                    self.refresh_branches(commander);
+                                    let branches = Vec::new();
+                                    let branches =
+                                        self.branches_output.as_ref().unwrap_or(&branches);
+                                    self.branch = branches.first().map(|branch| branch.to_owned());
+                                    self.refresh_branch(commander);
+                                }
+                                Err(err) => {
+                                    return Ok(Some(ComponentAction::SetPopup(Some(Box::new(
+                                        MessagePopup {
+                                            title: "Forget error".into(),
+                                            messages: err.to_string().into_text()?,
+                                        },
+                                    )))));
+                                }
+                            }
+                        }
+                    }
+                    NEW_POPUP_ID => {
+                        if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref() {
+                            commander.run_new(&branch.to_string())?;
+                            let head = commander.get_current_head()?;
+                            if self.describe_after_new {
+                                self.describe_after_new_change = Some(head.change_id);
+                                self.describe_after_new = false;
+                                let textarea = TextArea::default();
+                                self.describe_textarea = Some(textarea);
+                                return Ok(None);
+                            } else {
+                                return Ok(Some(ComponentAction::ViewLog(head)));
+                            }
+                        }
+                    }
+                    EDIT_POPUP_ID => {
+                        if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref() {
+                            commander.run_edit(&branch.to_string())?;
+                            let head = commander.get_current_head()?;
                             return Ok(Some(ComponentAction::ViewLog(head)));
                         }
                     }
+                    _ => {}
                 }
-                EDIT_POPUP_ID => {
-                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref() {
-                        commander.run_edit(&branch.to_string())?;
-                        let head = commander.get_current_head()?;
-                        return Ok(Some(ComponentAction::ViewLog(head)));
-                    }
-                }
-                _ => {}
             }
         }
 
@@ -333,15 +335,17 @@ impl Component for BranchesTab<'_> {
                 Err(err) => [
                     vec![Line::raw("Error getting branches").bold().fg(Color::Red)],
                     // TODO: Remove when jj 0.20 is released
-                    if let CommandError::Status(output, _) = err
-                        && output.contains("unexpected argument '-T' found")
-                    {
-                        vec![
-                            Line::raw(""),
-                            Line::raw("Please update jj to >0.18 for -T support to branches")
-                                .bold()
-                                .fg(Color::Red),
-                        ]
+                    if let CommandError::Status(output, _) = err {
+                        if output.contains("unexpected argument '-T' found") {
+                            vec![
+                                Line::raw(""),
+                                Line::raw("Please update jj to >0.18 for -T support to branches")
+                                    .bold()
+                                    .fg(Color::Red),
+                            ]
+                        } else {
+                            vec![]
+                        }
                     } else {
                         vec![]
                     },
@@ -660,9 +664,10 @@ impl Component for BranchesTab<'_> {
             return Ok(ComponentInputResult::Handled);
         }
 
-        if let Some(describe_textarea) = self.describe_textarea.as_mut()
-            && let Some(describe_after_new_change) = self.describe_after_new_change.as_ref()
-        {
+        if let (Some(describe_textarea), Some(describe_after_new_change)) = (
+            self.describe_textarea.as_mut(),
+            self.describe_after_new_change.as_ref(),
+        ) {
             if let Event::Key(key) = event {
                 match key.code {
                     KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
@@ -689,9 +694,10 @@ impl Component for BranchesTab<'_> {
             return Ok(ComponentInputResult::Handled);
         }
 
-        if let Event::Key(key) = event
-            && key.kind == KeyEventKind::Press
-        {
+        if let Event::Key(key) = event {
+            if key.kind == KeyEventKind::Press {
+                return Ok(ComponentInputResult::Handled);
+            }
             if self.popup.is_opened() {
                 if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc {
                     self.popup = ConfirmDialogState::default();
@@ -793,66 +799,31 @@ impl Component for BranchesTab<'_> {
                 }
                 // TODO: Ask for confirmation?
                 KeyCode::Char('t') => {
-                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref()
-                        && branch.remote.is_some()
-                        && branch.present
-                    {
-                        commander.track_branch(branch)?;
-                        self.refresh_branches(commander);
-                        self.refresh_branch(commander);
+                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref() {
+                        if branch.remote.is_some() && branch.present {
+                            commander.track_branch(branch)?;
+                            self.refresh_branches(commander);
+                            self.refresh_branch(commander);
+                        }
                     }
                 }
                 KeyCode::Char('T') => {
-                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref()
-                        && branch.remote.is_some()
-                        && branch.present
-                    {
-                        commander.untrack_branch(branch)?;
-                        self.refresh_branches(commander);
-                        self.refresh_branch(commander);
+                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref() {
+                        if branch.remote.is_some() && branch.present {
+                            commander.untrack_branch(branch)?;
+                            self.refresh_branches(commander);
+                            self.refresh_branch(commander);
+                        }
                     }
                 }
                 KeyCode::Char('n') | KeyCode::Char('N') => {
-                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref()
-                        && branch.present
-                    {
-                        self.popup = ConfirmDialogState::new(
-                            NEW_POPUP_ID,
-                            Span::styled(" New ", Style::new().bold().cyan()),
-                            Text::from(vec![
-                                Line::from("Are you sure you want to create a new change?"),
-                                Line::from(format!("Branch: {}", branch)),
-                            ]),
-                        )
-                        .with_yes_button(ButtonLabel::YES.clone())
-                        .with_no_button(ButtonLabel::NO.clone())
-                        .with_listener(Some(self.popup_tx.clone()))
-                        .open();
-
-                        self.describe_after_new = key.code == KeyCode::Char('N');
-                    }
-                }
-                KeyCode::Char('e') => {
-                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref()
-                        && branch.present
-                    {
-                        if commander.check_revision_immutable(&branch.to_string())? {
-                            return Ok(ComponentInputResult::HandledAction(
-                                ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                    title: "Edit".into(),
-                                    messages: vec![
-                                        "The change cannot be edited because it is immutable."
-                                            .into(),
-                                    ]
-                                    .into(),
-                                }))),
-                            ));
-                        } else {
+                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref() {
+                        if branch.present {
                             self.popup = ConfirmDialogState::new(
-                                EDIT_POPUP_ID,
-                                Span::styled(" Edit ", Style::new().bold().cyan()),
+                                NEW_POPUP_ID,
+                                Span::styled(" New ", Style::new().bold().cyan()),
                                 Text::from(vec![
-                                    Line::from("Are you sure you want to edit an existing change?"),
+                                    Line::from("Are you sure you want to create a new change?"),
                                     Line::from(format!("Branch: {}", branch)),
                                 ]),
                             )
@@ -860,16 +831,51 @@ impl Component for BranchesTab<'_> {
                             .with_no_button(ButtonLabel::NO.clone())
                             .with_listener(Some(self.popup_tx.clone()))
                             .open();
+
+                            self.describe_after_new = key.code == KeyCode::Char('N');
+                        }
+                    }
+                }
+                KeyCode::Char('e') => {
+                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref() {
+                        if branch.present {
+                            if commander.check_revision_immutable(&branch.to_string())? {
+                                return Ok(ComponentInputResult::HandledAction(
+                                    ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                        title: "Edit".into(),
+                                        messages: vec![
+                                            "The change cannot be edited because it is immutable."
+                                                .into(),
+                                        ]
+                                        .into(),
+                                    }))),
+                                ));
+                            } else {
+                                self.popup = ConfirmDialogState::new(
+                                    EDIT_POPUP_ID,
+                                    Span::styled(" Edit ", Style::new().bold().cyan()),
+                                    Text::from(vec![
+                                        Line::from(
+                                            "Are you sure you want to edit an existing change?",
+                                        ),
+                                        Line::from(format!("Branch: {}", branch)),
+                                    ]),
+                                )
+                                .with_yes_button(ButtonLabel::YES.clone())
+                                .with_no_button(ButtonLabel::NO.clone())
+                                .with_listener(Some(self.popup_tx.clone()))
+                                .open();
+                            }
                         }
                     }
                 }
                 KeyCode::Enter => {
-                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref()
-                        && branch.present
-                    {
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::ViewLog(commander.get_branch_head(branch)?),
-                        ));
+                    if let Some(BranchLine::Parsed { branch, .. }) = self.branch.as_ref() {
+                        if branch.present {
+                            return Ok(ComponentInputResult::HandledAction(
+                                ComponentAction::ViewLog(commander.get_branch_head(branch)?),
+                            ));
+                        }
                     }
                 }
                 KeyCode::Char('h') | KeyCode::Char('?') => {

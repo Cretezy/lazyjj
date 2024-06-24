@@ -86,19 +86,20 @@ impl Component for HelpPopup {
         _commander: &mut crate::commander::Commander,
         event: crossterm::event::Event,
     ) -> anyhow::Result<crate::ComponentInputResult> {
-        if let Event::Key(key) = event
-            && key.kind == event::KeyEventKind::Press
-        {
-            match key.code {
-                KeyCode::Char('j') => {
-                    let max = self.left_items.len().max(self.right_items.len());
-                    self.scroll = (self.scroll + 1).min(max.saturating_sub(self.height as usize));
+        if let Event::Key(key) = event {
+            if key.kind == event::KeyEventKind::Press {
+                match key.code {
+                    KeyCode::Char('j') => {
+                        let max = self.left_items.len().max(self.right_items.len());
+                        self.scroll =
+                            (self.scroll + 1).min(max.saturating_sub(self.height as usize));
+                    }
+                    KeyCode::Char('k') => self.scroll = self.scroll.saturating_sub(1),
+                    _ => return Ok(ComponentInputResult::NotHandled),
                 }
-                KeyCode::Char('k') => self.scroll = self.scroll.saturating_sub(1),
-                _ => return Ok(ComponentInputResult::NotHandled),
-            }
 
-            return Ok(ComponentInputResult::Handled);
+                return Ok(ComponentInputResult::Handled);
+            }
         }
 
         Ok(ComponentInputResult::NotHandled)
