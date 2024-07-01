@@ -96,8 +96,12 @@ impl Commander {
     }
 
     /// Git push. Maps to `jj git push`
-    pub fn git_push(&mut self, all_branches: bool) -> Result<String, CommandError> {
-        let mut args = vec!["git", "push"];
+    pub fn git_push(
+        &mut self,
+        all_branches: bool,
+        commit_id: &CommitId,
+    ) -> Result<String, CommandError> {
+        let mut args = vec!["git", "push", "-r", commit_id.as_str()];
         if all_branches {
             args.push("--all");
         }
