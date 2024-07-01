@@ -54,16 +54,12 @@ fn parse_head(text: &str) -> Result<Head> {
     captured
         .as_ref()
         .map_or(Err(anyhow!(HeadParseError(text.to_owned()))), |captured| {
-            let change_id = captured.get(1);
-            let commit_id = captured.get(2);
-            let divergent = captured.get(3);
-            let immutable = captured.get(4);
-
-            if let Some(change_id) = change_id
-                && let Some(commit_id) = commit_id
-                && let Some(divergent) = divergent
-                && let Some(immutable) = immutable
-            {
+            if let (Some(change_id), Some(commit_id), Some(divergent), Some(immutable)) = (
+                captured.get(1),
+                captured.get(2),
+                captured.get(3),
+                captured.get(4),
+            ) {
                 Ok(Head {
                     change_id: ChangeId(change_id.as_str().to_string()),
                     commit_id: CommitId(commit_id.as_str().to_string()),
