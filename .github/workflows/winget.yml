@@ -1,0 +1,36 @@
+name: WinGet submission on release
+# based off of https://raw.githubusercontent.com/microsoft/PowerToys/main/.github/workflows/package-submissions.yml
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  winget:
+    name: Publish winget package
+    runs-on: windows-latest
+    steps:
+      - name: Submit Cretezy.lazyjj package to Windows Package Manager Community Repository
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $wingetPackage = "Cretezy.lazyjj"
+          $gitToken = "${{ secrets.PAT_WINGET }}"
+
+          $github = Invoke-RestMethod -uri "https://api.github.com/repos/Cretezy/lazyjj/releases" 
+
+          if ($github.Length -gt 0) {
+            $targetRelease = $github[0]
+            $installer = ($targetRelease.assets | where-object name -match 'x86_64-pc-windows')[0].browser_download_url
+            $ver = $targetRelease.tag_name.Trim("v")
+
+            # getting latest wingetcreate file
+            Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+            Write-Output "wingetcreate.exe update $wingetPackage -s -v $ver -u $installer -t <TOKEN>"
+            .\wingetcreate.exe update $wingetPackage -s -v $ver -u $installer -t $gitToken
+          }
+          else {
+            Write-Error "Failed to find any releases"
+            return 1
+          }
+
