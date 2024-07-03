@@ -70,24 +70,16 @@ fn main() -> Result<()> {
     // Setup app
     let mut app = App::new(env.clone(), &mut commander)?;
 
-    // Setup terminal
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
+    let mut terminal = setup_terminal()?;
 
     // Run app
-    run_app(&mut terminal, &mut app, &mut commander)?;
-
-    // Restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
+    match run_app(&mut terminal, &mut app, &mut commander) {
+        Ok(()) => restore_terminal(terminal)?,
+        e @ Err(_) => {
+            restore_terminal(terminal)?;
+            return e;
+        },
+    }
 
     Ok(())
 }
@@ -111,6 +103,25 @@ fn run_app<B: Backend>(
             return Ok(());
         }
     }
+}
+
+fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    Ok(Terminal::new(backend)?)
+}
+
+fn restore_terminal(mut terminal: Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+    Ok(())
 }
 
 enum ComponentInputResult {
