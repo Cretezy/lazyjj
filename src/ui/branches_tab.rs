@@ -695,7 +695,7 @@ impl Component for BranchesTab<'_> {
         }
 
         if let Event::Key(key) = event {
-            if key.kind == KeyEventKind::Press {
+            if key.kind != KeyEventKind::Press {
                 return Ok(ComponentInputResult::Handled);
             }
             if self.popup.is_opened() {
