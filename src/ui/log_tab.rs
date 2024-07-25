@@ -624,7 +624,7 @@ impl Component for LogTab<'_> {
                     ));
                 }
                 KeyCode::Char('p') | KeyCode::Char('P') => {
-                    match commander.git_push(key.code == KeyCode::Char('P')) {
+                    match commander.git_push(key.code == KeyCode::Char('P'), &self.head.commit_id) {
                         Ok(result) if !result.is_empty() => {
                             return Ok(ComponentInputResult::HandledAction(
                                 ComponentAction::SetPopup(Some(Box::new(MessagePopup {
