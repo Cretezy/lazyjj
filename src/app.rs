@@ -103,20 +103,20 @@ impl App<'_> {
                 }
                 ComponentInputResult::Handled => {}
                 ComponentInputResult::NotHandled => {
-                    if let Event::Key(key) = event
-                        && key.kind == event::KeyEventKind::Press
-                    {
-                        // Close
-                        if matches!(
-                            key.code,
-                            KeyCode::Char('y')
-                                | KeyCode::Char('n')
-                                | KeyCode::Char('o')
-                                | KeyCode::Enter
-                                | KeyCode::Char('q')
-                                | KeyCode::Esc
-                        ) {
-                            self.popup = None
+                    if let Event::Key(key) = event {
+                        if key.kind == event::KeyEventKind::Press {
+                            // Close
+                            if matches!(
+                                key.code,
+                                KeyCode::Char('y')
+                                    | KeyCode::Char('n')
+                                    | KeyCode::Char('o')
+                                    | KeyCode::Enter
+                                    | KeyCode::Char('q')
+                                    | KeyCode::Esc
+                            ) {
+                                self.popup = None
+                            }
                         }
                     }
                 }
@@ -131,27 +131,27 @@ impl App<'_> {
                 }
                 ComponentInputResult::Handled => {}
                 ComponentInputResult::NotHandled => {
-                    if let Event::Key(key) = event
-                        && key.kind == event::KeyEventKind::Press
-                    {
-                        // Close
-                        if key.code == KeyCode::Char('q')
-                            || (key.modifiers.contains(KeyModifiers::CONTROL)
-                                && (key.code == KeyCode::Char('c')))
-                            || key.code == KeyCode::Esc
-                        {
-                            return Ok(true);
-                        }
-                        //
-                        // Tab switching
-                        if let Some((_, tab)) = Tab::VALUES.iter().enumerate().find(|(i, _)| {
-                            key.code
-                                == KeyCode::Char(
-                                    char::from_digit((*i as u32) + 1u32, 10)
-                                        .expect("Tab index could not be converted to digit"),
-                                )
-                        }) {
-                            self.set_tab(commander, *tab)?;
+                    if let Event::Key(key) = event {
+                        if key.kind == event::KeyEventKind::Press {
+                            // Close
+                            if key.code == KeyCode::Char('q')
+                                || (key.modifiers.contains(KeyModifiers::CONTROL)
+                                    && (key.code == KeyCode::Char('c')))
+                                || key.code == KeyCode::Esc
+                            {
+                                return Ok(true);
+                            }
+                            //
+                            // Tab switching
+                            if let Some((_, tab)) = Tab::VALUES.iter().enumerate().find(|(i, _)| {
+                                key.code
+                                    == KeyCode::Char(
+                                        char::from_digit((*i as u32) + 1u32, 10)
+                                            .expect("Tab index could not be converted to digit"),
+                                    )
+                            }) {
+                                self.set_tab(commander, *tab)?;
+                            }
                         }
                     }
                 }
