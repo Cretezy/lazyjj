@@ -58,6 +58,8 @@ To start lazyjj for the repository in the current directory: `lazyjj`
 
 To use a different repository: `lazyjj --path ~/path/to/repo`
 
+To start with a different default revset: `lazyjj -r '::@'`
+
 ## Key mappings
 
 See all key mappings for the current tab with `h` or `?`.
