@@ -73,13 +73,9 @@ fn main() -> Result<()> {
     let mut terminal = setup_terminal()?;
 
     // Run app
-    match run_app(&mut terminal, &mut app, &mut commander) {
-        Ok(()) => restore_terminal(terminal)?,
-        e @ Err(_) => {
-            restore_terminal(terminal)?;
-            return e;
-        },
-    }
+    let res = run_app(&mut terminal, &mut app, &mut commander);
+    restore_terminal(terminal)?;
+    res?;
 
     Ok(())
 }
