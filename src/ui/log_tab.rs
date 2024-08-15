@@ -30,6 +30,7 @@ const ABANDON_POPUP_ID: u16 = 3;
 /// Log tab. Shows `jj log` in left panel and shows selected change details of in right panel.
 pub struct LogTab<'a> {
     log_output: Result<LogOutput, CommandError>,
+    log_output_text: Text<'a>,
     log_list_state: ListState,
     log_height: u16,
 
@@ -86,6 +87,13 @@ impl LogTab<'_> {
         let (branch_set_popup_tx, branch_set_popup_rx) = std::sync::mpsc::channel();
 
         Ok(Self {
+            log_output_text: match log_output.as_ref() {
+                Ok(log_output) => log_output
+                    .graph
+                    .into_text()
+                    .unwrap_or(Text::from("Could not turn text into TUI text (coloring)")),
+                Err(_) => Text::default(),
+            },
             log_output,
             log_list_state,
             log_height: 0,
@@ -119,6 +127,13 @@ impl LogTab<'_> {
 
     fn refresh_log_output(&mut self, commander: &mut Commander) {
         self.log_output = commander.get_log(&self.log_revset);
+        self.log_output_text = match self.log_output.as_ref() {
+            Ok(log_output) => log_output
+                .graph
+                .into_text()
+                .unwrap_or(Text::from("Could not turn text into TUI text (coloring)")),
+            Err(_) => Text::default(),
+        };
     }
 
     fn refresh_head_output(&mut self, commander: &mut Commander) {
@@ -237,9 +252,8 @@ impl Component for LogTab<'_> {
             let mut scroll_offset = 0;
             let log_lines = match self.log_output.as_ref() {
                 Ok(log_output) => {
-                    let log_lines: Vec<Line> = log_output
-                        .graph
-                        .to_text()?
+                    let log_lines: Vec<Line> = self
+                        .log_output_text
                         .iter()
                         .enumerate()
                         .map(|(i, line)| {
