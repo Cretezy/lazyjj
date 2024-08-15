@@ -1,5 +1,3 @@
-#![feature(let_chains)]
-
 extern crate lazy_static;
 extern crate thiserror;
 
@@ -54,10 +52,10 @@ fn main() -> Result<()> {
     };
 
     // Check that jj exists
-    if let Err(err) = Command::new("jj").arg("help").output()
-        && let ErrorKind::NotFound = err.kind()
-    {
-        bail!("jj command not found. Please make sure it is installed: https://martinvonz.github.io/jj/latest/install-and-setup");
+    if let Err(err) = Command::new("jj").arg("help").output() {
+        if err.kind() == ErrorKind::NotFound {
+            bail!("jj command not found. Please make sure it is installed: https://martinvonz.github.io/jj/latest/install-and-setup");
+        }
     }
 
     // Setup environment

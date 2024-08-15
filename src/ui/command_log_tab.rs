@@ -43,8 +43,10 @@ impl CommandLogTag {
     pub fn get_output_lines<'a>(&self) -> Result<Vec<Line<'a>>> {
         let mut output_lines = vec![];
 
-        if let Some(selected_index) = self.commands_list_state.selected()
-            && let Some(command) = self.command_history.iter().rev().nth(selected_index)
+        if let Some(command) = self
+            .commands_list_state
+            .selected()
+            .and_then(|selected_index| self.command_history.iter().rev().nth(selected_index))
         {
             match command.output.clone().borrow() {
                 Ok(output) => {
@@ -186,9 +188,7 @@ impl Component for CommandLogTag {
                             },
                         );
 
-                    if let Some(selected_index) = self.commands_list_state.selected()
-                        && i == selected_index
-                    {
+                    if self.commands_list_state.selected() == Some(i) {
                         line = line.bg(self.config.highlight_color());
                     }
 
@@ -227,9 +227,11 @@ impl Component for CommandLogTag {
 
     #[allow(clippy::collapsible_if)]
     fn input(&mut self, _commander: &mut Commander, event: Event) -> Result<ComponentInputResult> {
-        if let Event::Key(key) = event
-            && key.kind == KeyEventKind::Press
-        {
+        if let Event::Key(key) = event {
+            if key.kind != KeyEventKind::Press {
+                return Ok(ComponentInputResult::Handled);
+            }
+
             if self.output_panel.input(key) {
                 return Ok(ComponentInputResult::Handled);
             }

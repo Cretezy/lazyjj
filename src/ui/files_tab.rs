@@ -37,9 +37,7 @@ fn get_current_file_index(
     current_file: Option<&String>,
     files_output: Result<&Vec<File>, &CommandError>,
 ) -> Option<usize> {
-    if let Some(current_file) = current_file
-        && let Ok(files_output) = files_output
-    {
+    if let (Some(current_file), Ok(files_output)) = (current_file, files_output) {
         files_output.iter().position(|file| {
             file.path
                 .as_ref()
@@ -140,11 +138,11 @@ impl FilesTab {
                 None => files.first(),
             }
             .map(|x| x.to_owned());
-            if let Some(next_file) = next_file
-                && next_file.path.is_some()
-            {
-                self.file.clone_from(&next_file.path);
-                self.refresh_diff(commander)?;
+            if let Some(next_file) = next_file {
+                if next_file.path.is_some() {
+                    self.file.clone_from(&next_file.path);
+                    self.refresh_diff(commander)?;
+                }
             }
         }
         Ok(())
@@ -276,9 +274,11 @@ impl Component for FilesTab {
     }
 
     fn input(&mut self, commander: &mut Commander, event: Event) -> Result<ComponentInputResult> {
-        if let Event::Key(key) = event
-            && key.kind == KeyEventKind::Press
-        {
+        if let Event::Key(key) = event {
+            if key.kind != KeyEventKind::Press {
+                return Ok(ComponentInputResult::Handled);
+            }
+
             if self.diff_panel.input(key) {
                 return Ok(ComponentInputResult::Handled);
             }
