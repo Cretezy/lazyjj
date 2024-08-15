@@ -15,26 +15,26 @@ pkg-url = "{ repo }/releases/download/v{ version }/lazyjj-v{ version }-{ target 
 
 
 [dependencies]
-ansi-to-tui = "4.0.1"
-anyhow = "1.0.86"
+ansi-to-tui = "6.0.0"
+anyhow = "1.0.89"
 chrono = "0.4.38"
-clap = { version = "4.5.7", features = ["derive"] }
-crossterm = "0.27.0"
-insta = { version = "1.39.0", features = ["filters"] }
+clap = { version = "4.5.19", features = ["derive"] }
+crossterm = "0.28.1"
+insta = { version = "1.40.0", features = ["filters"] }
 itertools = "0.13.0"
-lazy_static = "1.4.0"
-ratatui = { version = "0.26.3", features = [
+lazy_static = "1.5.0"
+ratatui = { version = "0.28.1", features = [
   "serde",
   "unstable-rendered-line-info",
 ] }
-regex = "1.10.5"
-serde = { version = "1.0.203", features = ["derive"] }
+regex = "1.11.0"
+serde = { version = "1.0.210", features = ["derive"] }
 tempdir = "0.3.7"
-thiserror = "1.0.61"
-toml = "0.8.14"
+thiserror = "1.0.64"
+toml = "0.8.19"
 tracing = { version = "0.1.40", features = ["attributes"] }
 tracing-chrome = "0.7.2"
 tracing-log = "0.2.0"
 tracing-subscriber = "0.3.18"
-tui-textarea = "0.4.0"
-tui_confirm_dialog = "0.2.1"
+tui-textarea = "0.6.1"
+tui_confirm_dialog = "0.2.3"
