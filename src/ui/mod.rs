@@ -15,6 +15,7 @@ use crate::{
     ComponentInputResult,
 };
 use anyhow::Result;
+use chrono::Utc;
 use crossterm::event::Event;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -46,26 +47,9 @@ pub trait Component {
     fn input(&mut self, commander: &mut Commander, event: Event) -> Result<ComponentInputResult>;
 }
 
-impl App<'_> {
-    // pub fn get_current_component(&self) -> &dyn Component {
-    //     match self.current_tab {
-    //         Tab::Log => &self.log,
-    //         Tab::Files => &self.files,
-    //         Tab::CommandLog => &self.command_log,
-    //     }
-    // }
-
-    pub fn get_current_component_mut(&mut self) -> &mut dyn Component {
-        match self.current_tab {
-            Tab::Log => &mut self.log,
-            Tab::Files => &mut self.files,
-            Tab::Branches => &mut self.branches,
-            Tab::CommandLog => &mut self.command_log,
-        }
-    }
-}
-
 pub fn ui(f: &mut Frame, app: &mut App) -> Result<()> {
+    let start_time = Utc::now().time();
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(3), Constraint::Min(1)])
@@ -112,10 +96,27 @@ pub fn ui(f: &mut Frame, app: &mut App) -> Result<()> {
         f.render_widget(tabs, header_chunks[1]);
     }
 
-    app.get_current_component_mut().draw(f, chunks[1])?;
+    if let Some(current_tab) = app.get_current_tab() {
+        current_tab.draw(f, chunks[1])?;
+    }
 
     if let Some(popup) = app.popup.as_mut() {
         popup.draw(f, f.size())?;
+    }
+
+    let end_time = Utc::now().time();
+    let diff = end_time - start_time;
+
+    {
+        let paragraph =
+            Paragraph::new(format!("{}ms", diff.num_milliseconds())).alignment(Alignment::Right);
+        let position = Rect {
+            x: 0,
+            y: 1,
+            height: 1,
+            width: f.size().width - 1,
+        };
+        f.render_widget(paragraph, position);
     }
 
     Ok(())

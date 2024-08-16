@@ -15,6 +15,7 @@ use ansi_to_tui::IntoText;
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
+use tracing::instrument;
 use tui_confirm_dialog::{ButtonLabel, ConfirmDialog, ConfirmDialogState, Listener};
 use tui_textarea::{CursorMove, TextArea};
 
@@ -102,6 +103,7 @@ fn get_current_branch_index(
 }
 
 impl BranchesTab<'_> {
+    #[instrument(level = "trace", skip(commander))]
     pub fn new(commander: &mut Commander) -> Result<Self> {
         let diff_format = commander.env.config.diff_format();
 

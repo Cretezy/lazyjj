@@ -2,14 +2,15 @@ use crate::{
     commander::Commander,
     env::Env,
     ui::{
-        branches_tab::BranchesTab, command_log_tab::CommandLogTag, files_tab::FilesTab,
+        branches_tab::BranchesTab, command_log_tab::CommandLogTab, files_tab::FilesTab,
         log_tab::LogTab, Component, ComponentAction,
     },
     ComponentInputResult,
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use core::fmt;
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
+use tracing::{info, info_span};
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum Tab {
@@ -37,32 +38,127 @@ impl Tab {
 pub struct App<'a> {
     pub env: Env,
     pub current_tab: Tab,
-    pub log: LogTab<'a>,
-    pub files: FilesTab,
-    pub branches: BranchesTab<'a>,
-    pub command_log: CommandLogTag,
+    pub log: Option<LogTab<'a>>,
+    pub files: Option<FilesTab>,
+    pub branches: Option<BranchesTab<'a>>,
+    pub command_log: Option<CommandLogTab>,
     pub popup: Option<Box<dyn Component>>,
 }
 
-impl App<'_> {
-    pub fn new<'a>(env: Env, commander: &mut Commander) -> Result<App<'a>> {
-        let current_head = &commander.get_current_head()?;
-        // TODO: Lazy load tabs on open
+impl<'a> App<'a> {
+    pub fn new(env: Env) -> Result<App<'a>> {
         Ok(App {
             env,
             current_tab: Tab::Log,
-            log: LogTab::new(commander)?,
-            files: FilesTab::new(commander, current_head)?,
-            branches: BranchesTab::new(commander)?,
-            command_log: CommandLogTag::new(commander)?,
+            log: None,
+            files: None,
+            branches: None,
+            command_log: None,
             popup: None,
         })
     }
 
+    pub fn get_or_init_current_tab(
+        &mut self,
+        commander: &mut Commander,
+    ) -> Result<&mut dyn Component> {
+        self.get_or_init_tab(commander, self.current_tab)
+    }
+    pub fn get_current_tab(&mut self) -> Option<&mut dyn Component> {
+        self.get_tab(self.current_tab)
+    }
+
     pub fn set_tab(&mut self, commander: &mut Commander, tab: Tab) -> Result<()> {
+        info!("Setting tab to {}", tab);
         self.current_tab = tab;
-        self.get_current_component_mut().switch(commander)?;
+
+        self.get_or_init_current_tab(commander)?.switch(commander)?;
         Ok(())
+    }
+
+    pub fn get_log_tab(&mut self, commander: &mut Commander) -> Result<&mut LogTab<'a>> {
+        if self.log.is_none() {
+            let span = info_span!("Initializing log tab");
+            let log_tab = span.in_scope(|| LogTab::new(commander))?;
+            self.log = Some(log_tab);
+        }
+
+        self.log
+            .as_mut()
+            .ok_or_else(|| anyhow!("Failed to get mutable reference to LogTab"))
+    }
+
+    pub fn get_files_tab(&mut self, commander: &mut Commander) -> Result<&mut FilesTab> {
+        if self.files.is_none() {
+            let span = info_span!("Initializing files tab");
+            let files_tab = span.in_scope(|| {
+                let current_head = commander.get_current_head()?;
+                FilesTab::new(commander, &current_head)
+            })?;
+            self.files = Some(files_tab);
+        }
+
+        self.files
+            .as_mut()
+            .ok_or_else(|| anyhow!("Failed to get mutable reference to FilesTab"))
+    }
+
+    pub fn get_branches_tab(&mut self, commander: &mut Commander) -> Result<&mut BranchesTab<'a>> {
+        if self.branches.is_none() {
+            let span = info_span!("Initializing branches tab");
+            let branches_tab = span.in_scope(|| BranchesTab::new(commander))?;
+            self.branches = Some(branches_tab);
+        }
+
+        self.branches
+            .as_mut()
+            .ok_or_else(|| anyhow!("Failed to get mutable reference to BranchesTab"))
+    }
+
+    pub fn get_command_log_tab(&mut self, commander: &mut Commander) -> Result<&mut CommandLogTab> {
+        if self.command_log.is_none() {
+            let span = info_span!("Initializing command log tab");
+            let command_log_tab = span.in_scope(|| CommandLogTab::new(commander))?;
+            self.command_log = Some(command_log_tab);
+        }
+
+        self.command_log
+            .as_mut()
+            .ok_or_else(|| anyhow!("Failed to get mutable reference to CommandLogTab"))
+    }
+
+    pub fn get_or_init_tab(
+        &mut self,
+        commander: &mut Commander,
+        tab: Tab,
+    ) -> Result<&mut dyn Component> {
+        Ok(match tab {
+            Tab::Log => self.get_log_tab(commander)?,
+            Tab::Files => self.get_files_tab(commander)?,
+            Tab::Branches => self.get_branches_tab(commander)?,
+            Tab::CommandLog => self.get_command_log_tab(commander)?,
+        })
+    }
+
+    pub fn get_tab(&mut self, tab: Tab) -> Option<&mut dyn Component> {
+        match tab {
+            Tab::Log => self
+                .log
+                .as_mut()
+                .map(|log_tab| log_tab as &mut dyn Component),
+            Tab::Files => self
+                .files
+                .as_mut()
+                .map(|files_tab| files_tab as &mut dyn Component),
+            Tab::Branches => self
+                .branches
+                .as_mut()
+                .map(|branches_tab| branches_tab as &mut dyn Component),
+            Tab::CommandLog => self
+                .command_log
+                .as_mut()
+                .map(|command_log_tab| command_log_tab as &mut dyn Component),
+        }
     }
 
     pub fn handle_action(
@@ -72,15 +168,15 @@ impl App<'_> {
     ) -> Result<()> {
         match component_action {
             ComponentAction::ViewFiles(head) => {
-                self.files.set_head(commander, &head)?;
                 self.set_tab(commander, Tab::Files)?;
+                self.get_files_tab(commander)?.set_head(commander, &head)?;
             }
             ComponentAction::ViewLog(head) => {
-                self.log.set_head(commander, head);
+                self.get_log_tab(commander)?.set_head(commander, head);
                 self.set_tab(commander, Tab::Log)?;
             }
             ComponentAction::ChangeHead(head) => {
-                self.files.set_head(commander, &head)?;
+                self.get_files_tab(commander)?.set_head(commander, &head)?;
             }
             ComponentAction::SetPopup(popup) => {
                 self.popup = popup;
@@ -120,10 +216,10 @@ impl App<'_> {
                         }
                     }
                 }
-            }
+            };
         } else {
             match self
-                .get_current_component_mut()
+                .get_or_init_current_tab(commander)?
                 .input(commander, event.clone())?
             {
                 ComponentInputResult::HandledAction(component_action) => {

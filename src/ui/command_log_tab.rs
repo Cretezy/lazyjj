@@ -5,6 +5,7 @@ use anyhow::Result;
 use ansi_to_tui::IntoText;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::{prelude::*, widgets::*};
+use tracing::instrument;
 
 use crate::{
     commander::{CommandLogItem, Commander},
@@ -15,7 +16,7 @@ use crate::{
 
 /// Command log tab. Shows list of commands exectured by lazyjj in left panel and selected command
 /// output in right panel
-pub struct CommandLogTag {
+pub struct CommandLogTab {
     command_history: Vec<CommandLogItem>,
     commands_list_state: ListState,
     commands_height: u16,
@@ -25,7 +26,8 @@ pub struct CommandLogTag {
     config: Config,
 }
 
-impl CommandLogTag {
+impl CommandLogTab {
+    #[instrument(level = "trace", skip(commander))]
     pub fn new(commander: &mut Commander) -> Result<Self> {
         let command_history = commander.command_history.clone();
         let selected_index = command_history.first().map(|_| 0);
@@ -141,7 +143,7 @@ impl CommandLogTag {
 }
 
 #[allow(clippy::invisible_characters)]
-impl Component for CommandLogTag {
+impl Component for CommandLogTab {
     fn switch(&mut self, commander: &mut Commander) -> Result<()> {
         let command_history = commander.command_history.clone();
         let selected_index = command_history.first().map(|_| 0);
