@@ -115,9 +115,12 @@ impl Commander {
         all_branches: bool,
         commit_id: &CommitId,
     ) -> Result<String, CommandError> {
-        let mut args = vec!["git", "push", "-r", commit_id.as_str()];
+        let mut args = vec!["git", "push"];
         if all_branches {
             args.push("--all");
+        } else {
+            args.push("-r");
+            args.push(commit_id.as_str());
         }
 
         self.execute_jj_command(args, true, true)
