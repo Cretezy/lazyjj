@@ -6,7 +6,7 @@ use crate::{
         details_panel::DetailsPanel,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
-        utils::{centered_rect, centered_rect_line_height},
+        utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
         Component, ComponentAction,
     },
     ComponentInputResult,
@@ -120,9 +120,11 @@ impl BranchesTab<'_> {
             .with_selected(get_current_branch_index(branch.as_ref(), &branches_output));
 
         let branch_output = branch.as_ref().and_then(|branch| match branch {
-            BranchLine::Parsed { branch, .. } => {
-                Some(commander.get_branch_show(branch, &diff_format))
-            }
+            BranchLine::Parsed { branch, .. } => Some(
+                commander
+                    .get_branch_show(branch, &diff_format)
+                    .map(|diff| tabs_to_spaces(&diff)),
+            ),
             _ => None,
         });
 
@@ -168,9 +170,11 @@ impl BranchesTab<'_> {
 
     pub fn refresh_branch(&mut self, commander: &mut Commander) {
         self.branch_output = self.branch.as_ref().and_then(|branch| match branch {
-            BranchLine::Parsed { branch, .. } => {
-                Some(commander.get_branch_show(branch, &self.diff_format))
-            }
+            BranchLine::Parsed { branch, .. } => Some(
+                commander
+                    .get_branch_show(branch, &self.diff_format)
+                    .map(|diff| tabs_to_spaces(&diff)),
+            ),
             _ => None,
         });
 
