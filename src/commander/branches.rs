@@ -4,10 +4,9 @@ use crate::{
 };
 use ansi_to_tui::IntoText;
 use anyhow::Result;
-use lazy_static::lazy_static;
 use ratatui::text::Text;
 use regex::Regex;
-use std::fmt::Display;
+use std::{fmt::Display, sync::LazyLock};
 use tracing::instrument;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -30,10 +29,9 @@ impl Display for Branch {
 
 // Template which outputs `[name@remote]`. Used to parse data from branch list
 const BRANCH_TEMPLATE: &str = r#""[" ++ name ++ "@" ++ remote ++ "|" ++ present ++ "]""#;
-lazy_static! {
-    // Regex to parse branch
-    static ref BRANCH_REGEX: Regex = Regex::new(r"^\[(.*)@(.*)\|(.*)\]$").unwrap();
-}
+// Regex to parse branch
+static BRANCH_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\[(.*)@(.*)\|(.*)\]$").unwrap());
 
 fn parse_branch(text: &str) -> Option<Branch> {
     let captured = BRANCH_REGEX.captures(text);

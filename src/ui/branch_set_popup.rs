@@ -162,7 +162,7 @@ impl Component for BranchSetPopup<'_> {
                 .constraints([Constraint::Fill(1), Constraint::Length(2)])
                 .split(block.inner(area));
 
-            f.render_widget(creating.widget(), popup_chunks[0]);
+            f.render_widget(creating, popup_chunks[0]);
 
             let help = Paragraph::new(vec!["Ctrl+s: save | Escape: cancel".into()])
                 .fg(Color::DarkGray)

@@ -1,10 +1,11 @@
+use std::sync::LazyLock;
+
 use crate::{
     commander::{ids::CommitId, log::Head, CommandError, Commander},
     env::DiffFormat,
 };
 
 use anyhow::{Context, Result};
-use lazy_static::lazy_static;
 use ratatui::style::Color;
 use regex::Regex;
 use tracing::instrument;
@@ -47,11 +48,9 @@ impl DiffType {
     }
 }
 
-lazy_static! {
-    // Example line: `A README.md`, `M src/main.rs`, `D Hello World`
-    static ref FILES_REGEX: Regex = Regex::new(r"(.) (.*)").unwrap();
-    static ref CONFLICTS_REGEX: Regex = Regex::new(r"(.*)    .*").unwrap();
-}
+// Example line: `A README.md`, `M src/main.rs`, `D Hello World`
+static FILES_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(.) (.*)").unwrap());
+static CONFLICTS_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(.*)    .*").unwrap());
 
 impl Commander {
     /// Get list of changes files in a change. Parses the output.

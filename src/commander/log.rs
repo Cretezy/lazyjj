@@ -9,9 +9,8 @@ use crate::{
 
 use anyhow::{anyhow, bail, Context, Result};
 use itertools::Itertools;
-use lazy_static::lazy_static;
 use regex::Regex;
-use std::fmt::Display;
+use std::{fmt::Display, sync::LazyLock};
 use thiserror::Error;
 use tracing::instrument;
 
@@ -44,10 +43,9 @@ impl Display for HeadParseError {
 // commands which supports templating.
 const HEAD_TEMPLATE: &str =
     r#""[" ++ change_id ++ "|" ++ commit_id ++ "|" ++ divergent ++ "|" ++ immutable ++ "]""#;
-lazy_static! {
-    // Regex to parse HEAD_TEMPLATE
-    static ref HEAD_TEMPLATE_REGEX: Regex = Regex::new(r"\[(.*)\|(.*)\|(.*)\|(.*)\]").unwrap();
-}
+// Regex to parse HEAD_TEMPLATE
+static HEAD_TEMPLATE_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\[(.*)\|(.*)\|(.*)\|(.*)\]").unwrap());
 
 // Parse a head with HEAD_TEMPLATE.
 fn parse_head(text: &str) -> Result<Head> {

@@ -1,4 +1,3 @@
-extern crate lazy_static;
 extern crate thiserror;
 
 use std::{
@@ -165,7 +164,7 @@ fn run_app<B: Backend>(
                             x: 0,
                             y: 1,
                             height: 1,
-                            width: f.size().width - 1,
+                            width: f.area().width - 1,
                         };
                         f.render_widget(paragraph, position);
                     }

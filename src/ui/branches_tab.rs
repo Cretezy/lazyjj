@@ -440,7 +440,7 @@ impl Component for BranchesTab<'_> {
                     ])
                     .split(block.inner(area));
 
-                f.render_widget(create.textarea.widget(), popup_chunks[0]);
+                f.render_widget(&create.textarea, popup_chunks[0]);
 
                 if let Some(error_lines) = error_lines {
                     let help = Paragraph::new(error_lines).block(
@@ -497,7 +497,7 @@ impl Component for BranchesTab<'_> {
                     ])
                     .split(block.inner(area));
 
-                f.render_widget(rename.textarea.widget(), popup_chunks[0]);
+                f.render_widget(&rename.textarea, popup_chunks[0]);
 
                 if let Some(error_lines) = error_lines {
                     let help = Paragraph::new(error_lines).block(
@@ -541,7 +541,7 @@ impl Component for BranchesTab<'_> {
                     .constraints([Constraint::Fill(1), Constraint::Length(2)])
                     .split(block.inner(area));
 
-                f.render_widget(describe_textarea.widget(), popup_chunks[0]);
+                f.render_widget(&*describe_textarea, popup_chunks[0]);
 
                 let help = Paragraph::new(vec!["Ctrl+s: save | Escape: cancel".into()])
                     .fg(Color::DarkGray)

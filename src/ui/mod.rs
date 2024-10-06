@@ -53,7 +53,7 @@ pub fn ui(f: &mut Frame, app: &mut App) -> Result<()> {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(3), Constraint::Min(1)])
-        .split(f.size());
+        .split(f.area());
 
     let header_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -101,7 +101,7 @@ pub fn ui(f: &mut Frame, app: &mut App) -> Result<()> {
     }
 
     if let Some(popup) = app.popup.as_mut() {
-        popup.draw(f, f.size())?;
+        popup.draw(f, f.area())?;
     }
 
     let end_time = Utc::now().time();
@@ -114,7 +114,7 @@ pub fn ui(f: &mut Frame, app: &mut App) -> Result<()> {
             x: 0,
             y: 1,
             height: 1,
-            width: f.size().width - 1,
+            width: f.area().width - 1,
         };
         f.render_widget(paragraph, position);
     }

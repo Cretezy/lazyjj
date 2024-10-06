@@ -1,4 +1,5 @@
 #![allow(clippy::borrow_interior_mutable_const)]
+
 use ansi_to_tui::IntoText;
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
@@ -363,7 +364,7 @@ impl Component for LogTab<'_> {
                     .constraints([Constraint::Fill(1), Constraint::Length(2)])
                     .split(block.inner(area));
 
-                f.render_widget(describe_textarea.widget(), popup_chunks[0]);
+                f.render_widget(&*describe_textarea, popup_chunks[0]);
 
                 let help = Paragraph::new(vec!["Ctrl+s: save | Escape: cancel".into()])
                     .fg(Color::DarkGray)
@@ -396,7 +397,7 @@ impl Component for LogTab<'_> {
                     .constraints([Constraint::Fill(1), Constraint::Length(2)])
                     .split(block.inner(area));
 
-                f.render_widget(log_revset_textarea.widget(), popup_chunks[0]);
+                f.render_widget(&*log_revset_textarea, popup_chunks[0]);
 
                 let help = Paragraph::new(vec!["Ctrl+s: save | Escape: cancel".into()])
                     .fg(Color::DarkGray)
