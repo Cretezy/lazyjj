@@ -1,4 +1,4 @@
-pub mod branches;
+pub mod bookmarks;
 pub mod files;
 pub mod ids;
 pub mod jj;

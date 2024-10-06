@@ -13,12 +13,12 @@ pub struct Config {
     lazyjj_highlight_color: Option<Color>,
     #[serde(rename = "lazyjj.diff-format")]
     lazyjj_diff_format: Option<DiffFormat>,
-    #[serde(rename = "lazyjj.branch-prefix")]
-    lazyjj_branch_prefix: Option<String>,
+    #[serde(rename = "lazyjj.bookmark-prefix")]
+    lazyjj_bookmark_prefix: Option<String>,
     #[serde(rename = "ui.diff.format")]
     ui_diff_format: Option<DiffFormat>,
-    #[serde(rename = "git.push-branch-prefix")]
-    git_push_branch_prefix: Option<String>,
+    #[serde(rename = "git.push-bookmark-prefix")]
+    git_push_bookmark_prefix: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -34,7 +34,7 @@ pub struct JjConfig {
 pub struct JjConfigLazyjj {
     highlight_color: Option<Color>,
     diff_format: Option<DiffFormat>,
-    branch_prefix: Option<String>,
+    bookmark_prefix: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -52,7 +52,7 @@ pub struct JjConfigUiDiff {
 #[derive(Deserialize, Debug, Clone, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct JjConfigGit {
-    push_branch_prefix: Option<String>,
+    push_bookmark_prefix: Option<String>,
 }
 
 impl Config {
@@ -66,9 +66,9 @@ impl Config {
             .unwrap_or(Color::Rgb(50, 50, 150))
     }
 
-    pub fn branch_prefix(&self) -> String {
-        self.lazyjj_branch_prefix.clone().unwrap_or(
-            self.git_push_branch_prefix
+    pub fn bookmark_prefix(&self) -> String {
+        self.lazyjj_bookmark_prefix.clone().unwrap_or(
+            self.git_push_bookmark_prefix
                 .clone()
                 .unwrap_or("push-".to_owned()),
         )
@@ -133,14 +133,16 @@ impl Env {
                             .lazyjj
                             .as_ref()
                             .and_then(|lazyjj| lazyjj.diff_format),
-                        lazyjj_branch_prefix: config
+                        lazyjj_bookmark_prefix: config
                             .lazyjj
                             .as_ref()
-                            .and_then(|lazyjj| lazyjj.branch_prefix.clone()),
+                            .and_then(|lazyjj| lazyjj.bookmark_prefix.clone()),
                         ui_diff_format: config
                             .ui
                             .and_then(|ui| ui.diff.and_then(|diff| diff.format)),
-                        git_push_branch_prefix: config.git.and_then(|git| git.push_branch_prefix),
+                        git_push_bookmark_prefix: config
+                            .git
+                            .and_then(|git| git.push_bookmark_prefix),
                     })?
             }
         };

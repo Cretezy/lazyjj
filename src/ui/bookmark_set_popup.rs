@@ -12,7 +12,7 @@ use tui_textarea::TextArea;
 
 use crate::{
     commander::{
-        branches::Branch,
+        bookmarks::Bookmark,
         ids::{ChangeId, CommitId},
         Commander,
     },
@@ -25,18 +25,18 @@ use crate::{
     ComponentInputResult,
 };
 
-enum BranchSetOption {
-    CreateBranch,
+enum BookmarkSetOption {
+    CreateBookmark,
     // Name, exists
     GeneratedName(String, bool),
-    Branch(Branch),
+    Bookmark(Bookmark),
     Error(String),
 }
 
-pub struct BranchSetPopup<'a> {
+pub struct BookmarkSetPopup<'a> {
     pub change_id: Option<ChangeId>,
     commit_id: CommitId,
-    options: Vec<BranchSetOption>,
+    options: Vec<BookmarkSetOption>,
     list_state: ListState,
     list_height: u16,
     config: Config,
@@ -47,44 +47,49 @@ pub struct BranchSetPopup<'a> {
 fn generate_options(
     commander: &mut Commander,
     change_id: Option<&ChangeId>,
-) -> Vec<BranchSetOption> {
-    let branches = commander.get_branches_list(false).map(|branches| {
-        branches
+) -> Vec<BookmarkSetOption> {
+    let bookmarks = commander.get_bookmarks_list(false).map(|bookmarks| {
+        bookmarks
             .into_iter()
-            .filter(|branch| branch.remote.is_none())
-            .collect::<Vec<Branch>>()
+            .filter(|bookmark| bookmark.remote.is_none())
+            .collect::<Vec<Bookmark>>()
     });
-    let mut options = vec![BranchSetOption::CreateBranch];
+    let mut options = vec![BookmarkSetOption::CreateBookmark];
 
     if let Some(change_id) = change_id {
-        let generated_name = generate_name(&commander.env.config.branch_prefix(), change_id);
-        let exists = if let Ok(branches) = branches.as_ref() {
-            branches.iter().any(|branch| branch.name == generated_name)
+        let generated_name = generate_name(&commander.env.config.bookmark_prefix(), change_id);
+        let exists = if let Ok(bookmarks) = bookmarks.as_ref() {
+            bookmarks
+                .iter()
+                .any(|bookmark| bookmark.name == generated_name)
         } else {
             false
         };
-        options.push(BranchSetOption::GeneratedName(generated_name, exists));
+        options.push(BookmarkSetOption::GeneratedName(generated_name, exists));
     }
 
-    match branches.as_ref() {
-        Ok(branches) => {
-            for branch in branches.iter().filter(|branch| branch.remote.is_none()) {
-                options.push(BranchSetOption::Branch(branch.clone()))
+    match bookmarks.as_ref() {
+        Ok(bookmarks) => {
+            for bookmark in bookmarks
+                .iter()
+                .filter(|bookmark| bookmark.remote.is_none())
+            {
+                options.push(BookmarkSetOption::Bookmark(bookmark.clone()))
             }
         }
-        Err(err) => options.push(BranchSetOption::Error(err.to_string())),
+        Err(err) => options.push(BookmarkSetOption::Error(err.to_string())),
     }
 
     options
 }
 
-fn generate_name(git_push_branch_prefix: &str, change_id: &ChangeId) -> String {
+fn generate_name(git_push_bookmark_prefix: &str, change_id: &ChangeId) -> String {
     let mut change_id = change_id.to_string();
     change_id.truncate(12);
-    format!("{git_push_branch_prefix}{change_id}",)
+    format!("{git_push_bookmark_prefix}{change_id}",)
 }
 
-impl BranchSetPopup<'_> {
+impl BookmarkSetPopup<'_> {
     pub fn new(
         config: Config,
         commander: &mut Commander,
@@ -118,29 +123,29 @@ impl BranchSetPopup<'_> {
         self.creating = Some(TextArea::default());
     }
 
-    fn create_branch(&self, commander: &mut Commander, name: &str) -> Result<()> {
+    fn create_bookmark(&self, commander: &mut Commander, name: &str) -> Result<()> {
         if commander
-            .get_branches_list(false)?
+            .get_bookmarks_list(false)?
             .iter()
-            .any(|branch| branch.name == name)
+            .any(|bookmark| bookmark.name == name)
         {
-            commander.set_branch_commit(name, &self.commit_id)?;
+            commander.set_bookmark_commit(name, &self.commit_id)?;
         } else {
-            commander.create_branch_commit(name, &self.commit_id)?;
+            commander.create_bookmark_commit(name, &self.commit_id)?;
         }
         Ok(())
     }
-    fn generate_branch(&self, commander: &mut Commander) -> Result<()> {
+    fn generate_bookmark(&self, commander: &mut Commander) -> Result<()> {
         if let Some(change_id) = self.change_id.as_ref() {
-            let generated_name = generate_name(&commander.env.config.branch_prefix(), change_id);
+            let generated_name = generate_name(&commander.env.config.bookmark_prefix(), change_id);
             if commander
-                .get_branches_list(false)?
+                .get_bookmarks_list(false)?
                 .iter()
-                .any(|branch| branch.name == generated_name)
+                .any(|bookmark| bookmark.name == generated_name)
             {
-                commander.set_branch_commit(&generated_name, &self.commit_id)?;
+                commander.set_bookmark_commit(&generated_name, &self.commit_id)?;
             } else {
-                commander.create_branch_commit(&generated_name, &self.commit_id)?;
+                commander.create_bookmark_commit(&generated_name, &self.commit_id)?;
             }
             Ok(())
         } else {
@@ -149,10 +154,10 @@ impl BranchSetPopup<'_> {
     }
 }
 
-impl Component for BranchSetPopup<'_> {
+impl Component for BookmarkSetPopup<'_> {
     fn draw(&mut self, f: &mut ratatui::prelude::Frame<'_>, area: Rect) -> Result<()> {
         if let Some(creating) = self.creating.as_ref() {
-            let block = create_popup_block("Create branch");
+            let block = create_popup_block("Create bookmark");
             let area = centered_rect_line_height(area, 30, 5);
             f.render_widget(Clear, area);
             f.render_widget(&block, area);
@@ -177,7 +182,10 @@ impl Component for BranchSetPopup<'_> {
             f.render_widget(help, popup_chunks[1]);
         } else {
             let block = Block::bordered()
-                .title(Span::styled(" Select branch ", Style::new().bold().cyan()))
+                .title(Span::styled(
+                    " Select bookmark ",
+                    Style::new().bold().cyan(),
+                ))
                 .title_alignment(Alignment::Center)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(Color::Green));
@@ -191,16 +199,20 @@ impl Component for BranchSetPopup<'_> {
                 .split(block.inner(area));
 
             let list_items = self.options.iter().map(|option| match option {
-                BranchSetOption::CreateBranch => Text::raw("(C)reate branch").fg(Color::Yellow),
-                BranchSetOption::GeneratedName(generated_name, exists) => {
-                    let mut text = format!("(G)enerate branch: {}", generated_name);
+                BookmarkSetOption::CreateBookmark => {
+                    Text::raw("(C)reate bookmark").fg(Color::Yellow)
+                }
+                BookmarkSetOption::GeneratedName(generated_name, exists) => {
+                    let mut text = format!("(G)enerate bookmark: {}", generated_name);
                     if *exists {
                         text.push_str(" (exists)");
                     }
                     Text::raw(text).fg(Color::Yellow)
                 }
-                BranchSetOption::Branch(branch) => Text::raw(branch.to_string()).fg(Color::Magenta),
-                BranchSetOption::Error(err) => err.into_text().unwrap(),
+                BookmarkSetOption::Bookmark(bookmark) => {
+                    Text::raw(bookmark.to_string()).fg(Color::Magenta)
+                }
+                BookmarkSetOption::Error(err) => err.into_text().unwrap(),
             });
 
             let list = List::new(list_items)
@@ -244,7 +256,7 @@ impl Component for BranchSetPopup<'_> {
                             return Ok(ComponentInputResult::Handled);
                         }
 
-                        self.create_branch(commander, name)?;
+                        self.create_bookmark(commander, name)?;
                         self.tx.send(true)?;
                         return Ok(ComponentInputResult::HandledAction(
                             ComponentAction::SetPopup(None),
@@ -276,7 +288,7 @@ impl Component for BranchSetPopup<'_> {
                     self.scroll((self.list_height as isize / 2).saturating_neg());
                 }
                 KeyCode::Char('g') => {
-                    self.generate_branch(commander)?;
+                    self.generate_bookmark(commander)?;
                     self.tx.send(true)?;
                     return Ok(ComponentInputResult::HandledAction(
                         ComponentAction::SetPopup(None),
@@ -292,24 +304,24 @@ impl Component for BranchSetPopup<'_> {
                         .and_then(|index| self.options.get(index))
                     {
                         match action {
-                            BranchSetOption::CreateBranch => {
+                            BookmarkSetOption::CreateBookmark => {
                                 self.on_creating();
                             }
-                            BranchSetOption::GeneratedName(_, _) => {
-                                self.generate_branch(commander)?;
+                            BookmarkSetOption::GeneratedName(_, _) => {
+                                self.generate_bookmark(commander)?;
                                 self.tx.send(true)?;
                                 return Ok(ComponentInputResult::HandledAction(
                                     ComponentAction::SetPopup(None),
                                 ));
                             }
-                            BranchSetOption::Branch(branch) => {
-                                commander.set_branch_commit(&branch.name, &self.commit_id)?;
+                            BookmarkSetOption::Bookmark(bookmark) => {
+                                commander.set_bookmark_commit(&bookmark.name, &self.commit_id)?;
                                 self.tx.send(true)?;
                                 return Ok(ComponentInputResult::HandledAction(
                                     ComponentAction::SetPopup(None),
                                 ));
                             }
-                            BranchSetOption::Error(_) => {
+                            BookmarkSetOption::Error(_) => {
                                 self.options = generate_options(commander, self.change_id.as_ref());
                             }
                         }

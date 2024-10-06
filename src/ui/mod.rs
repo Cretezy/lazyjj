@@ -1,5 +1,5 @@
-pub mod branch_set_popup;
-pub mod branches_tab;
+pub mod bookmark_set_popup;
+pub mod bookmarks_tab;
 pub mod command_log_tab;
 pub mod details_panel;
 pub mod files_tab;

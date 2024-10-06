@@ -2,7 +2,7 @@ use crate::{
     commander::Commander,
     env::Env,
     ui::{
-        branches_tab::BranchesTab, command_log_tab::CommandLogTab, files_tab::FilesTab,
+        bookmarks_tab::BookmarksTab, command_log_tab::CommandLogTab, files_tab::FilesTab,
         log_tab::LogTab, Component, ComponentAction,
     },
     ComponentInputResult,
@@ -16,7 +16,7 @@ use tracing::{info, info_span};
 pub enum Tab {
     Log,
     Files,
-    Branches,
+    Bookmarks,
     CommandLog,
 }
 
@@ -25,14 +25,14 @@ impl fmt::Display for Tab {
         match self {
             Tab::Log => write!(f, "Log"),
             Tab::Files => write!(f, "Files"),
-            Tab::Branches => write!(f, "Branches"),
+            Tab::Bookmarks => write!(f, "Bookmarks"),
             Tab::CommandLog => write!(f, "Command Log"),
         }
     }
 }
 
 impl Tab {
-    pub const VALUES: [Self; 4] = [Tab::Log, Tab::Files, Tab::Branches, Tab::CommandLog];
+    pub const VALUES: [Self; 4] = [Tab::Log, Tab::Files, Tab::Bookmarks, Tab::CommandLog];
 }
 
 pub struct App<'a> {
@@ -40,7 +40,7 @@ pub struct App<'a> {
     pub current_tab: Tab,
     pub log: Option<LogTab<'a>>,
     pub files: Option<FilesTab>,
-    pub branches: Option<BranchesTab<'a>>,
+    pub bookmarks: Option<BookmarksTab<'a>>,
     pub command_log: Option<CommandLogTab>,
     pub popup: Option<Box<dyn Component>>,
 }
@@ -52,7 +52,7 @@ impl<'a> App<'a> {
             current_tab: Tab::Log,
             log: None,
             files: None,
-            branches: None,
+            bookmarks: None,
             command_log: None,
             popup: None,
         })
@@ -103,16 +103,19 @@ impl<'a> App<'a> {
             .ok_or_else(|| anyhow!("Failed to get mutable reference to FilesTab"))
     }
 
-    pub fn get_branches_tab(&mut self, commander: &mut Commander) -> Result<&mut BranchesTab<'a>> {
-        if self.branches.is_none() {
-            let span = info_span!("Initializing branches tab");
-            let branches_tab = span.in_scope(|| BranchesTab::new(commander))?;
-            self.branches = Some(branches_tab);
+    pub fn get_bookmarks_tab(
+        &mut self,
+        commander: &mut Commander,
+    ) -> Result<&mut BookmarksTab<'a>> {
+        if self.bookmarks.is_none() {
+            let span = info_span!("Initializing bookmarks tab");
+            let bookmarks_tab = span.in_scope(|| BookmarksTab::new(commander))?;
+            self.bookmarks = Some(bookmarks_tab);
         }
 
-        self.branches
+        self.bookmarks
             .as_mut()
-            .ok_or_else(|| anyhow!("Failed to get mutable reference to BranchesTab"))
+            .ok_or_else(|| anyhow!("Failed to get mutable reference to BookmarksTab"))
     }
 
     pub fn get_command_log_tab(&mut self, commander: &mut Commander) -> Result<&mut CommandLogTab> {
@@ -135,7 +138,7 @@ impl<'a> App<'a> {
         Ok(match tab {
             Tab::Log => self.get_log_tab(commander)?,
             Tab::Files => self.get_files_tab(commander)?,
-            Tab::Branches => self.get_branches_tab(commander)?,
+            Tab::Bookmarks => self.get_bookmarks_tab(commander)?,
             Tab::CommandLog => self.get_command_log_tab(commander)?,
         })
     }
@@ -150,10 +153,10 @@ impl<'a> App<'a> {
                 .files
                 .as_mut()
                 .map(|files_tab| files_tab as &mut dyn Component),
-            Tab::Branches => self
-                .branches
+            Tab::Bookmarks => self
+                .bookmarks
                 .as_mut()
-                .map(|branches_tab| branches_tab as &mut dyn Component),
+                .map(|bookmarks_tab| bookmarks_tab as &mut dyn Component),
             Tab::CommandLog => self
                 .command_log
                 .as_mut()

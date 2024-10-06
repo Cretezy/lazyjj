@@ -1,6 +1,6 @@
 use crate::{
     commander::{
-        branches::Branch,
+        bookmarks::Bookmark,
         ids::{ChangeId, CommitId},
         CommandError, Commander, RemoveEndLine,
     },
@@ -101,7 +101,7 @@ impl Commander {
                         "log",
                         "--template",
                         // Match builtin_log_compact with 2 lines per change
-                        &format!(r#"{0} ++ " " ++ branches ++"\n" ++ {0}"#, HEAD_TEMPLATE),
+                        &format!(r#"{0} ++ " " ++ bookmarks ++"\n" ++ {0}"#, HEAD_TEMPLATE),
                     ],
                     args,
                 ]
@@ -300,10 +300,10 @@ impl Commander {
             == "true")
     }
 
-    /// Get branch head
-    /// Maps to `jj log -r <branch>[@<remote>]`
+    /// Get bookmark head
+    /// Maps to `jj log -r <bookmark>[@<remote>]`
     #[instrument(level = "trace", skip(self))]
-    pub fn get_branch_head(&mut self, branch: &Branch) -> Result<Head> {
+    pub fn get_bookmark_head(&mut self, bookmark: &Bookmark) -> Result<Head> {
         parse_head(
             &self
                 .execute_jj_command(
@@ -313,14 +313,14 @@ impl Commander {
                         "--template",
                         &format!(r#"{} ++ "\n""#, HEAD_TEMPLATE),
                         "-r",
-                        &branch.to_string(),
+                        &bookmark.to_string(),
                         "--limit",
                         "1",
                     ],
                     false,
                     true,
                 )
-                .context("Failed getting branch head")?
+                .context("Failed getting bookmark head")?
                 .remove_end_line(),
         )
     }
@@ -421,14 +421,14 @@ mod tests {
     }
 
     #[test]
-    fn get_branch_head() -> Result<()> {
+    fn get_bookmark_head() -> Result<()> {
         let mut test_repo = TestRepo::new()?;
 
         let head = test_repo.commander.get_current_head()?;
-        // Git doesn't support branch pointing to root commit, so it will advance
-        let branch = test_repo.commander.create_branch("main")?;
+        // Git doesn't support bookmark pointing to root commit, so it will advance
+        let bookmark = test_repo.commander.create_bookmark("main")?;
 
-        assert_eq!(test_repo.commander.get_branch_head(&branch)?, head);
+        assert_eq!(test_repo.commander.get_bookmark_head(&bookmark)?, head);
 
         Ok(())
     }

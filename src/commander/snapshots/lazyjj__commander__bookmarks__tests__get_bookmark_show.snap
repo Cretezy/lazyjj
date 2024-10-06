@@ -1,5 +1,5 @@
 ---
-source: src/commander/branches.rs
-expression: branch_show
+source: src/commander/bookmarks.rs
+expression: bookmark_show
 ---
 "Commit ID: [COMMIT_ID]\nChange ID: [Change ID]\nBookmarks: test test@git\nAuthor: lazyjj <lazyjj@example.com> (([DATE_TIME]))\nCommitter: lazyjj <lazyjj@example.com> (([DATE_TIME]))\n\n    (no description set)\n"

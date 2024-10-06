@@ -10,13 +10,13 @@ use std::{fmt::Display, sync::LazyLock};
 use tracing::instrument;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Branch {
+pub struct Bookmark {
     pub name: String,
     pub remote: Option<String>,
     pub present: bool,
 }
 
-impl Display for Branch {
+impl Display for Bookmark {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut text = self.name.clone();
         if let Some(remote) = self.remote.as_ref() {
@@ -27,13 +27,13 @@ impl Display for Branch {
     }
 }
 
-// Template which outputs `[name@remote]`. Used to parse data from branch list
+// Template which outputs `[name@remote]`. Used to parse data from bookmark list
 const BRANCH_TEMPLATE: &str = r#""[" ++ name ++ "@" ++ remote ++ "|" ++ present ++ "]""#;
-// Regex to parse branch
+// Regex to parse bookmark
 static BRANCH_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\[(.*)@(.*)\|(.*)\]$").unwrap());
 
-fn parse_branch(text: &str) -> Option<Branch> {
+fn parse_bookmark(text: &str) -> Option<Bookmark> {
     let captured = BRANCH_REGEX.captures(text);
     captured.as_ref().and_then(|captured| {
         let name = captured.get(1);
@@ -41,7 +41,7 @@ fn parse_branch(text: &str) -> Option<Branch> {
         let present = captured.get(3);
         if let (Some(name), Some(remote), Some(present)) = (name, remote, present) {
             let remote = remote.as_str().to_owned();
-            Some(Branch {
+            Some(Bookmark {
                 remote: if remote.is_empty() {
                     None
                 } else {
@@ -57,33 +57,33 @@ fn parse_branch(text: &str) -> Option<Branch> {
 }
 
 #[derive(Clone, Debug)]
-pub enum BranchLine {
+pub enum BookmarkLine {
     Unparsable(String),
-    Parsed { text: String, branch: Branch },
+    Parsed { text: String, bookmark: Bookmark },
 }
 
-impl BranchLine {
+impl BookmarkLine {
     pub fn to_text(&self) -> Result<Text, ansi_to_tui::Error> {
         match self {
-            BranchLine::Unparsable(text) => text.to_text(),
-            BranchLine::Parsed { text, .. } => text.to_text(),
+            BookmarkLine::Unparsable(text) => text.to_text(),
+            BookmarkLine::Parsed { text, .. } => text.to_text(),
         }
     }
 }
 
 impl Commander {
-    /// Get branches.
-    /// Maps to `jj branch list`
+    /// Get bookmarks.
+    /// Maps to `jj bookmark list`
     #[instrument(level = "trace", skip(self))]
-    pub fn get_branches(&mut self, show_all: bool) -> Result<Vec<BranchLine>, CommandError> {
+    pub fn get_bookmarks(&mut self, show_all: bool) -> Result<Vec<BookmarkLine>, CommandError> {
         let mut args = vec![];
         if show_all {
             args.push("--all-remotes");
         }
-        let branches_colored = self.execute_jj_command(
+        let bookmarks_colored = self.execute_jj_command(
             [
                 vec![
-                    "branch",
+                    "bookmark",
                     "list",
                     "--config-toml",
                     // Override format_ref_targets to not list conflicts
@@ -103,11 +103,11 @@ impl Commander {
             true,
         )?;
 
-        let branches: Vec<BranchLine> = self
+        let bookmarks: Vec<BookmarkLine> = self
             .execute_jj_command(
                 [
                     vec![
-                        "branch",
+                        "bookmark",
                         "list",
                         "-T",
                         &format!(r#"{} ++ "\n""#, BRANCH_TEMPLATE),
@@ -119,23 +119,23 @@ impl Commander {
                 true,
             )?
             .lines()
-            .zip(branches_colored.lines())
-            .map(|(line, line_colored)| match parse_branch(line) {
-                Some(branch) => BranchLine::Parsed {
+            .zip(bookmarks_colored.lines())
+            .map(|(line, line_colored)| match parse_bookmark(line) {
+                Some(bookmark) => BookmarkLine::Parsed {
                     text: line_colored.to_owned(),
-                    branch,
+                    bookmark,
                 },
-                None => BranchLine::Unparsable(line_colored.to_owned()),
+                None => BookmarkLine::Unparsable(line_colored.to_owned()),
             })
             .collect();
 
-        Ok(branches)
+        Ok(bookmarks)
     }
 
     #[instrument(level = "trace", skip(self))]
-    pub fn get_branches_list(&mut self, show_all: bool) -> Result<Vec<Branch>, CommandError> {
+    pub fn get_bookmarks_list(&mut self, show_all: bool) -> Result<Vec<Bookmark>, CommandError> {
         let mut args = vec![
-            "branch".to_owned(),
+            "bookmark".to_owned(),
             "list".to_owned(),
             "-T".to_owned(),
             format!(r#"if(present, {} ++ "\n", "")"#, BRANCH_TEMPLATE),
@@ -144,26 +144,26 @@ impl Commander {
             args.push("--all-remotes".to_owned());
         }
 
-        let branches: Vec<Branch> = self
+        let bookmarks: Vec<Bookmark> = self
             .execute_jj_command(args, false, true)?
             .lines()
-            .filter_map(parse_branch)
+            .filter_map(parse_bookmark)
             .collect();
 
-        Ok(branches)
+        Ok(bookmarks)
     }
 
-    /// Get branch details.
-    /// Maps to `jj show <branch>`
+    /// Get bookmark details.
+    /// Maps to `jj show <bookmark>`
     #[instrument(level = "trace", skip(self))]
-    pub fn get_branch_show(
+    pub fn get_bookmark_show(
         &mut self,
-        branch: &Branch,
+        bookmark: &Bookmark,
         diff_format: &DiffFormat,
     ) -> Result<String, CommandError> {
         Ok(self
             .execute_jj_command(
-                vec!["show", &branch.to_string(), diff_format.get_arg()],
+                vec!["show", &bookmark.to_string(), diff_format.get_arg()],
                 true,
                 true,
             )?
@@ -181,44 +181,44 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_branches() -> Result<()> {
+    fn get_bookmarks() -> Result<()> {
         let mut test_repo = TestRepo::new()?;
 
-        let branch = test_repo.commander.create_branch("test")?;
-        let branches = test_repo.commander.get_branches(false)?;
+        let bookmark = test_repo.commander.create_bookmark("test")?;
+        let bookmarks = test_repo.commander.get_bookmarks(false)?;
 
-        assert_eq!(branches.len(), 1);
+        assert_eq!(bookmarks.len(), 1);
         assert_eq!(
-            branches.first().and_then(|branch| match branch {
-                BranchLine::Parsed { branch, .. } => Some(branch),
+            bookmarks.first().and_then(|bookmark| match bookmark {
+                BookmarkLine::Parsed { bookmark, .. } => Some(bookmark),
                 _ => None,
             }),
-            Some(&branch)
+            Some(&bookmark)
         );
 
         Ok(())
     }
 
     #[test]
-    fn get_branches_list() -> Result<()> {
+    fn get_bookmarks_list() -> Result<()> {
         let mut test_repo = TestRepo::new()?;
 
-        let branch = test_repo.commander.create_branch("test")?;
-        let branches = test_repo.commander.get_branches_list(false)?;
+        let bookmark = test_repo.commander.create_bookmark("test")?;
+        let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
 
-        assert_eq!(branches, [branch]);
+        assert_eq!(bookmarks, [bookmark]);
 
         Ok(())
     }
 
     #[test]
-    fn get_branch_show() -> Result<()> {
+    fn get_bookmark_show() -> Result<()> {
         let mut test_repo = TestRepo::new()?;
 
-        let branch = test_repo.commander.create_branch("test")?;
-        let branch_show = test_repo
+        let bookmark = test_repo.commander.create_bookmark("test")?;
+        let bookmark_show = test_repo
             .commander
-            .get_branch_show(&branch, &DiffFormat::default())?;
+            .get_bookmark_show(&bookmark, &DiffFormat::default())?;
 
         let mut settings = insta::Settings::clone_current();
         settings.add_filter(r"Commit ID: [0-9a-fA-F]{40}", "Commit ID: [COMMIT_ID]");
@@ -226,7 +226,7 @@ mod tests {
         settings.add_filter(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})", "([DATE_TIME])");
         let _bound = settings.bind_to_scope();
 
-        assert_debug_snapshot!(branch_show);
+        assert_debug_snapshot!(bookmark_show);
 
         Ok(())
     }
