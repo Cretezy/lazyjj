@@ -44,9 +44,7 @@ impl DetailsPanel {
     }
 
     pub fn scroll(&mut self, scroll: isize) {
-        self.scroll = (self.scroll.saturating_add_signed(scroll as i16))
-            .min(self.lines - 1)
-            .max(0);
+        self.scroll = (self.scroll.saturating_add_signed(scroll as i16)).min(self.lines - 1)
     }
 
     /// Handle input. Returns bool of if event was handled

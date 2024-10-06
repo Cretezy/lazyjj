@@ -1,4 +1,5 @@
 #![allow(clippy::borrow_interior_mutable_const)]
+
 use ansi_to_tui::IntoText;
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
@@ -14,7 +15,7 @@ use crate::{
     },
     env::{Config, DiffFormat},
     ui::{
-        branch_set_popup::BranchSetPopup,
+        bookmark_set_popup::BookmarkSetPopup,
         details_panel::DetailsPanel,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
@@ -48,8 +49,8 @@ pub struct LogTab<'a> {
     popup_tx: std::sync::mpsc::Sender<Listener>,
     popup_rx: std::sync::mpsc::Receiver<Listener>,
 
-    branch_set_popup_tx: std::sync::mpsc::Sender<bool>,
-    branch_set_popup_rx: std::sync::mpsc::Receiver<bool>,
+    bookmark_set_popup_tx: std::sync::mpsc::Sender<bool>,
+    bookmark_set_popup_rx: std::sync::mpsc::Receiver<bool>,
 
     describe_textarea: Option<TextArea<'a>>,
     describe_after_new: bool,
@@ -89,7 +90,7 @@ impl LogTab<'_> {
             .map(|text| tabs_to_spaces(&text));
 
         let (popup_tx, popup_rx) = std::sync::mpsc::channel();
-        let (branch_set_popup_tx, branch_set_popup_rx) = std::sync::mpsc::channel();
+        let (bookmark_set_popup_tx, bookmark_set_popup_rx) = std::sync::mpsc::channel();
 
         Ok(Self {
             log_output_text: match log_output.as_ref() {
@@ -116,8 +117,8 @@ impl LogTab<'_> {
             popup_tx,
             popup_rx,
 
-            branch_set_popup_tx,
-            branch_set_popup_rx,
+            bookmark_set_popup_tx,
+            bookmark_set_popup_rx,
 
             describe_textarea: None,
             describe_after_new: false,
@@ -234,7 +235,7 @@ impl Component for LogTab<'_> {
             }
         }
 
-        if let Ok(true) = self.branch_set_popup_rx.try_recv() {
+        if let Ok(true) = self.bookmark_set_popup_rx.try_recv() {
             self.refresh_log_output(commander);
             self.refresh_head_output(commander)
         }
@@ -367,7 +368,7 @@ impl Component for LogTab<'_> {
                     .constraints([Constraint::Fill(1), Constraint::Length(2)])
                     .split(block.inner(area));
 
-                f.render_widget(describe_textarea.widget(), popup_chunks[0]);
+                f.render_widget(&*describe_textarea, popup_chunks[0]);
 
                 let help = Paragraph::new(vec!["Ctrl+s: save | Escape: cancel".into()])
                     .fg(Color::DarkGray)
@@ -400,7 +401,7 @@ impl Component for LogTab<'_> {
                     .constraints([Constraint::Fill(1), Constraint::Length(2)])
                     .split(block.inner(area));
 
-                f.render_widget(log_revset_textarea.widget(), popup_chunks[0]);
+                f.render_widget(&*log_revset_textarea, popup_chunks[0]);
 
                 let help = Paragraph::new(vec!["Ctrl+s: save | Escape: cancel".into()])
                     .fg(Color::DarkGray)
@@ -630,12 +631,12 @@ impl Component for LogTab<'_> {
                 }
                 KeyCode::Char('b') => {
                     return Ok(ComponentInputResult::HandledAction(
-                        ComponentAction::SetPopup(Some(Box::new(BranchSetPopup::new(
+                        ComponentAction::SetPopup(Some(Box::new(BookmarkSetPopup::new(
                             self.config.clone(),
                             commander,
                             Some(self.head.change_id.clone()),
                             self.head.commit_id.clone(),
-                            self.branch_set_popup_tx.clone(),
+                            self.bookmark_set_popup_tx.clone(),
                         )))),
                     ));
                 }
@@ -706,11 +707,11 @@ impl Component for LogTab<'_> {
                                 ("n".to_owned(), "new change".to_owned()),
                                 ("N".to_owned(), "new with message".to_owned()),
                                 ("a".to_owned(), "abandon change".to_owned()),
-                                ("b".to_owned(), "set branch".to_owned()),
+                                ("b".to_owned(), "set bookmark".to_owned()),
                                 ("f".to_owned(), "git fetch".to_owned()),
                                 ("F".to_owned(), "git fetch all remotes".to_owned()),
                                 ("p".to_owned(), "git push".to_owned()),
-                                ("P".to_owned(), "git push all branches".to_owned()),
+                                ("P".to_owned(), "git push all bookmarks".to_owned()),
                             ],
                             vec![
                                 ("Ctrl+e/Ctrl+y".to_owned(), "scroll down/up".to_owned()),

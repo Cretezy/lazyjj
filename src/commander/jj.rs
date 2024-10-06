@@ -1,4 +1,4 @@
-use crate::commander::{branches::Branch, ids::CommitId, CommandError, Commander};
+use crate::commander::{bookmarks::Bookmark, ids::CommitId, CommandError, Commander};
 
 use anyhow::{Context, Result};
 use tracing::instrument;
@@ -32,44 +32,44 @@ impl Commander {
             .context("Failed executing jj describe")
     }
 
-    /// Create branch. Maps to `jj branch create <name>`
+    /// Create bookmark. Maps to `jj bookmark create <name>`
     #[instrument(level = "trace", skip(self))]
-    pub fn create_branch(&mut self, name: &str) -> Result<Branch, CommandError> {
-        self.execute_void_jj_command(vec!["branch", "create", name])?;
-        // jj only creates local branches
-        Ok(Branch {
+    pub fn create_bookmark(&mut self, name: &str) -> Result<Bookmark, CommandError> {
+        self.execute_void_jj_command(vec!["bookmark", "create", name])?;
+        // jj only creates local bookmarks
+        Ok(Bookmark {
             name: name.to_owned(),
             remote: None,
             present: true,
         })
     }
 
-    /// Create branch pointing to commit. Maps to `jj branch create <name> -r <revision>`
+    /// Create bookmark pointing to commit. Maps to `jj bookmark create <name> -r <revision>`
     #[instrument(level = "trace", skip(self))]
-    pub fn create_branch_commit(
+    pub fn create_bookmark_commit(
         &mut self,
         name: &str,
         commit_id: &CommitId,
-    ) -> Result<Branch, CommandError> {
-        self.execute_void_jj_command(vec!["branch", "create", name, "-r", commit_id.as_str()])?;
-        // jj only creates local branches
-        Ok(Branch {
+    ) -> Result<Bookmark, CommandError> {
+        self.execute_void_jj_command(vec!["bookmark", "create", name, "-r", commit_id.as_str()])?;
+        // jj only creates local bookmarks
+        Ok(Bookmark {
             name: name.to_owned(),
             remote: None,
             present: true,
         })
     }
 
-    /// Set branch pointing to commit. Maps to `jj branch set <name> -r <revision>`
+    /// Set bookmark pointing to commit. Maps to `jj bookmark set <name> -r <revision>`
     #[instrument(level = "trace", skip(self))]
-    pub fn set_branch_commit(
+    pub fn set_bookmark_commit(
         &mut self,
         name: &str,
         commit_id: &CommitId,
     ) -> Result<(), CommandError> {
         // TODO: Maybe don't do --allow-backwards by default?
         self.execute_void_jj_command(vec![
-            "branch",
+            "bookmark",
             "set",
             name,
             "-r",
@@ -78,46 +78,49 @@ impl Commander {
         ])
     }
 
-    /// Rename branch. Maps to `jj branch rename <old> <new>`
+    /// Rename bookmark. Maps to `jj bookmark rename <old> <new>`
     #[instrument(level = "trace", skip(self))]
-    pub fn rename_branch(&mut self, old: &str, new: &str) -> Result<(), CommandError> {
-        self.execute_void_jj_command(vec!["branch", "rename", old, new])
+    pub fn rename_bookmark(&mut self, old: &str, new: &str) -> Result<(), CommandError> {
+        self.execute_void_jj_command(vec!["bookmark", "rename", old, new])
     }
 
-    /// Delete branch. Maps to `jj branch delete <name>`
+    /// Delete bookmark. Maps to `jj bookmark delete <name>`
     #[instrument(level = "trace", skip(self))]
-    pub fn delete_branch(&mut self, name: &str) -> Result<(), CommandError> {
-        self.execute_void_jj_command(vec!["branch", "delete", name])
+    pub fn delete_bookmark(&mut self, name: &str) -> Result<(), CommandError> {
+        self.execute_void_jj_command(vec!["bookmark", "delete", name])
     }
 
-    /// Forget branch. Maps to `jj branch forget <name>`
+    /// Forget bookmark. Maps to `jj bookmark forget <name>`
     #[instrument(level = "trace", skip(self))]
-    pub fn forget_branch(&mut self, name: &str) -> Result<(), CommandError> {
-        self.execute_void_jj_command(vec!["branch", "forget", name])
+    pub fn forget_bookmark(&mut self, name: &str) -> Result<(), CommandError> {
+        self.execute_void_jj_command(vec!["bookmark", "forget", name])
     }
 
-    /// Track branch. Maps to `jj branch track <branch>@<remote>`
+    /// Track bookmark. Maps to `jj bookmark track <bookmark>@<remote>`
     #[instrument(level = "trace", skip(self))]
-    pub fn track_branch(&mut self, branch: &Branch) -> Result<(), CommandError> {
-        self.execute_void_jj_command(vec!["branch", "track", &branch.to_string()])
+    pub fn track_bookmark(&mut self, bookmark: &Bookmark) -> Result<(), CommandError> {
+        self.execute_void_jj_command(vec!["bookmark", "track", &bookmark.to_string()])
     }
 
-    /// Untrack branch. Maps to `jj branch untrack <branch>@<remote>`
+    /// Untrack bookmark. Maps to `jj bookmark untrack <bookmark>@<remote>`
     #[instrument(level = "trace", skip(self))]
-    pub fn untrack_branch(&mut self, branch: &Branch) -> Result<(), CommandError> {
-        self.execute_void_jj_command(vec!["branch", "untrack", &branch.to_string()])
+    pub fn untrack_bookmark(&mut self, bookmark: &Bookmark) -> Result<(), CommandError> {
+        self.execute_void_jj_command(vec!["bookmark", "untrack", &bookmark.to_string()])
     }
 
     /// Git push. Maps to `jj git push`
     #[instrument(level = "trace", skip(self))]
     pub fn git_push(
         &mut self,
-        all_branches: bool,
+        all_bookmarks: bool,
         commit_id: &CommitId,
     ) -> Result<String, CommandError> {
-        let mut args = vec!["git", "push", "-r", commit_id.as_str()];
-        if all_branches {
+        let mut args = vec!["git", "push"];
+        if all_bookmarks {
             args.push("--all");
+        } else {
+            args.push("-r");
+            args.push(commit_id.as_str());
         }
 
         self.execute_jj_command(args, true, true)
@@ -235,29 +238,29 @@ mod tests {
     }
 
     #[test]
-    fn create_branch() -> Result<()> {
+    fn create_bookmark() -> Result<()> {
         let mut test_repo = TestRepo::new()?;
 
-        let branch = test_repo.commander.create_branch("test")?;
-        let branches = test_repo.commander.get_branches_list(false)?;
+        let bookmark = test_repo.commander.create_bookmark("test")?;
+        let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
 
-        assert_eq!(branches, [branch]);
+        assert_eq!(bookmarks, [bookmark]);
 
         Ok(())
     }
 
     #[test]
-    fn create_branch_commit() -> Result<()> {
+    fn create_bookmark_commit() -> Result<()> {
         let mut test_repo = TestRepo::new()?;
 
-        // Create new change, since by default `jj branch create` uses current change
+        // Create new change, since by default `jj bookmark create` uses current change
         let head = test_repo.commander.get_current_head()?;
         test_repo.commander.run_new(head.commit_id.as_str())?;
         assert_ne!(head, test_repo.commander.get_current_head()?);
 
-        let branch = test_repo
+        let bookmark = test_repo
             .commander
-            .create_branch_commit("test", &head.commit_id)?;
+            .create_bookmark_commit("test", &head.commit_id)?;
 
         let log = test_repo.commander.execute_jj_command(
             [
@@ -268,7 +271,7 @@ mod tests {
                 "-T",
                 "commit_id",
                 "-r",
-                &branch.name,
+                &bookmark.name,
             ],
             false,
             true,
@@ -280,16 +283,16 @@ mod tests {
     }
 
     #[test]
-    fn set_branch_commit() -> Result<()> {
+    fn set_bookmark_commit() -> Result<()> {
         let mut test_repo = TestRepo::new()?;
 
-        // Create new change, since by default `jj branch create` uses current change
+        // Create new change, since by default `jj bookmark create` uses current change
         let old_head = test_repo.commander.get_current_head()?;
         test_repo.commander.run_new(old_head.commit_id.as_str())?;
         let new_head = test_repo.commander.get_current_head()?;
         assert_ne!(old_head, new_head);
 
-        let branch = test_repo.commander.create_branch("test")?;
+        let bookmark = test_repo.commander.create_bookmark("test")?;
 
         let log = test_repo.commander.execute_jj_command(
             [
@@ -300,7 +303,7 @@ mod tests {
                 "-T",
                 "commit_id",
                 "-r",
-                &branch.name,
+                &bookmark.name,
             ],
             false,
             true,
@@ -310,7 +313,7 @@ mod tests {
 
         test_repo
             .commander
-            .set_branch_commit(&branch.name, &old_head.commit_id)?;
+            .set_bookmark_commit(&bookmark.name, &old_head.commit_id)?;
 
         let log = test_repo.commander.execute_jj_command(
             [
@@ -321,7 +324,7 @@ mod tests {
                 "-T",
                 "commit_id",
                 "-r",
-                &branch.name,
+                &bookmark.name,
             ],
             false,
             true,
@@ -333,20 +336,22 @@ mod tests {
     }
 
     #[test]
-    fn rename_branch() -> Result<()> {
+    fn rename_bookmark() -> Result<()> {
         let mut test_repo = TestRepo::new()?;
 
-        let branch = test_repo.commander.create_branch("test1")?;
+        let bookmark = test_repo.commander.create_bookmark("test1")?;
 
-        let branches = test_repo.commander.get_branches_list(false)?;
-        assert_eq!(branches, [branch.clone()]);
+        let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
+        assert_eq!(bookmarks, [bookmark.clone()]);
 
-        test_repo.commander.rename_branch(&branch.name, "test2")?;
+        test_repo
+            .commander
+            .rename_bookmark(&bookmark.name, "test2")?;
 
-        let branches = test_repo.commander.get_branches_list(false)?;
+        let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
         assert_eq!(
-            branches,
-            [Branch {
+            bookmarks,
+            [Bookmark {
                 name: "test2".to_owned(),
                 remote: None,
                 present: true,
@@ -357,35 +362,35 @@ mod tests {
     }
 
     #[test]
-    fn delete_branch() -> Result<()> {
+    fn delete_bookmark() -> Result<()> {
         let mut test_repo = TestRepo::new()?;
 
-        let branch = test_repo.commander.create_branch("test")?;
+        let bookmark = test_repo.commander.create_bookmark("test")?;
 
-        let branches = test_repo.commander.get_branches_list(false)?;
-        assert_eq!(branches, [branch.clone()]);
+        let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
+        assert_eq!(bookmarks, [bookmark.clone()]);
 
-        test_repo.commander.delete_branch(&branch.name)?;
+        test_repo.commander.delete_bookmark(&bookmark.name)?;
 
-        let branches = test_repo.commander.get_branches_list(false)?;
-        assert_eq!(branches, []);
+        let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
+        assert_eq!(bookmarks, []);
 
         Ok(())
     }
 
     #[test]
-    fn forget_branch() -> Result<()> {
+    fn forget_bookmark() -> Result<()> {
         let mut test_repo = TestRepo::new()?;
 
-        let branch = test_repo.commander.create_branch("test")?;
+        let bookmark = test_repo.commander.create_bookmark("test")?;
 
-        let branches = test_repo.commander.get_branches_list(false)?;
-        assert_eq!(branches, [branch.clone()]);
+        let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
+        assert_eq!(bookmarks, [bookmark.clone()]);
 
-        test_repo.commander.forget_branch(&branch.name)?;
+        test_repo.commander.forget_bookmark(&bookmark.name)?;
 
-        let branches = test_repo.commander.get_branches_list(false)?;
-        assert_eq!(branches, []);
+        let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
+        assert_eq!(bookmarks, []);
 
         Ok(())
     }
