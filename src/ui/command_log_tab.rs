@@ -10,7 +10,10 @@ use tracing::instrument;
 use crate::{
     commander::{CommandLogItem, Commander},
     env::Config,
-    ui::{details_panel::DetailsPanel, help_popup::HelpPopup, Component, ComponentAction},
+    ui::{
+        details_panel::DetailsPanel, help_popup::HelpPopup, utils::tabs_to_spaces, Component,
+        ComponentAction,
+    },
     ComponentInputResult,
 };
 
@@ -92,7 +95,8 @@ impl CommandLogTab {
                             Line::default().spans([Span::raw("Output:").fg(Color::Green).bold()]),
                         );
                         output_lines.push(Line::default());
-                        output_lines.append(&mut stdout.as_ref().into_text()?.lines);
+                        output_lines
+                            .append(&mut tabs_to_spaces(&stdout.to_string()).into_text()?.lines);
                         has_output = true;
                     }
 

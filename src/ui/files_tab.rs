@@ -8,7 +8,10 @@ use crate::{
         CommandError, Commander,
     },
     env::{Config, DiffFormat},
-    ui::{details_panel::DetailsPanel, help_popup::HelpPopup, Component, ComponentAction},
+    ui::{
+        details_panel::DetailsPanel, help_popup::HelpPopup, utils::tabs_to_spaces, Component,
+        ComponentAction,
+    },
     ComponentInputResult,
 };
 
@@ -66,7 +69,7 @@ impl FilesTab {
         let diff_output = current_file
             .as_ref()
             .map(|current_change| commander.get_file_diff(&head, current_change, &diff_format))
-            .map_or(Ok(None), |r| r.map(Some));
+            .map_or(Ok(None), |r| r.map(|diff| Some(tabs_to_spaces(&diff))));
 
         let files_list_state = ListState::default().with_selected(get_current_file_index(
             current_file.as_ref(),
@@ -123,7 +126,7 @@ impl FilesTab {
             .map(|current_file| {
                 commander.get_file_diff(&self.head, current_file, &self.diff_format)
             })
-            .map_or(Ok(None), |r| r.map(Some));
+            .map_or(Ok(None), |r| r.map(|diff| Some(tabs_to_spaces(&diff))));
         self.diff_panel.scroll = 0;
         Ok(())
     }

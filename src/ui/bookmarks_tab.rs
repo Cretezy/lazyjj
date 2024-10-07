@@ -6,7 +6,7 @@ use crate::{
         details_panel::DetailsPanel,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
-        utils::{centered_rect, centered_rect_line_height},
+        utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
         Component, ComponentAction,
     },
     ComponentInputResult,
@@ -124,9 +124,11 @@ impl BookmarksTab<'_> {
         ));
 
         let bookmark_output = bookmark.as_ref().and_then(|bookmark| match bookmark {
-            BookmarkLine::Parsed { bookmark, .. } => {
-                Some(commander.get_bookmark_show(bookmark, &diff_format))
-            }
+            BookmarkLine::Parsed { bookmark, .. } => Some(
+                commander
+                    .get_bookmark_show(bookmark, &diff_format)
+                    .map(|diff| tabs_to_spaces(&diff)),
+            ),
             _ => None,
         });
 
@@ -172,9 +174,11 @@ impl BookmarksTab<'_> {
 
     pub fn refresh_bookmark(&mut self, commander: &mut Commander) {
         self.bookmark_output = self.bookmark.as_ref().and_then(|bookmark| match bookmark {
-            BookmarkLine::Parsed { bookmark, .. } => {
-                Some(commander.get_bookmark_show(bookmark, &self.diff_format))
-            }
+            BookmarkLine::Parsed { bookmark, .. } => Some(
+                commander
+                    .get_bookmark_show(bookmark, &self.diff_format)
+                    .map(|diff| tabs_to_spaces(&diff)),
+            ),
             _ => None,
         });
 

@@ -39,3 +39,66 @@ pub fn centered_rect_line_height(r: Rect, percent_x: u16, lines_y: u16) -> Rect 
         ])
         .split(popup_layout[1])[1]
 }
+
+/// replaces tabs in a string by spaces
+///
+/// ratatui doesn't work well displaying tabs, so any
+/// string that is rendered and might contain tabs
+/// needs to have the tabs converted to spaces.
+///
+/// this function aligns tabs in the input string to
+/// virtual tab stops 4 spaces apart, taking care
+/// to count ansi control sequences as zero width.
+pub fn tabs_to_spaces(line: &str) -> String {
+    const TAB_WIDTH: usize = 4;
+
+    enum AnsiState {
+        Neutral,
+        Escape,
+        Csi,
+    }
+
+    let mut out = String::new();
+    let mut x = 0;
+    let mut ansi_state = AnsiState::Neutral;
+    for c in line.chars() {
+        match ansi_state {
+            AnsiState::Neutral => {
+                if c == '\t' {
+                    loop {
+                        out.push(' ');
+                        x += 1;
+                        if x % TAB_WIDTH == 0 {
+                            break;
+                        }
+                    }
+                } else {
+                    out.push(c);
+                    if c == '\x1b' {
+                        ansi_state = AnsiState::Escape;
+                    } else {
+                        x += 1;
+                    }
+                }
+                if c == '\r' || c == '\n' {
+                    x = 0;
+                }
+            }
+            AnsiState::Escape => {
+                out.push(c);
+                ansi_state = if c == '[' {
+                    AnsiState::Csi
+                } else {
+                    AnsiState::Neutral
+                };
+            }
+            AnsiState::Csi => {
+                out.push(c);
+                if c >= '\x40' && c <= '\x7f' {
+                    ansi_state = AnsiState::Neutral;
+                }
+            }
+        }
+    }
+    out
+}
