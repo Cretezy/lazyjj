@@ -263,7 +263,9 @@ impl Component for BookmarkSetPopup<'_> {
                         ));
                     }
                     KeyCode::Esc => {
-                        return Ok(ComponentInputResult::Handled);
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(None),
+                        ));
                     }
                     _ => {}
                 }
