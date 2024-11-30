@@ -235,6 +235,7 @@ impl Component for BookmarksTab<'_> {
                                         MessagePopup {
                                             title: "Delete error".into(),
                                             messages: err.to_string().into_text()?,
+                                            text_align: None,
                                         },
                                     )))));
                                 }
@@ -258,6 +259,7 @@ impl Component for BookmarksTab<'_> {
                                         MessagePopup {
                                             title: "Forget error".into(),
                                             messages: err.to_string().into_text()?,
+                                            text_align: None,
                                         },
                                     )))));
                                 }
@@ -875,6 +877,7 @@ impl Component for BookmarksTab<'_> {
                                                 .into(),
                                         ]
                                         .into(),
+                                        text_align: None,
                                     }))),
                                 ));
                             } else {

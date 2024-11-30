@@ -547,6 +547,7 @@ impl Component for LogTab<'_> {
                                     "The change cannot be edited because it is immutable.".into(),
                                 ]
                                 .into(),
+                                text_align: None,
                             }))),
                         ));
                     } else {
@@ -574,6 +575,7 @@ impl Component for LogTab<'_> {
                                         .into(),
                                 ]
                                 .into(),
+                                text_align: None,
                             }))),
                         ));
                     } else {
@@ -601,6 +603,7 @@ impl Component for LogTab<'_> {
                                         .into(),
                                 ]
                                 .into(),
+                                text_align: None,
                             }))),
                         ));
                     } else {
@@ -652,6 +655,7 @@ impl Component for LogTab<'_> {
                                 ComponentAction::SetPopup(Some(Box::new(MessagePopup {
                                     title: "Push message".into(),
                                     messages: result.into_text()?,
+                                    text_align: None,
                                 }))),
                             ));
                         }
@@ -660,6 +664,7 @@ impl Component for LogTab<'_> {
                                 ComponentAction::SetPopup(Some(Box::new(MessagePopup {
                                     title: "Push error".into(),
                                     messages: err.into_text("")?,
+                                    text_align: None,
                                 }))),
                             ));
                         }
@@ -676,6 +681,7 @@ impl Component for LogTab<'_> {
                                 ComponentAction::SetPopup(Some(Box::new(MessagePopup {
                                     title: "Fetch message".into(),
                                     messages: result.into_text()?,
+                                    text_align: None,
                                 }))),
                             ));
                         }
@@ -684,6 +690,7 @@ impl Component for LogTab<'_> {
                                 ComponentAction::SetPopup(Some(Box::new(MessagePopup {
                                     title: "Fetch error".into(),
                                     messages: err.into_text("")?,
+                                    text_align: None,
                                 }))),
                             ));
                         }
