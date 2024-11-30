@@ -38,7 +38,7 @@ impl Component for CommandPopup<'_> {
             .title_alignment(Alignment::Center)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(Color::Green));
-        let area = centered_rect_line_height(area, 30, 7);
+        let area = centered_rect_line_height(area, 60, 5);
         f.render_widget(Clear, area);
         f.render_widget(&block, area);
 
