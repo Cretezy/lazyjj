@@ -31,6 +31,7 @@ pub enum ComponentAction {
     ChangeHead(Head),
     SetPopup(Option<Box<dyn Component>>),
     Multiple(Vec<ComponentAction>),
+    RefreshTab(),
 }
 
 pub trait Component {
