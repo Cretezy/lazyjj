@@ -2,8 +2,8 @@ use crate::{
     commander::Commander,
     env::Env,
     ui::{
-        bookmarks_tab::BookmarksTab, command_log_tab::CommandLogTab, files_tab::FilesTab,
-        log_tab::LogTab, Component, ComponentAction,
+        bookmarks_tab::BookmarksTab, command_log_tab::CommandLogTab, command_popup::CommandPopup,
+        files_tab::FilesTab, log_tab::LogTab, Component, ComponentAction,
     },
     ComponentInputResult,
 };
@@ -250,6 +250,10 @@ impl<'a> App<'a> {
                                     )
                             }) {
                                 self.set_tab(commander, *tab)?;
+                            }
+                            // General jj command runner
+                            if key.code == KeyCode::Char(':') {
+                                self.popup = Some(Box::new(CommandPopup::new()));
                             }
                         }
                     }

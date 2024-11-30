@@ -147,7 +147,7 @@ fn run_app<B: Backend>(
 
                     Ok(())
                 })
-                .unwrap();
+                .unwrap_or(());
 
             let draw_span = trace_span!("draw");
             draw_span
