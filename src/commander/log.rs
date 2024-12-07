@@ -168,20 +168,22 @@ impl Commander {
     #[instrument(level = "trace", skip(self))]
     pub fn get_head_latest(&self, head: &Head) -> Result<Head> {
         // Get all heads which point to the same change ID
-        let latest_heads: Vec<Head> = self
-            .execute_jj_command(
-                vec![
-                    "log",
-                    "--no-graph",
-                    "--template",
-                    &format!(r#"{} ++ "\n""#, HEAD_TEMPLATE),
-                    "-r",
-                    &head.change_id.as_str(),
-                ],
-                false,
-                true,
-            )
-            .context("Failed getting latest heads")?
+        let latest_heads_res = self.execute_jj_command(
+            vec![
+                "log",
+                "--no-graph",
+                "--template",
+                &format!(r#"{} ++ "\n""#, HEAD_TEMPLATE),
+                "-r",
+                head.change_id.as_str(),
+            ],
+            false,
+            true,
+        );
+        let Ok(latest_heads_res) = latest_heads_res else {
+            return self.get_head_latest(&self.get_current_head()?);
+        };
+        let latest_heads: Vec<Head> = latest_heads_res
             .lines()
             .map(parse_head)
             .collect::<Result<Vec<Head>>>()?;
@@ -202,7 +204,7 @@ impl Commander {
                         "--template",
                         r#"commit_id ++ "\n""#,
                         "-r",
-                        &latest_head.commit_id.as_str(),
+                        latest_head.commit_id.as_str(),
                     ],
                     false,
                     true,
