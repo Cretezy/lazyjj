@@ -6,35 +6,35 @@ use tracing::instrument;
 impl Commander {
     /// Create a new change after revision. Maps to `jj new <revision>`
     #[instrument(level = "trace", skip(self))]
-    pub fn run_new(&mut self, revision: &str) -> Result<()> {
+    pub fn run_new(&self, revision: &str) -> Result<()> {
         self.execute_void_jj_command(vec!["new", revision])
             .context("Failed executing jj new")
     }
 
     /// Edit change. Maps to `jj edit <commit>`
     #[instrument(level = "trace", skip(self))]
-    pub fn run_edit(&mut self, revision: &str) -> Result<()> {
+    pub fn run_edit(&self, revision: &str) -> Result<()> {
         self.execute_void_jj_command(vec!["edit", revision])
             .context("Failed executing jj edit")
     }
 
     /// Abandon change. Maps to `jj abandon <revision>`
     #[instrument(level = "trace", skip(self))]
-    pub fn run_abandon(&mut self, commit_id: &CommitId) -> Result<()> {
+    pub fn run_abandon(&self, commit_id: &CommitId) -> Result<()> {
         self.execute_void_jj_command(vec!["abandon", commit_id.as_str()])
             .context("Failed executing jj abandon")
     }
 
     /// Describe change. Maps to `jj describe <revision> -m <message>`
     #[instrument(level = "trace", skip(self))]
-    pub fn run_describe(&mut self, revision: &str, message: &str) -> Result<()> {
+    pub fn run_describe(&self, revision: &str, message: &str) -> Result<()> {
         self.execute_void_jj_command(vec!["describe", revision, "-m", message])
             .context("Failed executing jj describe")
     }
 
     /// Create bookmark. Maps to `jj bookmark create <name>`
     #[instrument(level = "trace", skip(self))]
-    pub fn create_bookmark(&mut self, name: &str) -> Result<Bookmark, CommandError> {
+    pub fn create_bookmark(&self, name: &str) -> Result<Bookmark, CommandError> {
         self.execute_void_jj_command(vec!["bookmark", "create", name])?;
         // jj only creates local bookmarks
         Ok(Bookmark {
@@ -47,7 +47,7 @@ impl Commander {
     /// Create bookmark pointing to commit. Maps to `jj bookmark create <name> -r <revision>`
     #[instrument(level = "trace", skip(self))]
     pub fn create_bookmark_commit(
-        &mut self,
+        &self,
         name: &str,
         commit_id: &CommitId,
     ) -> Result<Bookmark, CommandError> {
@@ -63,7 +63,7 @@ impl Commander {
     /// Set bookmark pointing to commit. Maps to `jj bookmark set <name> -r <revision>`
     #[instrument(level = "trace", skip(self))]
     pub fn set_bookmark_commit(
-        &mut self,
+        &self,
         name: &str,
         commit_id: &CommitId,
     ) -> Result<(), CommandError> {
@@ -80,38 +80,38 @@ impl Commander {
 
     /// Rename bookmark. Maps to `jj bookmark rename <old> <new>`
     #[instrument(level = "trace", skip(self))]
-    pub fn rename_bookmark(&mut self, old: &str, new: &str) -> Result<(), CommandError> {
+    pub fn rename_bookmark(&self, old: &str, new: &str) -> Result<(), CommandError> {
         self.execute_void_jj_command(vec!["bookmark", "rename", old, new])
     }
 
     /// Delete bookmark. Maps to `jj bookmark delete <name>`
     #[instrument(level = "trace", skip(self))]
-    pub fn delete_bookmark(&mut self, name: &str) -> Result<(), CommandError> {
+    pub fn delete_bookmark(&self, name: &str) -> Result<(), CommandError> {
         self.execute_void_jj_command(vec!["bookmark", "delete", name])
     }
 
     /// Forget bookmark. Maps to `jj bookmark forget <name>`
     #[instrument(level = "trace", skip(self))]
-    pub fn forget_bookmark(&mut self, name: &str) -> Result<(), CommandError> {
+    pub fn forget_bookmark(&self, name: &str) -> Result<(), CommandError> {
         self.execute_void_jj_command(vec!["bookmark", "forget", name])
     }
 
     /// Track bookmark. Maps to `jj bookmark track <bookmark>@<remote>`
     #[instrument(level = "trace", skip(self))]
-    pub fn track_bookmark(&mut self, bookmark: &Bookmark) -> Result<(), CommandError> {
+    pub fn track_bookmark(&self, bookmark: &Bookmark) -> Result<(), CommandError> {
         self.execute_void_jj_command(vec!["bookmark", "track", &bookmark.to_string()])
     }
 
     /// Untrack bookmark. Maps to `jj bookmark untrack <bookmark>@<remote>`
     #[instrument(level = "trace", skip(self))]
-    pub fn untrack_bookmark(&mut self, bookmark: &Bookmark) -> Result<(), CommandError> {
+    pub fn untrack_bookmark(&self, bookmark: &Bookmark) -> Result<(), CommandError> {
         self.execute_void_jj_command(vec!["bookmark", "untrack", &bookmark.to_string()])
     }
 
     /// Git push. Maps to `jj git push`
     #[instrument(level = "trace", skip(self))]
     pub fn git_push(
-        &mut self,
+        &self,
         all_bookmarks: bool,
         commit_id: &CommitId,
     ) -> Result<String, CommandError> {
@@ -128,7 +128,7 @@ impl Commander {
 
     /// Git fetch. Maps to `jj git fetch`
     #[instrument(level = "trace", skip(self))]
-    pub fn git_fetch(&mut self, all_remotes: bool) -> Result<String, CommandError> {
+    pub fn git_fetch(&self, all_remotes: bool) -> Result<String, CommandError> {
         let mut args = vec!["git", "fetch"];
         if all_remotes {
             args.push("--all-remotes");
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn run_new() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let head = test_repo.commander.get_current_head()?;
         test_repo.commander.run_new(head.commit_id.as_str())?;
@@ -153,6 +153,8 @@ mod tests {
             test_repo
                 .commander
                 .command_history
+                .lock()
+                .unwrap()
                 .last()
                 .unwrap()
                 .args
@@ -167,7 +169,7 @@ mod tests {
 
     #[test]
     fn run_edit() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let head = test_repo.commander.get_current_head()?;
         test_repo.commander.run_new(head.commit_id.as_str())?;
@@ -177,6 +179,8 @@ mod tests {
             test_repo
                 .commander
                 .command_history
+                .lock()
+                .unwrap()
                 .last()
                 .unwrap()
                 .args
@@ -191,7 +195,7 @@ mod tests {
 
     #[test]
     fn run_abandon() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let head = test_repo.commander.get_current_head()?;
         test_repo.commander.run_abandon(&head.commit_id)?;
@@ -199,6 +203,8 @@ mod tests {
             test_repo
                 .commander
                 .command_history
+                .lock()
+                .unwrap()
                 .last()
                 .unwrap()
                 .args
@@ -213,7 +219,7 @@ mod tests {
 
     #[test]
     fn run_describe() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let head = test_repo.commander.get_current_head()?;
         test_repo
@@ -223,6 +229,8 @@ mod tests {
             test_repo
                 .commander
                 .command_history
+                .lock()
+                .unwrap()
                 .last()
                 .unwrap()
                 .args
@@ -239,7 +247,7 @@ mod tests {
 
     #[test]
     fn create_bookmark() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let bookmark = test_repo.commander.create_bookmark("test")?;
         let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
@@ -251,7 +259,7 @@ mod tests {
 
     #[test]
     fn create_bookmark_commit() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         // Create new change, since by default `jj bookmark create` uses current change
         let head = test_repo.commander.get_current_head()?;
@@ -284,7 +292,7 @@ mod tests {
 
     #[test]
     fn set_bookmark_commit() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         // Create new change, since by default `jj bookmark create` uses current change
         let old_head = test_repo.commander.get_current_head()?;
@@ -337,7 +345,7 @@ mod tests {
 
     #[test]
     fn rename_bookmark() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let bookmark = test_repo.commander.create_bookmark("test1")?;
 
@@ -363,7 +371,7 @@ mod tests {
 
     #[test]
     fn delete_bookmark() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let bookmark = test_repo.commander.create_bookmark("test")?;
 
@@ -380,7 +388,7 @@ mod tests {
 
     #[test]
     fn forget_bookmark() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let bookmark = test_repo.commander.create_bookmark("test")?;
 

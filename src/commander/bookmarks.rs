@@ -75,7 +75,7 @@ impl Commander {
     /// Get bookmarks.
     /// Maps to `jj bookmark list`
     #[instrument(level = "trace", skip(self))]
-    pub fn get_bookmarks(&mut self, show_all: bool) -> Result<Vec<BookmarkLine>, CommandError> {
+    pub fn get_bookmarks(&self, show_all: bool) -> Result<Vec<BookmarkLine>, CommandError> {
         let mut args = vec![];
         if show_all {
             args.push("--all-remotes");
@@ -133,7 +133,7 @@ impl Commander {
     }
 
     #[instrument(level = "trace", skip(self))]
-    pub fn get_bookmarks_list(&mut self, show_all: bool) -> Result<Vec<Bookmark>, CommandError> {
+    pub fn get_bookmarks_list(&self, show_all: bool) -> Result<Vec<Bookmark>, CommandError> {
         let mut args = vec![
             "bookmark".to_owned(),
             "list".to_owned(),
@@ -157,7 +157,7 @@ impl Commander {
     /// Maps to `jj show <bookmark>`
     #[instrument(level = "trace", skip(self))]
     pub fn get_bookmark_show(
-        &mut self,
+        &self,
         bookmark: &Bookmark,
         diff_format: &DiffFormat,
     ) -> Result<String, CommandError> {

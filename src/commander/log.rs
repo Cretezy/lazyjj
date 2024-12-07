@@ -75,7 +75,7 @@ impl Commander {
     /// Get log. Returns human readable log and mapping to log line to head.
     /// Maps to `jj log`
     #[instrument(level = "trace", skip(self))]
-    pub fn get_log(&mut self, revset: &Option<String>) -> Result<LogOutput, CommandError> {
+    pub fn get_log(&self, revset: &Option<String>) -> Result<LogOutput, CommandError> {
         let mut args = vec![];
 
         if let Some(revset) = revset {
@@ -126,7 +126,7 @@ impl Commander {
     /// Maps to `jj show <commit>`
     #[instrument(level = "trace", skip(self))]
     pub fn get_commit_show(
-        &mut self,
+        &self,
         commit_id: &CommitId,
         diff_format: &DiffFormat,
     ) -> Result<String, CommandError> {
@@ -142,7 +142,7 @@ impl Commander {
     /// Get the current head.
     /// Maps to `jj log -r @`
     #[instrument(level = "trace", skip(self))]
-    pub fn get_current_head(&mut self) -> Result<Head> {
+    pub fn get_current_head(&self) -> Result<Head> {
         parse_head(
             &self
                 .execute_jj_command(
@@ -166,7 +166,7 @@ impl Commander {
 
     /// Get the latest version of a head. Can detect evolution of divergent head.
     #[instrument(level = "trace", skip(self))]
-    pub fn get_head_latest(&mut self, head: &Head) -> Result<Head> {
+    pub fn get_head_latest(&self, head: &Head) -> Result<Head> {
         // Get all heads which point to the same change ID
         let latest_heads: Vec<Head> = self
             .execute_jj_command(
@@ -231,7 +231,7 @@ impl Commander {
     /// Get a commit's parent.
     /// Maps to `jj log -r <revision>-`
     #[instrument(level = "trace", skip(self))]
-    pub fn get_commit_parent(&mut self, commit_id: &CommitId) -> Result<Head> {
+    pub fn get_commit_parent(&self, commit_id: &CommitId) -> Result<Head> {
         parse_head(
             &self
                 .execute_jj_command(
@@ -256,7 +256,7 @@ impl Commander {
     /// Get commit's description.
     /// Maps to `jj log -r <revision> -T description`
     #[instrument(level = "trace", skip(self))]
-    pub fn get_commit_description(&mut self, commit_id: &CommitId) -> Result<String> {
+    pub fn get_commit_description(&self, commit_id: &CommitId) -> Result<String> {
         Ok(self
             .execute_jj_command(
                 vec![
@@ -279,7 +279,7 @@ impl Commander {
     /// Check if a revision is immutable
     /// Maps to `jj log -r <revision> -T immutable`
     #[instrument(level = "trace", skip(self))]
-    pub fn check_revision_immutable(&mut self, revision: &str) -> Result<bool> {
+    pub fn check_revision_immutable(&self, revision: &str) -> Result<bool> {
         Ok(self
             .execute_jj_command(
                 vec![
@@ -303,7 +303,7 @@ impl Commander {
     /// Get bookmark head
     /// Maps to `jj log -r <bookmark>[@<remote>]`
     #[instrument(level = "trace", skip(self))]
-    pub fn get_bookmark_head(&mut self, bookmark: &Bookmark) -> Result<Head> {
+    pub fn get_bookmark_head(&self, bookmark: &Bookmark) -> Result<Head> {
         parse_head(
             &self
                 .execute_jj_command(
