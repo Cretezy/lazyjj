@@ -15,6 +15,8 @@ pub struct Config {
     lazyjj_diff_format: Option<DiffFormat>,
     #[serde(rename = "lazyjj.bookmark-prefix")]
     lazyjj_bookmark_prefix: Option<String>,
+    #[serde(rename = "lazyjj.layout")]
+    lazyjj_layout: Option<JJLayout>,
     #[serde(rename = "ui.diff.format")]
     ui_diff_format: Option<DiffFormat>,
     #[serde(rename = "git.push-bookmark-prefix")]
@@ -35,6 +37,7 @@ pub struct JjConfigLazyjj {
     highlight_color: Option<Color>,
     diff_format: Option<DiffFormat>,
     bookmark_prefix: Option<String>,
+    layout: Option<JJLayout>,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -72,6 +75,10 @@ impl Config {
                 .clone()
                 .unwrap_or("push-".to_owned()),
         )
+    }
+
+    pub fn layout(&self) -> JJLayout {
+        self.lazyjj_layout.unwrap_or(JJLayout::Horizontal)
     }
 }
 
@@ -137,6 +144,10 @@ impl Env {
                             .lazyjj
                             .as_ref()
                             .and_then(|lazyjj| lazyjj.bookmark_prefix.clone()),
+                        lazyjj_layout: config
+                            .lazyjj
+                            .as_ref()
+                            .and_then(|lazyjj| lazyjj.layout),
                         ui_diff_format: config
                             .ui
                             .and_then(|ui| ui.diff.and_then(|diff| diff.format)),
@@ -163,4 +174,12 @@ pub enum DiffFormat {
     Git,
     Summary,
     Stat,
+}
+
+#[derive(Clone, Debug, Deserialize, Default, Copy, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum JJLayout {
+    #[default]
+    Horizontal,
+    Vertical,
 }

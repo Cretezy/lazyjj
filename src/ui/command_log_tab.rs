@@ -9,7 +9,7 @@ use tracing::instrument;
 
 use crate::{
     commander::{CommandLogItem, Commander},
-    env::Config,
+    env::{Config, JJLayout},
     ui::{
         details_panel::DetailsPanel, help_popup::HelpPopup, utils::tabs_to_spaces, Component,
         ComponentAction,
@@ -24,6 +24,8 @@ pub struct CommandLogTab {
     commands_list_state: ListState,
     commands_height: u16,
 
+    layout_direction: Direction,
+
     output_panel: DetailsPanel,
 
     config: Config,
@@ -36,10 +38,17 @@ impl CommandLogTab {
         let selected_index = command_history.first().map(|_| 0);
         let commands_list_state = ListState::default().with_selected(selected_index);
 
+        let layout_direction = if commander.env.config.layout() == JJLayout::Horizontal {
+            Direction::Horizontal
+        } else {
+            Direction::Vertical
+        };
+
         Ok(Self {
             commands_height: 0,
             commands_list_state,
             command_history,
+            layout_direction,
             output_panel: DetailsPanel::new(),
             config: commander.env.config.clone(),
         })
@@ -162,7 +171,7 @@ impl Component for CommandLogTab {
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
         let chunks = Layout::default()
-            .direction(Direction::Horizontal)
+            .direction(self.layout_direction)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(area);
 

@@ -7,7 +7,7 @@ use crate::{
         log::Head,
         CommandError, Commander,
     },
-    env::{Config, DiffFormat},
+    env::{Config, DiffFormat, JJLayout},
     ui::{
         details_panel::DetailsPanel, help_popup::HelpPopup, utils::tabs_to_spaces, Component,
         ComponentAction,
@@ -33,6 +33,7 @@ pub struct FilesTab {
     diff_panel: DetailsPanel,
     diff_output: Result<Option<String>, CommandError>,
     diff_format: DiffFormat,
+    layout_direction: Direction,
 
     config: Config,
 }
@@ -71,6 +72,12 @@ impl FilesTab {
             .map(|current_change| commander.get_file_diff(&head, current_change, &diff_format))
             .map_or(Ok(None), |r| r.map(|diff| Some(tabs_to_spaces(&diff))));
 
+        let layout_direction = if commander.env.config.layout() == JJLayout::Horizontal {
+          Direction::Horizontal
+        } else {
+          Direction::Vertical
+        };
+
         let files_list_state = ListState::default().with_selected(get_current_file_index(
             current_file.as_ref(),
             files_output.as_ref(),
@@ -90,6 +97,7 @@ impl FilesTab {
             diff_output,
             diff_format,
             diff_panel: DetailsPanel::new(),
+            layout_direction,
 
             config: commander.env.config.clone(),
         })
@@ -168,7 +176,7 @@ impl Component for FilesTab {
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
         let chunks = Layout::default()
-            .direction(Direction::Horizontal)
+            .direction(self.layout_direction)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(area);
 

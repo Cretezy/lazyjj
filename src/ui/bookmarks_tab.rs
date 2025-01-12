@@ -1,7 +1,7 @@
 #![allow(clippy::borrow_interior_mutable_const)]
 use crate::{
     commander::{bookmarks::BookmarkLine, ids::ChangeId, CommandError, Commander},
-    env::{Config, DiffFormat},
+    env::{Config, DiffFormat, JJLayout},
     ui::{
         details_panel::DetailsPanel,
         help_popup::HelpPopup,
@@ -70,6 +70,7 @@ pub struct BookmarksTab<'a> {
     popup_rx: std::sync::mpsc::Receiver<Listener>,
 
     diff_format: DiffFormat,
+    layout_direction: Direction,
 
     config: Config,
 }
@@ -134,6 +135,11 @@ impl BookmarksTab<'_> {
 
         let (popup_tx, popup_rx) = std::sync::mpsc::channel();
 
+        let layout_direction = if commander.env.config.layout() == JJLayout::Horizontal {
+            Direction::Horizontal
+        } else {
+            Direction::Vertical
+        };
         Ok(Self {
             bookmarks_output,
             bookmark,
@@ -159,6 +165,7 @@ impl BookmarksTab<'_> {
             popup_rx,
 
             diff_format,
+            layout_direction,
 
             config: commander.env.config.clone(),
         })
@@ -302,7 +309,7 @@ impl Component for BookmarksTab<'_> {
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
         let chunks = Layout::default()
-            .direction(Direction::Horizontal)
+            .direction(self.layout_direction)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(area);
 

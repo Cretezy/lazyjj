@@ -13,7 +13,7 @@ use crate::{
         log::{Head, LogOutput},
         CommandError, Commander,
     },
-    env::{Config, DiffFormat},
+    env::{Config, DiffFormat, JJLayout},
     ui::{
         bookmark_set_popup::BookmarkSetPopup,
         details_panel::DetailsPanel,
@@ -55,6 +55,8 @@ pub struct LogTab<'a> {
     describe_textarea: Option<TextArea<'a>>,
     describe_after_new: bool,
 
+    layout_direction: Direction,
+
     config: Config,
 }
 
@@ -92,6 +94,12 @@ impl LogTab<'_> {
         let (popup_tx, popup_rx) = std::sync::mpsc::channel();
         let (bookmark_set_popup_tx, bookmark_set_popup_rx) = std::sync::mpsc::channel();
 
+        let layout_direction = if commander.env.config.layout() == JJLayout::Horizontal {
+          Direction::Horizontal
+        } else {
+          Direction::Vertical
+        };
+
         Ok(Self {
             log_output_text: match log_output.as_ref() {
                 Ok(log_output) => log_output
@@ -122,6 +130,8 @@ impl LogTab<'_> {
 
             describe_textarea: None,
             describe_after_new: false,
+
+            layout_direction,
 
             config: commander.env.config.clone(),
         })
@@ -249,7 +259,7 @@ impl Component for LogTab<'_> {
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
         let chunks = Layout::default()
-            .direction(Direction::Horizontal)
+            .direction(self.layout_direction)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(area);
 
