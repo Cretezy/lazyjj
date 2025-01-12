@@ -17,8 +17,8 @@ use crate::{
     ComponentInputResult,
 };
 
-/// Command log tab. Shows list of commands exectured by lazyjj in left panel and selected command
-/// output in right panel
+/// Command log tab. Shows list of commands exectured by lazyjj in main panel and selected command
+/// output in details panel
 pub struct CommandLogTab {
     command_history: Vec<CommandLogItem>,
     commands_list_state: ListState,

@@ -29,7 +29,7 @@ const NEW_POPUP_ID: u16 = 1;
 const EDIT_POPUP_ID: u16 = 2;
 const ABANDON_POPUP_ID: u16 = 3;
 
-/// Log tab. Shows `jj log` in left panel and shows selected change details of in right panel.
+/// Log tab. Shows `jj log` in main panel and shows selected change details of in details panel.
 pub struct LogTab<'a> {
     log_output: Result<LogOutput, CommandError>,
     log_output_text: Text<'a>,
