@@ -71,6 +71,7 @@ pub struct BookmarksTab<'a> {
 
     diff_format: DiffFormat,
     layout_direction: Direction,
+    layout_percent: u16,
 
     config: Config,
 }
@@ -140,6 +141,8 @@ impl BookmarksTab<'_> {
         } else {
             Direction::Vertical
         };
+        let layout_percent = commander.env.config.layout_percent();
+
         Ok(Self {
             bookmarks_output,
             bookmark,
@@ -166,6 +169,7 @@ impl BookmarksTab<'_> {
 
             diff_format,
             layout_direction,
+            layout_percent,
 
             config: commander.env.config.clone(),
         })
@@ -310,7 +314,10 @@ impl Component for BookmarksTab<'_> {
     ) -> Result<()> {
         let chunks = Layout::default()
             .direction(self.layout_direction)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .constraints([
+                Constraint::Percentage(self.layout_percent),
+                Constraint::Percentage(100 - self.layout_percent),
+            ])
             .split(area);
 
         // Draw bookmarks

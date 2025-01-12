@@ -25,6 +25,7 @@ pub struct CommandLogTab {
     commands_height: u16,
 
     layout_direction: Direction,
+    layout_percent: u16,
 
     output_panel: DetailsPanel,
 
@@ -43,12 +44,14 @@ impl CommandLogTab {
         } else {
             Direction::Vertical
         };
+        let layout_percent = commander.env.config.layout_percent();
 
         Ok(Self {
             commands_height: 0,
             commands_list_state,
             command_history,
             layout_direction,
+            layout_percent,
             output_panel: DetailsPanel::new(),
             config: commander.env.config.clone(),
         })
@@ -172,7 +175,10 @@ impl Component for CommandLogTab {
     ) -> Result<()> {
         let chunks = Layout::default()
             .direction(self.layout_direction)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .constraints([
+                Constraint::Percentage(self.layout_percent),
+                Constraint::Percentage(100 - self.layout_percent),
+            ])
             .split(area);
 
         // Draw commands

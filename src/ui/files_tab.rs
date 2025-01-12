@@ -34,6 +34,7 @@ pub struct FilesTab {
     diff_output: Result<Option<String>, CommandError>,
     diff_format: DiffFormat,
     layout_direction: Direction,
+    layout_percent: u16,
 
     config: Config,
 }
@@ -73,10 +74,11 @@ impl FilesTab {
             .map_or(Ok(None), |r| r.map(|diff| Some(tabs_to_spaces(&diff))));
 
         let layout_direction = if commander.env.config.layout() == JJLayout::Horizontal {
-          Direction::Horizontal
+            Direction::Horizontal
         } else {
-          Direction::Vertical
+            Direction::Vertical
         };
+        let layout_percent = commander.env.config.layout_percent();
 
         let files_list_state = ListState::default().with_selected(get_current_file_index(
             current_file.as_ref(),
@@ -98,6 +100,7 @@ impl FilesTab {
             diff_format,
             diff_panel: DetailsPanel::new(),
             layout_direction,
+            layout_percent,
 
             config: commander.env.config.clone(),
         })
@@ -177,7 +180,10 @@ impl Component for FilesTab {
     ) -> Result<()> {
         let chunks = Layout::default()
             .direction(self.layout_direction)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .constraints([
+                Constraint::Percentage(self.layout_percent),
+                Constraint::Percentage(100 - self.layout_percent),
+            ])
             .split(area);
 
         // Draw files
