@@ -11,7 +11,7 @@ use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use clap::Parser;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, MouseEvent, MouseEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -177,7 +177,15 @@ fn run_app<B: Backend>(
 
         // Input
         let input_spawn = trace_span!("input");
-        let event = event::read()?;
+        let event = loop {
+            match event::read()? {
+                Event::Mouse(MouseEvent {
+                    kind: MouseEventKind::Moved,
+                    ..
+                }) => continue,
+                event => break event,
+            }
+        };
         let should_stop = input_spawn.in_scope(|| -> Result<bool> {
             if app.input(event, commander)? {
                 return Ok(true);
