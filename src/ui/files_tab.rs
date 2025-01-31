@@ -10,7 +10,7 @@ use crate::{
     env::{Config, DiffFormat},
     ui::{
         details_panel::DetailsPanel, help_popup::HelpPopup, utils::tabs_to_spaces, Component,
-        ComponentAction,
+        ComponentAction, Panel,
     },
     ComponentInputResult,
 };
@@ -21,6 +21,8 @@ use ratatui::{prelude::*, widgets::*};
 
 /// Files tab. Shows files in selected change in left panel and selected file diff in right panel
 pub struct FilesTab {
+    zoom: Option<Panel>,
+
     head: Head,
     is_current_head: bool,
 
@@ -77,6 +79,8 @@ impl FilesTab {
         ));
 
         Ok(Self {
+            zoom: None,
+
             head,
             is_current_head,
 
@@ -159,6 +163,7 @@ impl Component for FilesTab {
         self.is_current_head = self.head == commander.get_current_head()?;
         self.refresh_files(commander)?;
         self.refresh_diff(commander)?;
+        self.zoom = None;
         Ok(())
     }
 
@@ -167,9 +172,15 @@ impl Component for FilesTab {
         f: &mut ratatui::prelude::Frame<'_>,
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
+        let (left_percent, right_percent) = match self.zoom {
+            None => (50, 50),
+            Some(Panel::Main) => (80, 20),
+            Some(Panel::Detail) => (20, 80),
+        };
+
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .constraints([Constraint::Percentage(left_percent), Constraint::Percentage(right_percent)])
             .split(area);
 
         // Draw files
@@ -289,6 +300,14 @@ impl Component for FilesTab {
             }
 
             match key.code {
+                KeyCode::Left => self.zoom = match self.zoom {
+                    Some(Panel::Detail) => None,
+                    _ => Some(Panel::Main),
+                },
+                KeyCode::Right => self.zoom = match self.zoom {
+                    Some(Panel::Main) => None,
+                    _ => Some(Panel::Detail),
+                },
                 KeyCode::Char('j') | KeyCode::Down => self.scroll_files(commander, 1)?,
                 KeyCode::Char('k') | KeyCode::Up => self.scroll_files(commander, -1)?,
                 KeyCode::Char('J') => {

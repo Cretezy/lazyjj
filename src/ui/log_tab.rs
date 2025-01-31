@@ -20,7 +20,7 @@ use crate::{
         help_popup::HelpPopup,
         message_popup::MessagePopup,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
-        Component, ComponentAction,
+        Component, ComponentAction, Panel,
     },
     ComponentInputResult,
 };
@@ -31,6 +31,8 @@ const ABANDON_POPUP_ID: u16 = 3;
 
 /// Log tab. Shows `jj log` in left panel and shows selected change details of in right panel.
 pub struct LogTab<'a> {
+    zoom: Option<Panel>,
+
     log_output: Result<LogOutput, CommandError>,
     log_output_text: Text<'a>,
     log_list_state: ListState,
@@ -93,6 +95,8 @@ impl LogTab<'_> {
         let (bookmark_set_popup_tx, bookmark_set_popup_rx) = std::sync::mpsc::channel();
 
         Ok(Self {
+            zoom: None,
+
             log_output_text: match log_output.as_ref() {
                 Ok(log_output) => log_output
                     .graph
@@ -182,6 +186,7 @@ impl Component for LogTab<'_> {
     fn switch(&mut self, commander: &mut Commander) -> Result<()> {
         self.refresh_log_output(commander);
         self.refresh_head_output(commander);
+        self.zoom = None;
         Ok(())
     }
 
@@ -248,9 +253,15 @@ impl Component for LogTab<'_> {
         f: &mut ratatui::prelude::Frame<'_>,
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
+        let (left_percent, right_percent) = match self.zoom {
+            None => (50, 50),
+            Some(Panel::Main) => (80, 20),
+            Some(Panel::Detail) => (20, 80),
+        };
+
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .constraints([Constraint::Percentage(left_percent), Constraint::Percentage(right_percent)])
             .split(area);
 
         // Draw log
@@ -492,6 +503,14 @@ impl Component for LogTab<'_> {
             }
 
             match key.code {
+                KeyCode::Left => self.zoom = match self.zoom {
+                    Some(Panel::Detail) => None,
+                    _ => Some(Panel::Main),
+                },
+                KeyCode::Right => self.zoom = match self.zoom {
+                    Some(Panel::Main) => None,
+                    _ => Some(Panel::Detail),
+                },
                 KeyCode::Char('j') | KeyCode::Down => {
                     self.scroll_log(commander, 1);
                 }

@@ -7,7 +7,7 @@ use crate::{
         help_popup::HelpPopup,
         message_popup::MessagePopup,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
-        Component, ComponentAction,
+        Component, ComponentAction, Panel,
     },
     ComponentInputResult,
 };
@@ -45,6 +45,8 @@ const EDIT_POPUP_ID: u16 = 4;
 
 /// Bookmarks tab. Shows bookmarks in left panel and selected bookmark current change in right panel.
 pub struct BookmarksTab<'a> {
+    zoom: Option<Panel>,
+
     bookmarks_output: Result<Vec<BookmarkLine>, CommandError>,
     bookmarks_list_state: ListState,
     bookmarks_height: u16,
@@ -135,6 +137,8 @@ impl BookmarksTab<'_> {
         let (popup_tx, popup_rx) = std::sync::mpsc::channel();
 
         Ok(Self {
+            zoom: None,
+
             bookmarks_output,
             bookmark,
             bookmarks_list_state,
@@ -210,6 +214,7 @@ impl Component for BookmarksTab<'_> {
     fn switch(&mut self, commander: &mut Commander) -> Result<()> {
         self.refresh_bookmarks(commander);
         self.refresh_bookmark(commander);
+        self.zoom = None;
         Ok(())
     }
 
@@ -301,9 +306,15 @@ impl Component for BookmarksTab<'_> {
         f: &mut ratatui::prelude::Frame<'_>,
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
+        let (left_percent, right_percent) = match self.zoom {
+            None => (50, 50),
+            Some(Panel::Main) => (80, 20),
+            Some(Panel::Detail) => (20, 80),
+        };
+
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .constraints([Constraint::Percentage(left_percent), Constraint::Percentage(right_percent)])
             .split(area);
 
         // Draw bookmarks
@@ -740,6 +751,14 @@ impl Component for BookmarksTab<'_> {
             }
 
             match key.code {
+                KeyCode::Left => self.zoom = match self.zoom {
+                    Some(Panel::Detail) => None,
+                    _ => Some(Panel::Main),
+                },
+                KeyCode::Right => self.zoom = match self.zoom {
+                    Some(Panel::Main) => None,
+                    _ => Some(Panel::Detail),
+                },
                 KeyCode::Char('j') | KeyCode::Down => self.scroll_bookmarks(commander, 1),
                 KeyCode::Char('k') | KeyCode::Up => self.scroll_bookmarks(commander, -1),
                 KeyCode::Char('J') => {

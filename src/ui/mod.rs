@@ -32,6 +32,11 @@ pub enum ComponentAction {
     Multiple(Vec<ComponentAction>),
 }
 
+pub enum Panel {
+    Main,
+    Detail,
+}
+
 pub trait Component {
     // Called when switching to tab
     fn switch(&mut self, _commander: &mut Commander) -> Result<()> {

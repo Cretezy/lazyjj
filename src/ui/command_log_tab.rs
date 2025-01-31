@@ -12,7 +12,7 @@ use crate::{
     env::Config,
     ui::{
         details_panel::DetailsPanel, help_popup::HelpPopup, utils::tabs_to_spaces, Component,
-        ComponentAction,
+        ComponentAction, Panel,
     },
     ComponentInputResult,
 };
@@ -20,6 +20,8 @@ use crate::{
 /// Command log tab. Shows list of commands exectured by lazyjj in left panel and selected command
 /// output in right panel
 pub struct CommandLogTab {
+    zoom: Option<Panel>,
+
     command_history: Vec<CommandLogItem>,
     commands_list_state: ListState,
     commands_height: u16,
@@ -37,6 +39,7 @@ impl CommandLogTab {
         let commands_list_state = ListState::default().with_selected(selected_index);
 
         Ok(Self {
+            zoom: None,
             commands_height: 0,
             commands_list_state,
             command_history,
@@ -153,6 +156,7 @@ impl Component for CommandLogTab {
         let selected_index = command_history.first().map(|_| 0);
         self.commands_list_state.select(selected_index);
         self.command_history = command_history;
+        self.zoom = None;
         Ok(())
     }
 
@@ -161,9 +165,15 @@ impl Component for CommandLogTab {
         f: &mut ratatui::prelude::Frame<'_>,
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
+        let (left_percent, right_percent) = match self.zoom {
+            None => (50, 50),
+            Some(Panel::Main) => (80, 20),
+            Some(Panel::Detail) => (20, 80),
+        };
+
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .constraints([Constraint::Percentage(left_percent), Constraint::Percentage(right_percent)])
             .split(area);
 
         // Draw commands
@@ -243,6 +253,14 @@ impl Component for CommandLogTab {
             }
 
             match key.code {
+                KeyCode::Left => self.zoom = match self.zoom {
+                    Some(Panel::Detail) => None,
+                    _ => Some(Panel::Main),
+                },
+                KeyCode::Right => self.zoom = match self.zoom {
+                    Some(Panel::Main) => None,
+                    _ => Some(Panel::Detail),
+                },
                 KeyCode::Char('j') | KeyCode::Down => {
                     self.scroll_commands(1);
                 }
