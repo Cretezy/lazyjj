@@ -32,6 +32,13 @@ impl Commander {
             .context("Failed executing jj describe")
     }
 
+    /// Squash changes. Maps to `jj squash -u --into <revision>`
+    #[instrument(level = "trace", skip(self))]
+    pub fn run_squash(&mut self, revision: &str) -> Result<()> {
+        self.execute_void_jj_command(vec!["squash", "-u", "--into", revision])
+            .context("Failed executing jj squash")
+    }
+
     /// Create bookmark. Maps to `jj bookmark create <name>`
     #[instrument(level = "trace", skip(self))]
     pub fn create_bookmark(&mut self, name: &str) -> Result<Bookmark, CommandError> {
