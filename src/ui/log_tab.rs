@@ -529,7 +529,7 @@ impl Component for LogTab<'_> {
                         Text::from(vec![
                             Line::from("Are you sure you want to create a new change?"),
                             Line::from(format!("New parent: {}", self.head.change_id.as_str())),
-                        ]),
+                        ]).fg(Color::default()),
                     )
                     .with_yes_button(ButtonLabel::YES.clone())
                     .with_no_button(ButtonLabel::NO.clone())
@@ -556,7 +556,7 @@ impl Component for LogTab<'_> {
                             Text::from(vec![
                                 Line::from("Are you sure you want to edit an existing change?"),
                                 Line::from(format!("Change: {}", self.head.change_id.as_str())),
-                            ]),
+                            ]).fg(Color::default()),
                         )
                         .with_yes_button(ButtonLabel::YES.clone())
                         .with_no_button(ButtonLabel::NO.clone())
@@ -583,7 +583,7 @@ impl Component for LogTab<'_> {
                             Text::from(vec![
                                 Line::from("Are you sure you want to abandon this change?"),
                                 Line::from(format!("Change: {}", self.head.change_id.as_str())),
-                            ]),
+                            ]).fg(Color::default()),
                         )
                         .with_yes_button(ButtonLabel::YES.clone())
                         .with_no_button(ButtonLabel::NO.clone())
