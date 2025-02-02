@@ -11,7 +11,7 @@ use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use clap::Parser;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture},
+    event::{self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -177,7 +177,12 @@ fn run_app<B: Backend>(
 
         // Input
         let input_spawn = trace_span!("input");
-        let event = event::read()?;
+        let event = loop {
+            match event::read()? {
+                event::Event::FocusLost => continue,
+                event => break event,
+            }
+        };
         let should_stop = input_spawn.in_scope(|| -> Result<bool> {
             if app.input(event, commander)? {
                 return Ok(true);
@@ -195,7 +200,7 @@ fn run_app<B: Backend>(
 fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture, EnableFocusChange)?;
     let backend = CrosstermBackend::new(stdout);
     Ok(Terminal::new(backend)?)
 }
@@ -205,7 +210,8 @@ fn restore_terminal(mut terminal: Terminal<CrosstermBackend<io::Stdout>>) -> Res
     execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
-        DisableMouseCapture
+        DisableMouseCapture,
+        DisableFocusChange
     )?;
     terminal.show_cursor()?;
     Ok(())
