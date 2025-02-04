@@ -117,6 +117,7 @@ fn main() -> Result<()> {
     let mut app = App::new(env.clone())?;
 
     let mut terminal = setup_terminal()?;
+    install_panic_hook();
 
     // Run app
     let res = run_app(&mut terminal, &mut app, &mut commander);
@@ -208,6 +209,16 @@ fn restore_terminal() -> Result<()> {
         DisableMouseCapture
     )?;
     Ok(())
+}
+
+fn install_panic_hook() {
+    let original_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new( move |info| {
+        if let Err(err) = restore_terminal() {
+            eprintln!("Failed to restore terminal: {err}");
+        }
+        original_hook(info);
+    }));
 }
 
 enum ComponentInputResult {
