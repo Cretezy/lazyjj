@@ -120,7 +120,7 @@ fn main() -> Result<()> {
 
     // Run app
     let res = run_app(&mut terminal, &mut app, &mut commander);
-    restore_terminal(terminal)?;
+    restore_terminal()?;
     res?;
 
     Ok(())
@@ -200,10 +200,10 @@ fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
     Ok(Terminal::new(backend)?)
 }
 
-fn restore_terminal(mut terminal: Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
+fn restore_terminal() -> Result<()> {
     disable_raw_mode()?;
     execute!(
-        terminal.backend_mut(),
+        io::stdout(),
         LeaveAlternateScreen,
         DisableMouseCapture
     )?;
