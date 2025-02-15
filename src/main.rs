@@ -232,7 +232,7 @@ fn restore_terminal() -> Result<()> {
 
 fn install_panic_hook() {
     let original_hook = std::panic::take_hook();
-    std::panic::set_hook(Box::new( move |info| {
+    std::panic::set_hook(Box::new(move |info| {
         if let Err(err) = restore_terminal() {
             eprintln!("Failed to restore terminal: {err}");
         }

@@ -200,7 +200,6 @@ impl<'a> App<'a> {
                         self.get_command_log_tab(commander)?.update(commander)?;
                     }
                     _ => {}
-
                 };
             }
         }

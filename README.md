@@ -16,6 +16,7 @@ https://github.com/Cretezy/lazyjj/assets/2672503/b5e6b4f1-ebdb-448f-af9e-361e86f
   - See different revset with `r`
   - Set a bookmark to selected change with `b`
   - Fetch/push with `f`/`p`
+  - Squash current changes to selected change with `s`
 - Files
   - View files in current change and diff in side panel
   - See a change's files from the log tab with `Enter`
@@ -27,6 +28,7 @@ https://github.com/Cretezy/lazyjj/assets/2672503/b5e6b4f1-ebdb-448f-af9e-361e86f
   - Track bookmarks with `t`, untrack bookmarks with `T`
 - Command log: View every command lazyjj executes
 - Config: Configure lazyjj with your jj config
+- Command box: Run jj commands directly in lazyjj with `:`
 - Help: See all key mappings with `h`/`?`
 
 ## Setup
@@ -49,6 +51,8 @@ You can optionally configure the following options through your jj config:
   - If `lazyjj.diff-format` is not set but `ui.diff.format` is, the latter will be used
 - `lazyjj.bookmark-prefix`: Change the bookmark name prefix for generated bookmark names. Defaults to `push-`
   - If `lazyjj.bookmark-prefix` is not set but `git.push-bookmark-prefix` is, the latter will be used
+- `lazyjj.layout`: Changes the layout of the main and details panel. Can be `horizontal` (default) or `vertical`
+- `lazyjj.layout-percent`: Changes the layout split of the main page. Should be number between 0 and 100. Defaults to `50`
 
 Example: `jj config set --user lazyjj.diff-format "color-words"` (for storing in [user config file](https://martinvonz.github.io/jj/latest/config/#user-config-file), repo config is also supported)
 
@@ -75,6 +79,7 @@ See all key mappings for the current tab with `h` or `?`.
   - Scroll down/up by one line with `Ctrl+e`/`Ctrl+y`
   - Scroll down/up by a half page with `Ctrl+d`/`Ctrl+u`
   - Scroll down/up by a full page with `Ctrl+f`/`Ctrl+b`
+- Open a command popup to run jj commands using `:` (jj prefix not required, e.g. write `new main` instead of `jj new main`)
 
 ### Log tab
 
@@ -94,10 +99,12 @@ See all key mappings for the current tab with `h` or `?`.
   - Scroll in bookmark list with `j`/`k`
   - Create a new bookmark with `c`
   - Use auto-generated name with `g`
+- Squash current changes (in @) to the selected change with `s`
 - Git fetch with `f` (`jj git fetch`)
   - Git fetch all remotes with `F` (`jj git fetch --all-remotes`)
 - Git push with `p` (`jj git push`)
   - Git push all bookmarks with `P` (`jj git push --all`)
+  - Use `Ctrl+p` or `Ctrl+P` to include pushing new bookmarks (`--allow-new`)
 
 ### Files tab
 

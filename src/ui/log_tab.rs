@@ -540,7 +540,8 @@ impl Component for LogTab<'_> {
                         Text::from(vec![
                             Line::from("Are you sure you want to create a new change?"),
                             Line::from(format!("New parent: {}", self.head.change_id.as_str())),
-                        ]).fg(Color::default()),
+                        ])
+                        .fg(Color::default()),
                     )
                     .with_yes_button(ButtonLabel::YES.clone())
                     .with_no_button(ButtonLabel::NO.clone())
@@ -556,7 +557,8 @@ impl Component for LogTab<'_> {
                         Text::from(vec![
                             Line::from("Are you sure you want to squash @ into this change?"),
                             Line::from(format!("Squash into {}", self.head.change_id.as_str())),
-                        ]).fg(Color::default()),
+                        ])
+                        .fg(Color::default()),
                     )
                     .with_yes_button(ButtonLabel::YES.clone())
                     .with_no_button(ButtonLabel::NO.clone())
@@ -582,7 +584,8 @@ impl Component for LogTab<'_> {
                             Text::from(vec![
                                 Line::from("Are you sure you want to edit an existing change?"),
                                 Line::from(format!("Change: {}", self.head.change_id.as_str())),
-                            ]).fg(Color::default()),
+                            ])
+                            .fg(Color::default()),
                         )
                         .with_yes_button(ButtonLabel::YES.clone())
                         .with_no_button(ButtonLabel::NO.clone())
@@ -610,7 +613,8 @@ impl Component for LogTab<'_> {
                             Text::from(vec![
                                 Line::from("Are you sure you want to abandon this change?"),
                                 Line::from(format!("Change: {}", self.head.change_id.as_str())),
-                            ]).fg(Color::default()),
+                            ])
+                            .fg(Color::default()),
                         )
                         .with_yes_button(ButtonLabel::YES.clone())
                         .with_no_button(ButtonLabel::NO.clone())
@@ -743,7 +747,10 @@ impl Component for LogTab<'_> {
                                 ("n".to_owned(), "new change".to_owned()),
                                 ("N".to_owned(), "new with message".to_owned()),
                                 ("a".to_owned(), "abandon change".to_owned()),
-                                ("s".to_owned(), "squash @ into the selected change".to_owned()),
+                                (
+                                    "s".to_owned(),
+                                    "squash @ into the selected change".to_owned(),
+                                ),
                                 ("b".to_owned(), "set bookmark".to_owned()),
                                 ("f".to_owned(), "git fetch".to_owned()),
                                 ("F".to_owned(), "git fetch all remotes".to_owned()),

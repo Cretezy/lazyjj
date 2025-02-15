@@ -35,8 +35,7 @@ dependencies = [
 [[package]]
 name = "ansi-to-tui"
 version = "7.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67555e1f1ece39d737e28c8a017721287753af3f93225e4a445b29ccb0f5912c"
+source = "git+https://github.com/Cretezy/ansi-to-tui.git?rev=74bd97e#74bd97e76066186cace33ea04cf497055db67e62"
 dependencies = [
  "nom",
  "ratatui",
@@ -515,7 +514,7 @@ checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "lazyjj"
-version = "0.4.2"
+version = "0.5.0"
 dependencies = [
  "ansi-to-tui",
  "anyhow",
