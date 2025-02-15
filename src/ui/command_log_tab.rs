@@ -17,8 +17,8 @@ use crate::{
     ComponentInputResult,
 };
 
-/// Command log tab. Shows list of commands exectured by lazyjj in left panel and selected command
-/// output in right panel
+/// Command log tab. Shows list of commands exectured by lazyjj in main panel and selected command
+/// output in details panel
 pub struct CommandLogTab {
     command_history: Vec<CommandLogItem>,
     commands_list_state: ListState,
@@ -32,7 +32,7 @@ pub struct CommandLogTab {
 impl CommandLogTab {
     #[instrument(level = "trace", skip(commander))]
     pub fn new(commander: &mut Commander) -> Result<Self> {
-        let command_history = commander.command_history.clone();
+        let command_history = commander.command_history.lock().unwrap().clone();
         let selected_index = command_history.first().map(|_| 0);
         let commands_list_state = ListState::default().with_selected(selected_index);
 
@@ -95,8 +95,7 @@ impl CommandLogTab {
                             Line::default().spans([Span::raw("Output:").fg(Color::Green).bold()]),
                         );
                         output_lines.push(Line::default());
-                        output_lines
-                            .append(&mut tabs_to_spaces(&stdout.to_string()).into_text()?.lines);
+                        output_lines.append(&mut tabs_to_spaces(stdout).into_text()?.lines);
                         has_output = true;
                     }
 
@@ -149,7 +148,7 @@ impl CommandLogTab {
 #[allow(clippy::invisible_characters)]
 impl Component for CommandLogTab {
     fn switch(&mut self, commander: &mut Commander) -> Result<()> {
-        let command_history = commander.command_history.clone();
+        let command_history = commander.command_history.lock().unwrap().clone();
         let selected_index = command_history.first().map(|_| 0);
         self.commands_list_state.select(selected_index);
         self.command_history = command_history;
@@ -162,8 +161,11 @@ impl Component for CommandLogTab {
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
         let chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .direction(self.config.layout().into())
+            .constraints([
+                Constraint::Percentage(self.config.layout_percent()),
+                Constraint::Percentage(100 - self.config.layout_percent()),
+            ])
             .split(area);
 
         // Draw commands

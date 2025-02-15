@@ -70,11 +70,11 @@ impl Component for HelpPopup {
             .split(block_inner);
 
         f.render_widget(
-            self.create_table(&self.left_items, "Left panel".into()),
+            self.create_table(&self.left_items, "Main panel".into()),
             chunks[0],
         );
         f.render_widget(
-            self.create_table(&self.right_items, "Right panel".into()),
+            self.create_table(&self.right_items, "Details panel".into()),
             chunks[2],
         );
 
