@@ -28,6 +28,7 @@ use crate::{
 const NEW_POPUP_ID: u16 = 1;
 const EDIT_POPUP_ID: u16 = 2;
 const ABANDON_POPUP_ID: u16 = 3;
+const SQUASH_POPUP_ID: u16 = 4;
 
 /// Log tab. Shows `jj log` in main panel and shows selected change details of in details panel.
 pub struct LogTab<'a> {
@@ -229,6 +230,13 @@ impl Component for LogTab<'_> {
                             self.head = head_parent;
                             self.refresh_head_output(commander);
                         }
+                    }
+                    SQUASH_POPUP_ID => {
+                        commander.run_squash(self.head.commit_id.as_str())?;
+                        self.head = commander.get_current_head()?;
+                        self.refresh_log_output(commander);
+                        self.refresh_head_output(commander);
+                        return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
                     }
                     _ => {}
                 }
@@ -541,6 +549,20 @@ impl Component for LogTab<'_> {
 
                     self.describe_after_new = key.code == KeyCode::Char('N');
                 }
+                KeyCode::Char('s') => {
+                    self.popup = ConfirmDialogState::new(
+                        SQUASH_POPUP_ID,
+                        Span::styled(" Squash ", Style::new().bold().cyan()),
+                        Text::from(vec![
+                            Line::from("Are you sure you want to squash @ into this change?"),
+                            Line::from(format!("Squash into {}", self.head.change_id.as_str())),
+                        ]).fg(Color::default()),
+                    )
+                    .with_yes_button(ButtonLabel::YES.clone())
+                    .with_no_button(ButtonLabel::NO.clone())
+                    .with_listener(Some(self.popup_tx.clone()))
+                    .open();
+                }
                 KeyCode::Char('e') => {
                     if self.head.immutable {
                         return Ok(ComponentInputResult::HandledAction(
@@ -721,6 +743,7 @@ impl Component for LogTab<'_> {
                                 ("n".to_owned(), "new change".to_owned()),
                                 ("N".to_owned(), "new with message".to_owned()),
                                 ("a".to_owned(), "abandon change".to_owned()),
+                                ("s".to_owned(), "squash @ into the selected change".to_owned()),
                                 ("b".to_owned(), "set bookmark".to_owned()),
                                 ("f".to_owned(), "git fetch".to_owned()),
                                 ("F".to_owned(), "git fetch all remotes".to_owned()),
