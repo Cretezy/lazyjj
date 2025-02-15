@@ -113,9 +113,13 @@ impl Commander {
     pub fn git_push(
         &self,
         all_bookmarks: bool,
+        allow_new: bool,
         commit_id: &CommitId,
     ) -> Result<String, CommandError> {
         let mut args = vec!["git", "push"];
+        if allow_new {
+            args.push("--allow-new");
+        }
         if all_bookmarks {
             args.push("--all");
         } else {

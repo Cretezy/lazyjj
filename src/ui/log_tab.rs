@@ -646,7 +646,11 @@ impl Component for LogTab<'_> {
                     ));
                 }
                 KeyCode::Char('p') | KeyCode::Char('P') => {
-                    match commander.git_push(key.code == KeyCode::Char('P'), &self.head.commit_id) {
+                    match commander.git_push(
+                        key.code == KeyCode::Char('P'),
+                        key.modifiers.contains(KeyModifiers::CONTROL),
+                        &self.head.commit_id,
+                    ) {
                         Ok(result) if !result.is_empty() => {
                             return Ok(ComponentInputResult::HandledAction(
                                 ComponentAction::SetPopup(Some(Box::new(MessagePopup {
@@ -710,8 +714,15 @@ impl Component for LogTab<'_> {
                                 ("b".to_owned(), "set bookmark".to_owned()),
                                 ("f".to_owned(), "git fetch".to_owned()),
                                 ("F".to_owned(), "git fetch all remotes".to_owned()),
-                                ("p".to_owned(), "git push".to_owned()),
-                                ("P".to_owned(), "git push all bookmarks".to_owned()),
+                                (
+                                    "p".to_owned(),
+                                    "git push (+Ctrl to include new bookmarks)".to_owned(),
+                                ),
+                                (
+                                    "P".to_owned(),
+                                    "git push all bookmarks (+Ctrl to include new bookmarks)"
+                                        .to_owned(),
+                                ),
                             ],
                             vec![
                                 ("Ctrl+e/Ctrl+y".to_owned(), "scroll down/up".to_owned()),
