@@ -134,44 +134,45 @@ fn run_app<B: Backend>(
     let mut start_time = Utc::now().time();
     loop {
         // Draw
+        let mut terminal_draw_res = Ok(());
         terminal.draw(|f| {
             // Update current tab
             let update_span = trace_span!("update");
-            update_span
-                .in_scope(|| -> Result<()> {
-                    if let Some(component_action) =
-                        app.get_or_init_current_tab(commander)?.update(commander)?
-                    {
-                        app.handle_action(component_action, commander)?;
-                    }
+            terminal_draw_res = update_span.in_scope(|| -> Result<()> {
+                if let Some(component_action) =
+                    app.get_or_init_current_tab(commander)?.update(commander)?
+                {
+                    app.handle_action(component_action, commander)?;
+                }
 
-                    Ok(())
-                })
-                .unwrap();
+                Ok(())
+            });
+            if terminal_draw_res.is_err() {
+                return;
+            }
 
             let draw_span = trace_span!("draw");
-            draw_span
-                .in_scope(|| -> Result<()> {
-                    ui(f, app).unwrap();
+            terminal_draw_res = draw_span.in_scope(|| -> Result<()> {
+                ui(f, app)?;
 
-                    let end_time = Utc::now().time();
-                    let diff = end_time - start_time;
+                let end_time = Utc::now().time();
+                let diff = end_time - start_time;
 
-                    {
-                        let paragraph = Paragraph::new(format!("{}ms", diff.num_milliseconds()))
-                            .alignment(Alignment::Right);
-                        let position = Rect {
-                            x: 0,
-                            y: 1,
-                            height: 1,
-                            width: f.area().width - 1,
-                        };
-                        f.render_widget(paragraph, position);
-                    }
-                    Ok(())
-                })
-                .unwrap();
+                {
+                    let paragraph = Paragraph::new(format!("{}ms", diff.num_milliseconds()))
+                        .alignment(Alignment::Right);
+                    let position = Rect {
+                        x: 0,
+                        y: 1,
+                        height: 1,
+                        width: f.area().width - 1,
+                    };
+                    f.render_widget(paragraph, position);
+                }
+                Ok(())
+            });
         })?;
+        terminal_draw_res?;
 
         start_time = Utc::now().time();
 
