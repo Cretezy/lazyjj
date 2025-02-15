@@ -1,0 +1,7 @@
+use {
+    'swaits/lazyjj.nvim',
+    requires = 'nvim-lua/plenary.nvim',
+    config = function()
+        require('lazyjj').setup()
+    end
+}
