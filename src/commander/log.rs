@@ -194,13 +194,13 @@ impl Commander {
         // Check obslog for each head. If the obslog contains the head's commit, it means
         // there's a new commit for the head
         for latest_head in latest_heads.iter() {
-            let parent_commits: Vec<CommitId> = self
+            let parent_commits: Vec<ChangeId> = self
                 .execute_jj_command(
                     vec![
                         "obslog",
                         "--no-graph",
                         "--template",
-                        r#"commit_id ++ "\n""#,
+                        r#"change_id ++ "\n""#,
                         "-r",
                         &latest_head.commit_id.as_str(),
                     ],
@@ -209,12 +209,12 @@ impl Commander {
                 )
                 .context("Failed getting latest head parent commits")?
                 .lines()
-                .map(|line| CommitId(line.to_owned()))
+                .map(|line| ChangeId(line.to_owned()))
                 .collect();
 
             if parent_commits
                 .iter()
-                .any(|parent_commit| parent_commit == &head.commit_id)
+                .any(|parent_commit| parent_commit == &head.change_id)
             {
                 return Ok(latest_head.to_owned());
             }
