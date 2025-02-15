@@ -120,10 +120,11 @@ fn main() -> Result<()> {
     let mut app = App::new(env.clone())?;
 
     let mut terminal = setup_terminal()?;
+    install_panic_hook();
 
     // Run app
     let res = run_app(&mut terminal, &mut app, &mut commander);
-    restore_terminal(terminal)?;
+    restore_terminal()?;
     res?;
 
     Ok(())
@@ -218,16 +219,25 @@ fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
     Ok(Terminal::new(backend)?)
 }
 
-fn restore_terminal(mut terminal: Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
+fn restore_terminal() -> Result<()> {
     disable_raw_mode()?;
     execute!(
-        terminal.backend_mut(),
+        io::stdout(),
         LeaveAlternateScreen,
         DisableMouseCapture,
         DisableFocusChange
     )?;
-    terminal.show_cursor()?;
     Ok(())
+}
+
+fn install_panic_hook() {
+    let original_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new( move |info| {
+        if let Err(err) = restore_terminal() {
+            eprintln!("Failed to restore terminal: {err}");
+        }
+        original_hook(info);
+    }));
 }
 
 enum ComponentInputResult {
