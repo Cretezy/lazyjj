@@ -14,6 +14,7 @@ use crate::{commander::Commander, ui::Component, ComponentInputResult};
 pub struct MessagePopup<'a> {
     pub title: Title<'a>,
     pub messages: Text<'a>,
+    pub text_align: Option<Alignment>,
 }
 
 impl Component for MessagePopup<'_> {
@@ -29,9 +30,14 @@ impl Component for MessagePopup<'_> {
 
         title.content = title.content.fg(Color::Cyan).bold();
 
+        let text_align = match self.text_align {
+            Some(align) => align,
+            None => Alignment::Center,
+        };
+
         let popup = PopupMessage::new(title, self.messages.clone())
             .title_alignment(Alignment::Center)
-            .text_alignment(Alignment::Center)
+            .text_alignment(text_align)
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(Color::Green));
