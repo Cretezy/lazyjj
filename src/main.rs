@@ -11,7 +11,10 @@ use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use clap::Parser;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture},
+    event::{
+        self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
+        Event, MouseEvent, MouseEventKind,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -134,50 +137,60 @@ fn run_app<B: Backend>(
     let mut start_time = Utc::now().time();
     loop {
         // Draw
+        let mut terminal_draw_res = Ok(());
         terminal.draw(|f| {
             // Update current tab
             let update_span = trace_span!("update");
-            update_span
-                .in_scope(|| -> Result<()> {
-                    if let Some(component_action) =
-                        app.get_or_init_current_tab(commander)?.update(commander)?
-                    {
-                        app.handle_action(component_action, commander)?;
-                    }
+            terminal_draw_res = update_span.in_scope(|| -> Result<()> {
+                if let Some(component_action) =
+                    app.get_or_init_current_tab(commander)?.update(commander)?
+                {
+                    app.handle_action(component_action, commander)?;
+                }
 
-                    Ok(())
-                })
-                .unwrap();
+                Ok(())
+            });
+            if terminal_draw_res.is_err() {
+                return;
+            }
 
             let draw_span = trace_span!("draw");
-            draw_span
-                .in_scope(|| -> Result<()> {
-                    ui(f, app).unwrap();
+            terminal_draw_res = draw_span.in_scope(|| -> Result<()> {
+                ui(f, app)?;
 
-                    let end_time = Utc::now().time();
-                    let diff = end_time - start_time;
+                let end_time = Utc::now().time();
+                let diff = end_time - start_time;
 
-                    {
-                        let paragraph = Paragraph::new(format!("{}ms", diff.num_milliseconds()))
-                            .alignment(Alignment::Right);
-                        let position = Rect {
-                            x: 0,
-                            y: 1,
-                            height: 1,
-                            width: f.area().width - 1,
-                        };
-                        f.render_widget(paragraph, position);
-                    }
-                    Ok(())
-                })
-                .unwrap();
+                {
+                    let paragraph = Paragraph::new(format!("{}ms", diff.num_milliseconds()))
+                        .alignment(Alignment::Right);
+                    let position = Rect {
+                        x: 0,
+                        y: 1,
+                        height: 1,
+                        width: f.area().width - 1,
+                    };
+                    f.render_widget(paragraph, position);
+                }
+                Ok(())
+            });
         })?;
+        terminal_draw_res?;
 
         start_time = Utc::now().time();
 
         // Input
         let input_spawn = trace_span!("input");
-        let event = event::read()?;
+        let event = loop {
+            match event::read()? {
+                event::Event::FocusLost => continue,
+                Event::Mouse(MouseEvent {
+                    kind: MouseEventKind::Moved,
+                    ..
+                }) => continue,
+                event => break event,
+            }
+        };
         let should_stop = input_spawn.in_scope(|| -> Result<bool> {
             if app.input(event, commander)? {
                 return Ok(true);
@@ -195,7 +208,12 @@ fn run_app<B: Backend>(
 fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(
+        stdout,
+        EnterAlternateScreen,
+        EnableMouseCapture,
+        EnableFocusChange
+    )?;
     let backend = CrosstermBackend::new(stdout);
     Ok(Terminal::new(backend)?)
 }
@@ -205,7 +223,8 @@ fn restore_terminal(mut terminal: Terminal<CrosstermBackend<io::Stdout>>) -> Res
     execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
-        DisableMouseCapture
+        DisableMouseCapture,
+        DisableFocusChange
     )?;
     terminal.show_cursor()?;
     Ok(())

@@ -29,7 +29,7 @@ const NEW_POPUP_ID: u16 = 1;
 const EDIT_POPUP_ID: u16 = 2;
 const ABANDON_POPUP_ID: u16 = 3;
 
-/// Log tab. Shows `jj log` in left panel and shows selected change details of in right panel.
+/// Log tab. Shows `jj log` in main panel and shows selected change details of in details panel.
 pub struct LogTab<'a> {
     log_output: Result<LogOutput, CommandError>,
     log_output_text: Text<'a>,
@@ -249,8 +249,11 @@ impl Component for LogTab<'_> {
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
         let chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .direction(self.config.layout().into())
+            .constraints([
+                Constraint::Percentage(self.config.layout_percent()),
+                Constraint::Percentage(100 - self.config.layout_percent()),
+            ])
             .split(area);
 
         // Draw log
@@ -529,7 +532,7 @@ impl Component for LogTab<'_> {
                         Text::from(vec![
                             Line::from("Are you sure you want to create a new change?"),
                             Line::from(format!("New parent: {}", self.head.change_id.as_str())),
-                        ]),
+                        ]).fg(Color::default()),
                     )
                     .with_yes_button(ButtonLabel::YES.clone())
                     .with_no_button(ButtonLabel::NO.clone())
@@ -547,6 +550,7 @@ impl Component for LogTab<'_> {
                                     "The change cannot be edited because it is immutable.".into(),
                                 ]
                                 .into(),
+                                text_align: None,
                             }))),
                         ));
                     } else {
@@ -556,7 +560,7 @@ impl Component for LogTab<'_> {
                             Text::from(vec![
                                 Line::from("Are you sure you want to edit an existing change?"),
                                 Line::from(format!("Change: {}", self.head.change_id.as_str())),
-                            ]),
+                            ]).fg(Color::default()),
                         )
                         .with_yes_button(ButtonLabel::YES.clone())
                         .with_no_button(ButtonLabel::NO.clone())
@@ -574,6 +578,7 @@ impl Component for LogTab<'_> {
                                         .into(),
                                 ]
                                 .into(),
+                                text_align: None,
                             }))),
                         ));
                     } else {
@@ -583,7 +588,7 @@ impl Component for LogTab<'_> {
                             Text::from(vec![
                                 Line::from("Are you sure you want to abandon this change?"),
                                 Line::from(format!("Change: {}", self.head.change_id.as_str())),
-                            ]),
+                            ]).fg(Color::default()),
                         )
                         .with_yes_button(ButtonLabel::YES.clone())
                         .with_no_button(ButtonLabel::NO.clone())
@@ -601,6 +606,7 @@ impl Component for LogTab<'_> {
                                         .into(),
                                 ]
                                 .into(),
+                                text_align: None,
                             }))),
                         ));
                     } else {
@@ -646,12 +652,17 @@ impl Component for LogTab<'_> {
                     ));
                 }
                 KeyCode::Char('p') | KeyCode::Char('P') => {
-                    match commander.git_push(key.code == KeyCode::Char('P'), &self.head.commit_id) {
+                    match commander.git_push(
+                        key.code == KeyCode::Char('P'),
+                        key.modifiers.contains(KeyModifiers::CONTROL),
+                        &self.head.commit_id,
+                    ) {
                         Ok(result) if !result.is_empty() => {
                             return Ok(ComponentInputResult::HandledAction(
                                 ComponentAction::SetPopup(Some(Box::new(MessagePopup {
                                     title: "Push message".into(),
                                     messages: result.into_text()?,
+                                    text_align: None,
                                 }))),
                             ));
                         }
@@ -660,6 +671,7 @@ impl Component for LogTab<'_> {
                                 ComponentAction::SetPopup(Some(Box::new(MessagePopup {
                                     title: "Push error".into(),
                                     messages: err.into_text("")?,
+                                    text_align: None,
                                 }))),
                             ));
                         }
@@ -676,6 +688,7 @@ impl Component for LogTab<'_> {
                                 ComponentAction::SetPopup(Some(Box::new(MessagePopup {
                                     title: "Fetch message".into(),
                                     messages: result.into_text()?,
+                                    text_align: None,
                                 }))),
                             ));
                         }
@@ -684,6 +697,7 @@ impl Component for LogTab<'_> {
                                 ComponentAction::SetPopup(Some(Box::new(MessagePopup {
                                     title: "Fetch error".into(),
                                     messages: err.into_text("")?,
+                                    text_align: None,
                                 }))),
                             ));
                         }
@@ -710,8 +724,15 @@ impl Component for LogTab<'_> {
                                 ("b".to_owned(), "set bookmark".to_owned()),
                                 ("f".to_owned(), "git fetch".to_owned()),
                                 ("F".to_owned(), "git fetch all remotes".to_owned()),
-                                ("p".to_owned(), "git push".to_owned()),
-                                ("P".to_owned(), "git push all bookmarks".to_owned()),
+                                (
+                                    "p".to_owned(),
+                                    "git push (+Ctrl to include new bookmarks)".to_owned(),
+                                ),
+                                (
+                                    "P".to_owned(),
+                                    "git push all bookmarks (+Ctrl to include new bookmarks)"
+                                        .to_owned(),
+                                ),
                             ],
                             vec![
                                 ("Ctrl+e/Ctrl+y".to_owned(), "scroll down/up".to_owned()),

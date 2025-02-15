@@ -19,7 +19,7 @@ use ansi_to_tui::IntoText;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::{prelude::*, widgets::*};
 
-/// Files tab. Shows files in selected change in left panel and selected file diff in right panel
+/// Files tab. Shows files in selected change in main panel and selected file diff in details panel
 pub struct FilesTab {
     head: Head,
     is_current_head: bool,
@@ -168,8 +168,11 @@ impl Component for FilesTab {
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
         let chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .direction(self.config.layout().into())
+            .constraints([
+                Constraint::Percentage(self.config.layout_percent()),
+                Constraint::Percentage(100 - self.config.layout_percent()),
+            ])
             .split(area);
 
         // Draw files

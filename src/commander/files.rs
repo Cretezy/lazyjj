@@ -56,7 +56,7 @@ impl Commander {
     /// Get list of changes files in a change. Parses the output.
     /// Maps to `jj diff --summary -r <revision>`
     #[instrument(level = "trace", skip(self))]
-    pub fn get_files(&mut self, head: &Head) -> Result<Vec<File>, CommandError> {
+    pub fn get_files(&self, head: &Head) -> Result<Vec<File>, CommandError> {
         Ok(self
             .execute_jj_command(
                 vec!["diff", "-r", head.commit_id.as_str(), "--summary"],
@@ -87,7 +87,7 @@ impl Commander {
     /// Get list of changes files in a change. Parses the output.
     /// Maps to `jj diff --summary -r <revision>`
     #[instrument(level = "trace", skip(self))]
-    pub fn get_conflicts(&mut self, commit_id: &CommitId) -> Result<Vec<Conflict>> {
+    pub fn get_conflicts(&self, commit_id: &CommitId) -> Result<Vec<Conflict>> {
         let output = self.execute_jj_command(
             vec!["resolve", "--list", "-r", commit_id.as_str()],
             false,
@@ -121,7 +121,7 @@ impl Commander {
     /// Maps to `jj diff -r <revision> <path>`
     #[instrument(level = "trace", skip(self))]
     pub fn get_file_diff(
-        &mut self,
+        &self,
         head: &Head,
         current_file: &str,
         diff_format: &DiffFormat,
@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn get_files() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
         let file_path = test_repo.directory.path().join("README");
 
         // Initial state
@@ -215,7 +215,7 @@ mod tests {
 
     #[test]
     fn get_file_diff() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let file_path = test_repo.directory.path().join("README");
 

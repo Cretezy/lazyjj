@@ -15,6 +15,10 @@ pub struct Config {
     lazyjj_diff_format: Option<DiffFormat>,
     #[serde(rename = "lazyjj.bookmark-prefix")]
     lazyjj_bookmark_prefix: Option<String>,
+    #[serde(rename = "lazyjj.layout")]
+    lazyjj_layout: Option<JJLayout>,
+    #[serde(rename = "lazyjj.layout-percent")]
+    lazyjj_layout_percent: Option<u16>,
     #[serde(rename = "ui.diff.format")]
     ui_diff_format: Option<DiffFormat>,
     #[serde(rename = "git.push-bookmark-prefix")]
@@ -35,6 +39,8 @@ pub struct JjConfigLazyjj {
     highlight_color: Option<Color>,
     diff_format: Option<DiffFormat>,
     bookmark_prefix: Option<String>,
+    layout: Option<JJLayout>,
+    layout_percent: Option<u16>,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -72,6 +78,14 @@ impl Config {
                 .clone()
                 .unwrap_or("push-".to_owned()),
         )
+    }
+
+    pub fn layout(&self) -> JJLayout {
+        self.lazyjj_layout.unwrap_or(JJLayout::Horizontal)
+    }
+
+    pub fn layout_percent(&self) -> u16 {
+        self.lazyjj_layout_percent.unwrap_or(50)
     }
 }
 
@@ -137,6 +151,11 @@ impl Env {
                             .lazyjj
                             .as_ref()
                             .and_then(|lazyjj| lazyjj.bookmark_prefix.clone()),
+                        lazyjj_layout: config.lazyjj.as_ref().and_then(|lazyjj| lazyjj.layout),
+                        lazyjj_layout_percent: config
+                            .lazyjj
+                            .as_ref()
+                            .and_then(|lazyjj| lazyjj.layout_percent),
                         ui_diff_format: config
                             .ui
                             .and_then(|ui| ui.diff.and_then(|diff| diff.format)),
@@ -163,4 +182,22 @@ pub enum DiffFormat {
     Git,
     Summary,
     Stat,
+}
+
+#[derive(Clone, Debug, Deserialize, Default, Copy, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum JJLayout {
+    #[default]
+    Horizontal,
+    Vertical,
+}
+
+// Impl into for JJLayout to ratatui's Direction
+impl From<JJLayout> for ratatui::layout::Direction {
+    fn from(layout: JJLayout) -> Self {
+        match layout {
+            JJLayout::Horizontal => ratatui::layout::Direction::Horizontal,
+            JJLayout::Vertical => ratatui::layout::Direction::Vertical,
+        }
+    }
 }

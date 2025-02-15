@@ -43,7 +43,7 @@ const FORGET_BRANCH_POPUP_ID: u16 = 2;
 const NEW_POPUP_ID: u16 = 3;
 const EDIT_POPUP_ID: u16 = 4;
 
-/// Bookmarks tab. Shows bookmarks in left panel and selected bookmark current change in right panel.
+/// Bookmarks tab. Shows bookmarks in main panel and selected bookmark current change in details panel.
 pub struct BookmarksTab<'a> {
     bookmarks_output: Result<Vec<BookmarkLine>, CommandError>,
     bookmarks_list_state: ListState,
@@ -235,6 +235,7 @@ impl Component for BookmarksTab<'_> {
                                         MessagePopup {
                                             title: "Delete error".into(),
                                             messages: err.to_string().into_text()?,
+                                            text_align: None,
                                         },
                                     )))));
                                 }
@@ -258,6 +259,7 @@ impl Component for BookmarksTab<'_> {
                                         MessagePopup {
                                             title: "Forget error".into(),
                                             messages: err.to_string().into_text()?,
+                                            text_align: None,
                                         },
                                     )))));
                                 }
@@ -302,8 +304,11 @@ impl Component for BookmarksTab<'_> {
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
         let chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .direction(self.config.layout().into())
+            .constraints([
+                Constraint::Percentage(self.config.layout_percent()),
+                Constraint::Percentage(100 - self.config.layout_percent()),
+            ])
             .split(area);
 
         // Draw bookmarks
@@ -875,6 +880,7 @@ impl Component for BookmarksTab<'_> {
                                                 .into(),
                                         ]
                                         .into(),
+                                        text_align: None,
                                     }))),
                                 ));
                             } else {

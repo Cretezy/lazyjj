@@ -44,7 +44,7 @@ To build and install a pre-release version: `cargo install --git https://github.
 
 You can optionally configure the following options through your jj config:
 
-- `lazyjj.higlight-color`: Changes the highlight color. Can use named colors. Defaults to `#323264`
+- `lazyjj.highlight-color`: Changes the highlight color. Can use named colors. Defaults to `#323264`
 - `lazyjj.diff-format`: Change the default diff format. Can be `color-words` or `git`. Defaults to `color_words`
   - If `lazyjj.diff-format` is not set but `ui.diff.format` is, the latter will be used
 - `lazyjj.bookmark-prefix`: Change the bookmark name prefix for generated bookmark names. Defaults to `push-`
@@ -68,10 +68,10 @@ See all key mappings for the current tab with `h` or `?`.
 
 - Quit with `q`
 - Change tab with `1`/`2`/`3`
-- Scrolling in left panel
+- Scrolling in main panel
   - Scroll down/up by one line with `j`/`k` or down/up arrow
   - Scroll down/up by half page with `J`/`K` or down/up arrow
-- Scrolling in right panel
+- Scrolling in details panel
   - Scroll down/up by one line with `Ctrl+e`/`Ctrl+y`
   - Scroll down/up by a half page with `Ctrl+d`/`Ctrl+u`
   - Scroll down/up by a full page with `Ctrl+f`/`Ctrl+b`
@@ -81,8 +81,8 @@ See all key mappings for the current tab with `h` or `?`.
 - Select current change with `@`
 - View change files in files tab with `Enter`
 - Display different revset with `r` (`jj log -r`)
-- Change right panel diff format between color words (default) and Git with `w`
-- Toggle right panel wrapping with `W`
+- Change details panel diff format between color words (default) and Git with `w`
+- Toggle details panel wrapping with `W`
 - Create new change after highlighted change with `n` (`jj new`)
   - Create new change and describe with `N` (`jj new -m`)
 - Edit highlighted change `e` (`jj edit`)
@@ -102,8 +102,8 @@ See all key mappings for the current tab with `h` or `?`.
 ### Files tab
 
 - Select current change with `@`
-- Change right panel diff format between color words (default) and Git with `w`
-- Toggle right panel wrapping with `W`
+- Change details panel diff format between color words (default) and Git with `w`
+- Toggle details panel wrapping with `W`
 
 ### Bookmarks tab
 
@@ -114,15 +114,15 @@ See all key mappings for the current tab with `h` or `?`.
 - Forget a bookmark with `f` (`jj bookmark forget`)
 - Track a bookmark with `t` (only works for bookmarks with remotes) (`jj bookmark track`)
 - Untrack a bookmark with `T` (only works for bookmarks with remotes) (`jj bookmark untrack`)
-- Change right panel diff format between color words (default) and Git with `w`
-- Toggle right panel wrapping with `W`
+- Change details panel diff format between color words (default) and Git with `w`
+- Toggle details panel wrapping with `W`
 - Create a new change after the highlighted bookmark's change with `n` (`jj new`)
   - Create a new change and describe with `N` (`jj new -m`)
 
 ### Command log tab
 
 - Select latest command with `@`
-- Toggle right panel wrapping with `W`
+- Toggle details panel wrapping with `W`
 
 ## Development
 
