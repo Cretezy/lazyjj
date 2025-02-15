@@ -17,8 +17,8 @@ use crate::{
     ComponentInputResult,
 };
 
-/// Command log tab. Shows list of commands exectured by lazyjj in left panel and selected command
-/// output in right panel
+/// Command log tab. Shows list of commands exectured by lazyjj in main panel and selected command
+/// output in details panel
 pub struct CommandLogTab {
     command_history: Vec<CommandLogItem>,
     commands_list_state: ListState,
@@ -95,8 +95,7 @@ impl CommandLogTab {
                             Line::default().spans([Span::raw("Output:").fg(Color::Green).bold()]),
                         );
                         output_lines.push(Line::default());
-                        output_lines
-                            .append(&mut tabs_to_spaces(&stdout.to_string()).into_text()?.lines);
+                        output_lines.append(&mut tabs_to_spaces(stdout).into_text()?.lines);
                         has_output = true;
                     }
 
@@ -162,8 +161,11 @@ impl Component for CommandLogTab {
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
         let chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .direction(self.config.layout().into())
+            .constraints([
+                Constraint::Percentage(self.config.layout_percent()),
+                Constraint::Percentage(100 - self.config.layout_percent()),
+            ])
             .split(area);
 
         // Draw commands
