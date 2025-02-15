@@ -14,6 +14,7 @@ use ratatui::{
     style::{Color, Stylize},
     text::{Line, Text},
 };
+use std::sync::Mutex;
 use std::{
     ffi::OsStr,
     io,
@@ -72,7 +73,7 @@ pub struct CommandLogItem {
 #[derive(Debug)]
 pub struct Commander {
     pub env: Env,
-    pub command_history: Vec<CommandLogItem>,
+    pub command_history: Arc<Mutex<Vec<CommandLogItem>>>,
 
     // Used for testing
     pub jj_config_toml: Option<String>,
@@ -83,14 +84,14 @@ impl Commander {
     pub fn new(env: &Env) -> Self {
         Self {
             env: env.clone(),
-            command_history: Vec::new(),
+            command_history: Arc::new(Mutex::new(Vec::new())),
             jj_config_toml: None,
             force_no_color: false,
         }
     }
 
     /// Execute a command and record to history.
-    fn execute_command(&mut self, command: &mut Command) -> Result<String, CommandError> {
+    fn execute_command(&self, command: &mut Command) -> Result<String, CommandError> {
         // Set current directory to root
         command.current_dir(&self.env.root);
 
@@ -104,7 +105,8 @@ impl Commander {
         let output = command.output();
         let duration = Local::now() - time;
 
-        self.command_history.push(CommandLogItem {
+        // unwrap is enough, because mutex can only poison in the case of push panic
+        self.command_history.lock().unwrap().push(CommandLogItem {
             program,
             args,
             output: Arc::new(match output.as_ref() {
@@ -134,7 +136,7 @@ impl Commander {
 
     /// Execute a jj command with color/quiet arguments.
     pub fn execute_jj_command<I, S>(
-        &mut self,
+        &self,
         args: I,
         color: bool,
         quiet: bool,
@@ -155,7 +157,7 @@ impl Commander {
     }
 
     /// Execute a jj command without using the output.
-    pub fn execute_void_jj_command<I, S>(&mut self, args: I) -> Result<(), CommandError>
+    pub fn execute_void_jj_command<I, S>(&self, args: I) -> Result<(), CommandError>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
@@ -165,7 +167,7 @@ impl Commander {
         Ok(())
     }
 
-    pub fn init(&mut self) -> Result<()> {
+    pub fn init(&self) -> Result<()> {
         self.execute_void_jj_command(vec!["status"])
             .context("Failed getting initial status")
     }

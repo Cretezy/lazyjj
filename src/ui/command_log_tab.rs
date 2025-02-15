@@ -32,7 +32,7 @@ pub struct CommandLogTab {
 impl CommandLogTab {
     #[instrument(level = "trace", skip(commander))]
     pub fn new(commander: &mut Commander) -> Result<Self> {
-        let command_history = commander.command_history.clone();
+        let command_history = commander.command_history.lock().unwrap().clone();
         let selected_index = command_history.first().map(|_| 0);
         let commands_list_state = ListState::default().with_selected(selected_index);
 
@@ -148,7 +148,7 @@ impl CommandLogTab {
 #[allow(clippy::invisible_characters)]
 impl Component for CommandLogTab {
     fn switch(&mut self, commander: &mut Commander) -> Result<()> {
-        let command_history = commander.command_history.clone();
+        let command_history = commander.command_history.lock().unwrap().clone();
         let selected_index = command_history.first().map(|_| 0);
         self.commands_list_state.select(selected_index);
         self.command_history = command_history;
