@@ -551,7 +551,7 @@ impl Component for LogTab<'_> {
                         SQUASH_POPUP_ID,
                         Span::styled(" Squash ", Style::new().bold().cyan()),
                         Text::from(vec![
-                            Line::from("Are you sure you want to squash into this change?"),
+                            Line::from("Are you sure you want to squash @ into this change?"),
                             Line::from(format!("Squash into {}", self.head.change_id.as_str())),
                         ]).fg(Color::default()),
                     )
