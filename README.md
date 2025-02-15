@@ -44,7 +44,7 @@ To build and install a pre-release version: `cargo install --git https://github.
 
 You can optionally configure the following options through your jj config:
 
-- `lazyjj.higlight-color`: Changes the highlight color. Can use named colors. Defaults to `#323264`
+- `lazyjj.highlight-color`: Changes the highlight color. Can use named colors. Defaults to `#323264`
 - `lazyjj.diff-format`: Change the default diff format. Can be `color-words` or `git`. Defaults to `color_words`
   - If `lazyjj.diff-format` is not set but `ui.diff.format` is, the latter will be used
 - `lazyjj.bookmark-prefix`: Change the bookmark name prefix for generated bookmark names. Defaults to `push-`
