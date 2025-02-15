@@ -9,7 +9,7 @@ use tracing::instrument;
 
 use crate::{
     commander::{CommandLogItem, Commander},
-    env::{Config, JJLayout},
+    env::Config,
     ui::{
         details_panel::DetailsPanel, help_popup::HelpPopup, utils::tabs_to_spaces, Component,
         ComponentAction,
@@ -24,9 +24,6 @@ pub struct CommandLogTab {
     commands_list_state: ListState,
     commands_height: u16,
 
-    layout_direction: Direction,
-    layout_percent: u16,
-
     output_panel: DetailsPanel,
 
     config: Config,
@@ -39,19 +36,10 @@ impl CommandLogTab {
         let selected_index = command_history.first().map(|_| 0);
         let commands_list_state = ListState::default().with_selected(selected_index);
 
-        let layout_direction = if commander.env.config.layout() == JJLayout::Horizontal {
-            Direction::Horizontal
-        } else {
-            Direction::Vertical
-        };
-        let layout_percent = commander.env.config.layout_percent();
-
         Ok(Self {
             commands_height: 0,
             commands_list_state,
             command_history,
-            layout_direction,
-            layout_percent,
             output_panel: DetailsPanel::new(),
             config: commander.env.config.clone(),
         })
@@ -107,8 +95,7 @@ impl CommandLogTab {
                             Line::default().spans([Span::raw("Output:").fg(Color::Green).bold()]),
                         );
                         output_lines.push(Line::default());
-                        output_lines
-                            .append(&mut tabs_to_spaces(&stdout.to_string()).into_text()?.lines);
+                        output_lines.append(&mut tabs_to_spaces(stdout).into_text()?.lines);
                         has_output = true;
                     }
 
@@ -174,10 +161,10 @@ impl Component for CommandLogTab {
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
         let chunks = Layout::default()
-            .direction(self.layout_direction)
+            .direction(self.config.layout().into())
             .constraints([
-                Constraint::Percentage(self.layout_percent),
-                Constraint::Percentage(100 - self.layout_percent),
+                Constraint::Percentage(self.config.layout_percent()),
+                Constraint::Percentage(100 - self.config.layout_percent()),
             ])
             .split(area);
 

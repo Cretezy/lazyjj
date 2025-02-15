@@ -151,10 +151,7 @@ impl Env {
                             .lazyjj
                             .as_ref()
                             .and_then(|lazyjj| lazyjj.bookmark_prefix.clone()),
-                        lazyjj_layout: config
-                            .lazyjj
-                            .as_ref()
-                            .and_then(|lazyjj| lazyjj.layout),
+                        lazyjj_layout: config.lazyjj.as_ref().and_then(|lazyjj| lazyjj.layout),
                         lazyjj_layout_percent: config
                             .lazyjj
                             .as_ref()
@@ -193,4 +190,14 @@ pub enum JJLayout {
     #[default]
     Horizontal,
     Vertical,
+}
+
+// Impl into for JJLayout to ratatui's Direction
+impl From<JJLayout> for ratatui::layout::Direction {
+    fn from(layout: JJLayout) -> Self {
+        match layout {
+            JJLayout::Horizontal => ratatui::layout::Direction::Horizontal,
+            JJLayout::Vertical => ratatui::layout::Direction::Vertical,
+        }
+    }
 }

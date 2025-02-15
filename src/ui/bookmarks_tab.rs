@@ -1,7 +1,7 @@
 #![allow(clippy::borrow_interior_mutable_const)]
 use crate::{
     commander::{bookmarks::BookmarkLine, ids::ChangeId, CommandError, Commander},
-    env::{Config, DiffFormat, JJLayout},
+    env::{Config, DiffFormat},
     ui::{
         details_panel::DetailsPanel,
         help_popup::HelpPopup,
@@ -70,8 +70,6 @@ pub struct BookmarksTab<'a> {
     popup_rx: std::sync::mpsc::Receiver<Listener>,
 
     diff_format: DiffFormat,
-    layout_direction: Direction,
-    layout_percent: u16,
 
     config: Config,
 }
@@ -136,13 +134,6 @@ impl BookmarksTab<'_> {
 
         let (popup_tx, popup_rx) = std::sync::mpsc::channel();
 
-        let layout_direction = if commander.env.config.layout() == JJLayout::Horizontal {
-            Direction::Horizontal
-        } else {
-            Direction::Vertical
-        };
-        let layout_percent = commander.env.config.layout_percent();
-
         Ok(Self {
             bookmarks_output,
             bookmark,
@@ -168,8 +159,6 @@ impl BookmarksTab<'_> {
             popup_rx,
 
             diff_format,
-            layout_direction,
-            layout_percent,
 
             config: commander.env.config.clone(),
         })
@@ -313,10 +302,10 @@ impl Component for BookmarksTab<'_> {
         area: ratatui::prelude::Rect,
     ) -> Result<()> {
         let chunks = Layout::default()
-            .direction(self.layout_direction)
+            .direction(self.config.layout().into())
             .constraints([
-                Constraint::Percentage(self.layout_percent),
-                Constraint::Percentage(100 - self.layout_percent),
+                Constraint::Percentage(self.config.layout_percent()),
+                Constraint::Percentage(100 - self.config.layout_percent()),
             ])
             .split(area);
 
