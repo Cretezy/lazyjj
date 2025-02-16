@@ -4,7 +4,10 @@ use anyhow::{bail, Context, Result};
 use ratatui::style::Color;
 use serde::Deserialize;
 
-use crate::commander::{get_output_args, RemoveEndLine};
+use crate::{
+    commander::{get_output_args, RemoveEndLine},
+    keybinds::KeybindsConfig,
+};
 
 // TODO: After 0.18, remove Config and replace with JjConfig
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -19,6 +22,8 @@ pub struct Config {
     lazyjj_layout: Option<JJLayout>,
     #[serde(rename = "lazyjj.layout-percent")]
     lazyjj_layout_percent: Option<u16>,
+    #[serde(rename = "lazyjj.keybinds")]
+    lazyjj_keybinds: Option<KeybindsConfig>,
     #[serde(rename = "ui.diff.format")]
     ui_diff_format: Option<DiffFormat>,
     #[serde(rename = "ui.diff.tool")]
@@ -43,6 +48,7 @@ pub struct JjConfigLazyjj {
     bookmark_prefix: Option<String>,
     layout: Option<JJLayout>,
     layout_percent: Option<u16>,
+    keybinds: Option<KeybindsConfig>,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -98,6 +104,10 @@ impl Config {
 
     pub fn layout_percent(&self) -> u16 {
         self.lazyjj_layout_percent.unwrap_or(50)
+    }
+
+    pub fn keybinds(&self) -> Option<&KeybindsConfig> {
+        self.lazyjj_keybinds.as_ref()
     }
 }
 
@@ -168,6 +178,10 @@ impl Env {
                             .lazyjj
                             .as_ref()
                             .and_then(|lazyjj| lazyjj.layout_percent),
+                        lazyjj_keybinds: config
+                            .lazyjj
+                            .as_ref()
+                            .and_then(|lazyjj| lazyjj.keybinds.clone()),
                         ui_diff_format: config
                             .ui
                             .as_ref()

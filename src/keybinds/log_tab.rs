@@ -2,9 +2,9 @@ use std::str::FromStr;
 
 use crossterm::event::KeyEvent;
 
-use crate::set_keybinds;
+use crate::{set_keybinds, update_keybinds};
 
-use super::{keybinds_store::KeybindsStore, Shortcut};
+use super::{config::LogTabKeybindsConfig, keybinds_store::KeybindsStore, Shortcut};
 
 #[derive(Debug)]
 pub struct LogTabKeybinds {
@@ -100,11 +100,51 @@ impl Default for LogTabKeybinds {
 
 impl LogTabKeybinds {
     pub fn match_event(&self, event: KeyEvent) -> LogTabEvent {
+        if !matches!(event.code, KeyCode::Char('d')) {
+            panic!("handling event {event:#?}")
+        }
         if let Some(action) = self.keys.match_event(event) {
             action
         } else {
             LogTabEvent::Unbound
         }
+    }
+    pub fn extend_from_config(&mut self, config: &LogTabKeybindsConfig) {
+        let push = |all_bookmarks, allow_new| LogTabEvent::Push {
+            all_bookmarks,
+            allow_new,
+        };
+        update_keybinds!(
+            self.keys,
+            LogTabEvent::Save => config.save,
+            LogTabEvent::Cancel => config.cancel,
+            LogTabEvent::ClosePopup => config.close_popup,
+            LogTabEvent::ScrollDown => config.scroll_down,
+            LogTabEvent::ScrollDown => config.scroll_down,
+            LogTabEvent::ScrollUp => config.scroll_up,
+            LogTabEvent::ScrollUp => config.scroll_up,
+            LogTabEvent::ScrollDownHalf => config.scroll_down_half,
+            LogTabEvent::ScrollUpHalf => config.scroll_up_half,
+            LogTabEvent::FocusCurrent => config.focus_current,
+            LogTabEvent::ToggleDiffFormat => config.toggle_diff_format,
+            LogTabEvent::Refresh => config.refresh,
+            LogTabEvent::CreateNew { describe: false } => config.create_new,
+            LogTabEvent::CreateNew { describe: true } => config.create_new_describe,
+            LogTabEvent::Squash => config.squash,
+            LogTabEvent::EditChange => config.edit_change,
+            LogTabEvent::Abandon => config.abandon,
+            LogTabEvent::Describe => config.describe,
+            LogTabEvent::EditRevset => config.edit_revset,
+            LogTabEvent::SetBookmark => config.set_bookmark,
+            LogTabEvent::OpenFiles => config.open_files,
+            push(false, false) => config.push,
+            push(false, true) => config.push_new,
+            push(true, false) => config.push_all,
+            push(true, true) => config.push_all_new,
+            LogTabEvent::Fetch { all_remotes: false } => config.fetch,
+            LogTabEvent::Fetch { all_remotes: true } => config.fetch_all,
+            LogTabEvent::OpenHelp => config.open_help,
+        );
     }
 }
 

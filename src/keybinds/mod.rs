@@ -2,8 +2,10 @@ use std::str::FromStr;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
+pub use config::{Keybind, KeybindsConfig};
 pub use log_tab::{LogTabEvent, LogTabKeybinds};
 
+mod config;
 mod keybinds_store;
 mod log_tab;
 
@@ -25,7 +27,19 @@ macro_rules! set_keybinds {
     };
 }
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[macro_export]
+macro_rules! update_keybinds {
+    () => {};
+    ($keys:expr, $($action:expr => $config:expr),* $(,)?) => {
+        $(
+        	if let Some(ref k) = $config {
+	            $keys.replace_action_from_config($action, k);
+	        }
+        )*
+    };
+}
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, serde_with::DeserializeFromStr)]
 pub struct Shortcut {
     key: KeyCode,
     modifiers: KeyModifiers,

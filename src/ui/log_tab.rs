@@ -95,6 +95,16 @@ impl LogTab<'_> {
         let (popup_tx, popup_rx) = std::sync::mpsc::channel();
         let (bookmark_set_popup_tx, bookmark_set_popup_rx) = std::sync::mpsc::channel();
 
+        let mut keybinds = LogTabKeybinds::default();
+        if let Some(new_keybinds) = commander
+            .env
+            .config
+            .keybinds()
+            .and_then(|k| k.log_tab.clone())
+        {
+            keybinds.extend_from_config(&new_keybinds);
+        }
+
         Ok(Self {
             log_output_text: match log_output.as_ref() {
                 Ok(log_output) => log_output
@@ -127,7 +137,7 @@ impl LogTab<'_> {
             describe_after_new: false,
 
             config: commander.env.config.clone(),
-            keybinds: LogTabKeybinds::default(),
+            keybinds,
         })
     }
 
