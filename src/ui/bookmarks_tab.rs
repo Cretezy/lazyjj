@@ -1,4 +1,5 @@
-#![allow(clippy::borrow_interior_mutable_const)]
+#![expect(clippy::borrow_interior_mutable_const)]
+
 use crate::{
     commander::{bookmarks::BookmarkLine, ids::ChangeId, CommandError, Commander},
     env::{Config, DiffFormat},
@@ -329,9 +330,7 @@ impl Component for BookmarksTab<'_> {
                                 // Add padding at start
                                 line.spans.insert(0, Span::from(" "));
 
-                                if current_bookmark_index.map_or(false, |current_bookmark_index| {
-                                    i == current_bookmark_index
-                                }) {
+                                if current_bookmark_index == Some(i) {
                                     line = line.bg(self.config.highlight_color());
 
                                     line.spans = line

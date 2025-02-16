@@ -1,4 +1,4 @@
-#![allow(clippy::borrow_interior_mutable_const)]
+#![expect(clippy::borrow_interior_mutable_const)]
 
 use ansi_to_tui::IntoText;
 use anyhow::Result;
@@ -185,7 +185,6 @@ impl LogTab<'_> {
     }
 }
 
-#[allow(clippy::invisible_characters)]
 impl Component for LogTab<'_> {
     fn switch(&mut self, commander: &mut Commander) -> Result<()> {
         self.refresh_log_output(commander);
@@ -318,8 +317,8 @@ impl Component for LogTab<'_> {
                                 .graph_heads
                                 .get(i)
                                 .unwrap_or(&None)
-                                .clone()
-                                .map_or(false, |line_change| line_change == self.head)
+                                .as_ref()
+                                .is_some_and(|h| h == &self.head)
                         }));
 
                     log_lines
@@ -441,7 +440,6 @@ impl Component for LogTab<'_> {
         Ok(())
     }
 
-    #[allow(clippy::collapsible_if)]
     fn input(&mut self, commander: &mut Commander, event: Event) -> Result<ComponentInputResult> {
         if let Some(describe_textarea) = self.describe_textarea.as_mut() {
             if let Event::Key(key) = event {
