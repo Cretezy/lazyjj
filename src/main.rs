@@ -31,6 +31,7 @@ use tracing_subscriber::layer::SubscriberExt;
 mod app;
 mod commander;
 mod env;
+mod keybinds;
 mod ui;
 
 use crate::{

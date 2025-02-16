@@ -2,7 +2,7 @@
 
 use ansi_to_tui::IntoText;
 use anyhow::Result;
-use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
+use crossterm::event::{Event, KeyEventKind};
 use ratatui::{prelude::*, widgets::*};
 use tracing::instrument;
 use tui_confirm_dialog::{ButtonLabel, ConfirmDialog, ConfirmDialogState, Listener};
@@ -14,6 +14,7 @@ use crate::{
         CommandError, Commander,
     },
     env::{Config, DiffFormat},
+    keybinds::{LogTabEvent, LogTabKeybinds},
     ui::{
         bookmark_set_popup::BookmarkSetPopup,
         details_panel::DetailsPanel,
@@ -57,6 +58,7 @@ pub struct LogTab<'a> {
     describe_after_new: bool,
 
     config: Config,
+    keybinds: LogTabKeybinds,
 }
 
 fn get_head_index(head: &Head, log_output: &Result<LogOutput, CommandError>) -> Option<usize> {
@@ -125,6 +127,7 @@ impl LogTab<'_> {
             describe_after_new: false,
 
             config: commander.env.config.clone(),
+            keybinds: LogTabKeybinds::default(),
         })
     }
 
@@ -443,8 +446,8 @@ impl Component for LogTab<'_> {
     fn input(&mut self, commander: &mut Commander, event: Event) -> Result<ComponentInputResult> {
         if let Some(describe_textarea) = self.describe_textarea.as_mut() {
             if let Event::Key(key) = event {
-                match key.code {
-                    KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                match self.keybinds.match_event(key) {
+                    LogTabEvent::Save => {
                         // TODO: Handle error
                         commander.run_describe(
                             self.head.commit_id.as_str(),
@@ -455,11 +458,11 @@ impl Component for LogTab<'_> {
                         self.describe_textarea = None;
                         return Ok(ComponentInputResult::Handled);
                     }
-                    KeyCode::Esc => {
+                    LogTabEvent::Cancel => {
                         self.describe_textarea = None;
                         return Ok(ComponentInputResult::Handled);
                     }
-                    _ => {}
+                    _ => (),
                 }
             }
             describe_textarea.input(event);
@@ -468,8 +471,8 @@ impl Component for LogTab<'_> {
 
         if let Some(log_revset_textarea) = self.log_revset_textarea.as_mut() {
             if let Event::Key(key) = event {
-                match key.code {
-                    KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                match self.keybinds.match_event(key) {
+                    LogTabEvent::Save => {
                         let log_revset = log_revset_textarea.lines().join("\n");
                         self.log_revset = if log_revset.trim().is_empty() {
                             None
@@ -480,11 +483,11 @@ impl Component for LogTab<'_> {
                         self.log_revset_textarea = None;
                         return Ok(ComponentInputResult::Handled);
                     }
-                    KeyCode::Esc => {
+                    LogTabEvent::Cancel => {
                         self.log_revset_textarea = None;
                         return Ok(ComponentInputResult::Handled);
                     }
-                    _ => {}
+                    _ => (),
                 }
             }
             log_revset_textarea.input(event);
@@ -497,7 +500,10 @@ impl Component for LogTab<'_> {
             }
 
             if self.popup.is_opened() {
-                if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc {
+                if matches!(
+                    self.keybinds.match_event(key),
+                    LogTabEvent::ClosePopup | LogTabEvent::Cancel
+                ) {
                     self.popup = ConfirmDialogState::default();
                 } else {
                     self.popup.handle(key);
@@ -510,35 +516,35 @@ impl Component for LogTab<'_> {
                 return Ok(ComponentInputResult::Handled);
             }
 
-            match key.code {
-                KeyCode::Char('j') | KeyCode::Down => {
+            match self.keybinds.match_event(key) {
+                LogTabEvent::ScrollDown => {
                     self.scroll_log(commander, 1);
                 }
-                KeyCode::Char('k') | KeyCode::Up => {
+                LogTabEvent::ScrollUp => {
                     self.scroll_log(commander, -1);
                 }
-                KeyCode::Char('J') => {
+                LogTabEvent::ScrollDownHalf => {
                     self.scroll_log(commander, self.log_height as isize / 2 / 2);
                 }
-                KeyCode::Char('K') => {
+                LogTabEvent::ScrollUpHalf => {
                     self.scroll_log(
                         commander,
                         (self.log_height as isize / 2 / 2).saturating_neg(),
                     );
                 }
-                KeyCode::Char('@') => {
+                LogTabEvent::FocusCurrent => {
                     self.head = commander.get_current_head()?;
                     self.refresh_head_output(commander);
                 }
-                KeyCode::Char('w') => {
+                LogTabEvent::ToggleDiffFormat => {
                     self.diff_format = self.diff_format.get_next(self.config.has_diff_tool());
                     self.refresh_head_output(commander);
                 }
-                KeyCode::Char('R') | KeyCode::F(5) => {
+                LogTabEvent::Refresh => {
                     self.refresh_log_output(commander);
                     self.refresh_head_output(commander);
                 }
-                KeyCode::Char('n') | KeyCode::Char('N') => {
+                LogTabEvent::CreateNew { describe } => {
                     self.popup = ConfirmDialogState::new(
                         NEW_POPUP_ID,
                         Span::styled(" New ", Style::new().bold().cyan()),
@@ -553,9 +559,9 @@ impl Component for LogTab<'_> {
                     .with_listener(Some(self.popup_tx.clone()))
                     .open();
 
-                    self.describe_after_new = key.code == KeyCode::Char('N');
+                    self.describe_after_new = describe;
                 }
-                KeyCode::Char('s') => {
+                LogTabEvent::Squash => {
                     self.popup = ConfirmDialogState::new(
                         SQUASH_POPUP_ID,
                         Span::styled(" Squash ", Style::new().bold().cyan()),
@@ -570,7 +576,7 @@ impl Component for LogTab<'_> {
                     .with_listener(Some(self.popup_tx.clone()))
                     .open();
                 }
-                KeyCode::Char('e') => {
+                LogTabEvent::EditChange => {
                     if self.head.immutable {
                         return Ok(ComponentInputResult::HandledAction(
                             ComponentAction::SetPopup(Some(Box::new(MessagePopup {
@@ -598,7 +604,7 @@ impl Component for LogTab<'_> {
                         .open();
                     }
                 }
-                KeyCode::Char('a') => {
+                LogTabEvent::Abandon => {
                     if self.head.immutable {
                         return Ok(ComponentInputResult::HandledAction(
                             ComponentAction::SetPopup(Some(Box::new(MessagePopup {
@@ -627,7 +633,7 @@ impl Component for LogTab<'_> {
                         .open();
                     }
                 }
-                KeyCode::Char('d') => {
+                LogTabEvent::Describe => {
                     if self.head.immutable {
                         return Ok(ComponentInputResult::HandledAction(
                             ComponentAction::SetPopup(Some(Box::new(MessagePopup {
@@ -653,7 +659,7 @@ impl Component for LogTab<'_> {
                         return Ok(ComponentInputResult::Handled);
                     }
                 }
-                KeyCode::Char('r') => {
+                LogTabEvent::EditRevset => {
                     let mut textarea = TextArea::new(
                         self.log_revset
                             .as_ref()
@@ -666,7 +672,7 @@ impl Component for LogTab<'_> {
                     self.log_revset_textarea = Some(textarea);
                     return Ok(ComponentInputResult::Handled);
                 }
-                KeyCode::Char('b') => {
+                LogTabEvent::SetBookmark => {
                     return Ok(ComponentInputResult::HandledAction(
                         ComponentAction::SetPopup(Some(Box::new(BookmarkSetPopup::new(
                             self.config.clone(),
@@ -677,17 +683,16 @@ impl Component for LogTab<'_> {
                         )))),
                     ));
                 }
-                KeyCode::Enter => {
+                LogTabEvent::OpenFiles => {
                     return Ok(ComponentInputResult::HandledAction(
                         ComponentAction::ViewFiles(self.head.clone()),
                     ));
                 }
-                KeyCode::Char('p') | KeyCode::Char('P') => {
-                    match commander.git_push(
-                        key.code == KeyCode::Char('P'),
-                        key.modifiers.contains(KeyModifiers::CONTROL),
-                        &self.head.commit_id,
-                    ) {
+                LogTabEvent::Push {
+                    all_bookmarks,
+                    allow_new,
+                } => {
+                    match commander.git_push(all_bookmarks, allow_new, &self.head.commit_id) {
                         Ok(result) if !result.is_empty() => {
                             return Ok(ComponentInputResult::HandledAction(
                                 ComponentAction::SetPopup(Some(Box::new(MessagePopup {
@@ -712,8 +717,8 @@ impl Component for LogTab<'_> {
                     self.refresh_log_output(commander);
                     self.refresh_head_output(commander);
                 }
-                KeyCode::Char('f') | KeyCode::Char('F') => {
-                    match commander.git_fetch(key.code == KeyCode::Char('F')) {
+                LogTabEvent::Fetch { all_remotes } => {
+                    match commander.git_fetch(all_remotes) {
                         Ok(result) if !result.is_empty() => {
                             return Ok(ComponentInputResult::HandledAction(
                                 ComponentAction::SetPopup(Some(Box::new(MessagePopup {
@@ -738,12 +743,12 @@ impl Component for LogTab<'_> {
                     self.refresh_log_output(commander);
                     self.refresh_head_output(commander);
                 }
-                KeyCode::Char('?') => {
+                LogTabEvent::OpenHelp => {
                     return Ok(ComponentInputResult::HandledAction(
                         ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
                             vec![
                                 ("j/k".to_owned(), "scroll down/up".to_owned()),
-                                ("J/K".to_owned(), "scroll down by ½ page".to_owned()),
+                                ("J/K".to_owned(), "scroll down/up by ½ page".to_owned()),
                                 ("Enter".to_owned(), "see files".to_owned()),
                                 ("@".to_owned(), "current change".to_owned()),
                                 ("r".to_owned(), "revset".to_owned()),
@@ -785,7 +790,10 @@ impl Component for LogTab<'_> {
                         )))),
                     ))
                 }
-                _ => return Ok(ComponentInputResult::NotHandled),
+                LogTabEvent::Save
+                | LogTabEvent::Cancel
+                | LogTabEvent::ClosePopup
+                | LogTabEvent::Unbound => return Ok(ComponentInputResult::NotHandled),
             };
         }
 
