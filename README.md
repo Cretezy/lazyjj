@@ -131,6 +131,17 @@ See all key mappings for the current tab with `h` or `?`.
 - Select latest command with `@`
 - Toggle details panel wrapping with `W`
 
+### Configuring
+
+Keys can be configured
+
+```toml
+[lazyjj.keybinds.log_tab]
+save = "ctrl+s"
+```
+
+See more in [keybindings.md](docs/keybindings.md)
+
 ## Development
 
 ### Setup
