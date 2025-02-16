@@ -14,6 +14,7 @@ pub struct Keybinds {
     log_tab: LogTabKeybinds,
 }*/
 
+/// Add keybindings to [`keybinds_store::KeybindsStore`]. Checks that shortcuts not duplicated
 #[macro_export]
 macro_rules! set_keybinds {
     () => {};
@@ -27,6 +28,7 @@ macro_rules! set_keybinds {
     };
 }
 
+/// Replace keybindings in [`keybinds_store::KeybindsStore`] from config
 #[macro_export]
 macro_rules! update_keybinds {
     () => {};
@@ -139,7 +141,7 @@ impl Display for Shortcut {
             KeyCode::Up => "Up".to_string(),
             KeyCode::Down => "Down".to_string(),
             KeyCode::F(n) => format!("F{n}"),
-            KeyCode::Char(c) => c.to_ascii_uppercase().to_string(),
+            KeyCode::Char(c) => c.to_string(),
             KeyCode::Esc => "Esc".to_string(),
             _ => "Unknown".to_string(),
         };
