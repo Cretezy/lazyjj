@@ -100,9 +100,6 @@ impl Default for LogTabKeybinds {
 
 impl LogTabKeybinds {
     pub fn match_event(&self, event: KeyEvent) -> LogTabEvent {
-        if !matches!(event.code, KeyCode::Char('d')) {
-            panic!("handling event {event:#?}")
-        }
         if let Some(action) = self.keys.match_event(event) {
             action
         } else {

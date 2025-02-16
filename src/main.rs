@@ -13,10 +13,13 @@ use clap::Parser;
 use crossterm::{
     event::{
         self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
-        Event, MouseEvent, MouseEventKind,
+        Event, KeyboardEnhancementFlags, MouseEvent, MouseEventKind, PushKeyboardEnhancementFlags,
     },
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{
+        disable_raw_mode, enable_raw_mode, supports_keyboard_enhancement, EnterAlternateScreen,
+        LeaveAlternateScreen,
+    },
 };
 use ratatui::{
     backend::{Backend, CrosstermBackend},
@@ -216,6 +219,15 @@ fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
         EnableMouseCapture,
         EnableFocusChange
     )?;
+
+    if supports_keyboard_enhancement()? {
+        execute!(
+            stdout,
+            // required to properly detect ctrl+shift
+            PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES)
+        )?;
+    }
+
     let backend = CrosstermBackend::new(stdout);
     Ok(Terminal::new(backend)?)
 }
