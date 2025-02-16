@@ -756,34 +756,7 @@ impl Component for LogTab<'_> {
                 LogTabEvent::OpenHelp => {
                     return Ok(ComponentInputResult::HandledAction(
                         ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
-                            vec![
-                                ("j/k".to_owned(), "scroll down/up".to_owned()),
-                                ("J/K".to_owned(), "scroll down/up by ½ page".to_owned()),
-                                ("Enter".to_owned(), "see files".to_owned()),
-                                ("@".to_owned(), "current change".to_owned()),
-                                ("r".to_owned(), "revset".to_owned()),
-                                ("d".to_owned(), "describe change".to_owned()),
-                                ("e".to_owned(), "edit change".to_owned()),
-                                ("n".to_owned(), "new change".to_owned()),
-                                ("N".to_owned(), "new with message".to_owned()),
-                                ("a".to_owned(), "abandon change".to_owned()),
-                                (
-                                    "s".to_owned(),
-                                    "squash @ into the selected change".to_owned(),
-                                ),
-                                ("b".to_owned(), "set bookmark".to_owned()),
-                                ("f".to_owned(), "git fetch".to_owned()),
-                                ("F".to_owned(), "git fetch all remotes".to_owned()),
-                                (
-                                    "p".to_owned(),
-                                    "git push (+Ctrl to include new bookmarks)".to_owned(),
-                                ),
-                                (
-                                    "P".to_owned(),
-                                    "git push all bookmarks (+Ctrl to include new bookmarks)"
-                                        .to_owned(),
-                                ),
-                            ],
+                            self.keybinds.make_main_panel_help(),
                             vec![
                                 ("Ctrl+e/Ctrl+y".to_owned(), "scroll down/up".to_owned()),
                                 (

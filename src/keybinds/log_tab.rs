@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crossterm::event::KeyEvent;
 
-use crate::{set_keybinds, update_keybinds};
+use crate::{make_keybinds_help, set_keybinds, update_keybinds};
 
 use super::{config::LogTabKeybindsConfig, keybinds_store::KeybindsStore, Shortcut};
 
@@ -55,11 +55,6 @@ pub enum LogTabEvent {
 impl Default for LogTabKeybinds {
     fn default() -> Self {
         let mut keys = KeybindsStore::<LogTabEvent>::default();
-
-        let push = |all_bookmarks, allow_new| LogTabEvent::Push {
-            all_bookmarks,
-            allow_new,
-        };
         set_keybinds!(
             keys,
             LogTabEvent::Save => "ctrl+s",
@@ -72,6 +67,7 @@ impl Default for LogTabKeybinds {
             LogTabEvent::ScrollDownHalf => "shift+j",
             LogTabEvent::ScrollUpHalf => "shift+k",
             LogTabEvent::FocusCurrent => "@",
+            // todo: move to DetailsKeybindings
             LogTabEvent::ToggleDiffFormat => "w",
             LogTabEvent::Refresh => "shift+r",
             LogTabEvent::Refresh => "f5",
@@ -84,10 +80,10 @@ impl Default for LogTabKeybinds {
             LogTabEvent::EditRevset => "r",
             LogTabEvent::SetBookmark => "b",
             LogTabEvent::OpenFiles => "enter",
-            push(false, false) => "p",
-            push(false, true) => "ctrl+p",
-            push(true, false) => "shift+p",
-            push(true, true) => "ctrl+shift+p",
+            event_push(false, false) => "p",
+            event_push(false, true) => "ctrl+p",
+            event_push(true, false) => "shift+p",
+            event_push(true, true) => "ctrl+shift+p",
             LogTabEvent::Fetch { all_remotes: false } => "f",
             LogTabEvent::Fetch { all_remotes: true } => "shift+f",
             LogTabEvent::OpenHelp => "h",
@@ -107,18 +103,12 @@ impl LogTabKeybinds {
         }
     }
     pub fn extend_from_config(&mut self, config: &LogTabKeybindsConfig) {
-        let push = |all_bookmarks, allow_new| LogTabEvent::Push {
-            all_bookmarks,
-            allow_new,
-        };
         update_keybinds!(
             self.keys,
             LogTabEvent::Save => config.save,
             LogTabEvent::Cancel => config.cancel,
             LogTabEvent::ClosePopup => config.close_popup,
             LogTabEvent::ScrollDown => config.scroll_down,
-            LogTabEvent::ScrollDown => config.scroll_down,
-            LogTabEvent::ScrollUp => config.scroll_up,
             LogTabEvent::ScrollUp => config.scroll_up,
             LogTabEvent::ScrollDownHalf => config.scroll_down_half,
             LogTabEvent::ScrollUpHalf => config.scroll_up_half,
@@ -134,14 +124,46 @@ impl LogTabKeybinds {
             LogTabEvent::EditRevset => config.edit_revset,
             LogTabEvent::SetBookmark => config.set_bookmark,
             LogTabEvent::OpenFiles => config.open_files,
-            push(false, false) => config.push,
-            push(false, true) => config.push_new,
-            push(true, false) => config.push_all,
-            push(true, true) => config.push_all_new,
+            event_push(false, false) => config.push,
+            event_push(false, true) => config.push_new,
+            event_push(true, false) => config.push_all,
+            event_push(true, true) => config.push_all_new,
             LogTabEvent::Fetch { all_remotes: false } => config.fetch,
             LogTabEvent::Fetch { all_remotes: true } => config.fetch_all,
             LogTabEvent::OpenHelp => config.open_help,
         );
+    }
+    pub fn make_main_panel_help(&self) -> Vec<(String, String)> {
+        make_keybinds_help!(
+            self.keys,
+            LogTabEvent::ScrollDown => "scroll down",
+            LogTabEvent::ScrollUp => "scroll up",
+            LogTabEvent::ScrollDownHalf => "scroll down by ½ page",
+            LogTabEvent::ScrollUpHalf => "scroll up by ½ page",
+            LogTabEvent::OpenFiles => "see files",
+            LogTabEvent::FocusCurrent => "current change",
+            LogTabEvent::EditRevset => "set revset",
+            LogTabEvent::Describe => "describe change",
+            LogTabEvent::EditChange => "edit change",
+            LogTabEvent::CreateNew { describe: false } => "new change",
+            LogTabEvent::CreateNew { describe: true } => "new with message",
+            LogTabEvent::Abandon => "abandon change",
+            LogTabEvent::Squash => "squash @ into the selected change",
+            LogTabEvent::SetBookmark => "set bookmark",
+            LogTabEvent::Fetch { all_remotes: false } => "git fetch",
+            LogTabEvent::Fetch { all_remotes: true } => "git fetch all remotes",
+            event_push(false, false) => "git push",
+            event_push(false, true) => "git push with new bookmarks",
+            event_push(true, false) => "git push all bookmarks, except new",
+            event_push(true, true) => "git push all bookmarks",
+        )
+    }
+}
+
+fn event_push(all_bookmarks: bool, allow_new: bool) -> LogTabEvent {
+    LogTabEvent::Push {
+        all_bookmarks,
+        allow_new,
     }
 }
 

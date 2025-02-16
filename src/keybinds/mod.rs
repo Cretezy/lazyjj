@@ -32,10 +32,32 @@ macro_rules! update_keybinds {
     () => {};
     ($keys:expr, $($action:expr => $config:expr),* $(,)?) => {
         $(
-        	if let Some(ref k) = $config {
-	            $keys.replace_action_from_config($action, k);
-	        }
+            if let Some(ref k) = $config {
+                $keys.replace_action_from_config($action, k);
+            }
         )*
+    };
+}
+
+#[macro_export]
+macro_rules! make_keybinds_help {
+    () => {};
+    ($keys:expr, $($action:expr => $desc:literal),* $(,)?) => {
+        #[allow(clippy::vec_init_then_push)]
+        {
+            let mut res = vec![];
+            $(
+                res.push((
+                    $keys.get_shortcuts($action)
+                        .iter()
+                        .map(|s| s.to_string())
+                        .collect::<Vec<_>>()
+                        .join("/"),
+                    $desc.to_string(),
+                ));
+            )*
+            res
+        }
     };
 }
 

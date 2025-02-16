@@ -24,6 +24,13 @@ where
     pub fn add_action(&mut self, shortcut: Shortcut, action: A) {
         self.shortcut_actions.insert(shortcut, action);
     }
+    pub fn get_shortcuts(&self, action: A) -> Vec<Shortcut> {
+        self.shortcut_actions
+            .iter()
+            .filter(|(_, a)| **a == action)
+            .map(|(s, _)| *s)
+            .collect()
+    }
     pub fn replace_action_from_config(&mut self, action: A, key: &Keybind) {
         // just ignore this case
         if matches!(key, Keybind::Enable(true)) {
