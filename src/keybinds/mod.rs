@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
@@ -96,6 +96,32 @@ impl FromStr for Shortcut {
         } else {
             Err(ShortcutParseError::NoKey)
         }
+    }
+}
+
+impl Display for Shortcut {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut parts = Vec::with_capacity(3);
+        if self.modifiers.contains(KeyModifiers::CONTROL) {
+            parts.push("Control".to_string());
+        }
+        if self.modifiers.contains(KeyModifiers::SHIFT) {
+            parts.push("Shift".to_string());
+        }
+        let k = match self.key {
+            KeyCode::Enter => "Enter".to_string(),
+            KeyCode::Left => "Left".to_string(),
+            KeyCode::Right => "Right".to_string(),
+            KeyCode::Up => "Up".to_string(),
+            KeyCode::Down => "Down".to_string(),
+            KeyCode::F(n) => format!("F{n}"),
+            KeyCode::Char(c) => c.to_ascii_uppercase().to_string(),
+            KeyCode::Esc => "Esc".to_string(),
+            _ => "Unknown".to_string(),
+        };
+        parts.push(k);
+
+        parts.join("+").fmt(f)
     }
 }
 
