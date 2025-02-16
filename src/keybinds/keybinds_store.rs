@@ -22,10 +22,8 @@ where
     pub fn add_action(&mut self, shortcut: Shortcut, action: A) {
         self.shortcut_actions.insert(shortcut, action);
     }
-    pub fn add_shortcuts<I: IntoIterator<Item = Shortcut>>(&mut self, shortcuts: I, action: A) {
-        for s in shortcuts {
-            self.add_action(s, action.clone());
-        }
+    pub fn len(&self) -> usize {
+        self.shortcut_actions.len()
     }
 }
 

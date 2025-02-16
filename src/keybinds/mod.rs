@@ -12,6 +12,19 @@ pub struct Keybinds {
     log_tab: LogTabKeybinds,
 }*/
 
+#[macro_export]
+macro_rules! set_keybinds {
+    () => {};
+    ($keys:ident, $($action:expr => $shortcut:literal),* $(,)?) => {
+        let mut __shortcuts_count = 0;
+        $(
+            $keys.add_action(Shortcut::from_str($shortcut).unwrap(), $action);
+            __shortcuts_count += 1;
+        )*
+        assert_eq!(__shortcuts_count, $keys.len(), "shortcuts should not duplicate");
+    };
+}
+
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub struct Shortcut {
     key: KeyCode,
@@ -21,15 +34,6 @@ pub struct Shortcut {
 impl Shortcut {
     pub fn new_mod_key(modifiers: KeyModifiers, key: KeyCode) -> Self {
         Self { key, modifiers }
-    }
-    pub fn new_mod_char(modifiers: KeyModifiers, key: char) -> Self {
-        Self::new_mod_key(modifiers, KeyCode::Char(key))
-    }
-    pub fn new_char(key: char) -> Self {
-        Self::new_mod_key(KeyModifiers::empty(), KeyCode::Char(key))
-    }
-    pub fn new_key(key: KeyCode) -> Self {
-        Self::new_mod_key(KeyModifiers::empty(), key)
     }
     pub fn from_event(event: KeyEvent) -> Self {
         Self {
@@ -92,6 +96,18 @@ pub enum ShortcutParseError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    impl Shortcut {
+        pub fn new_mod_char(modifiers: KeyModifiers, key: char) -> Self {
+            Self::new_mod_key(modifiers, KeyCode::Char(key))
+        }
+        pub fn new_char(key: char) -> Self {
+            Self::new_mod_key(KeyModifiers::empty(), KeyCode::Char(key))
+        }
+        pub fn new_key(key: KeyCode) -> Self {
+            Self::new_mod_key(KeyModifiers::empty(), key)
+        }
+    }
 
     #[test]
     fn test_shortcut_from_str() {
