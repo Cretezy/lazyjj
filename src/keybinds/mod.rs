@@ -47,14 +47,16 @@ macro_rules! make_keybinds_help {
         {
             let mut res = vec![];
             $(
-                res.push((
-                    $keys.get_shortcuts($action)
-                        .iter()
-                        .map(|s| s.to_string())
-                        .collect::<Vec<_>>()
-                        .join("/"),
-                    $desc.to_string(),
-                ));
+                let shortcuts = $keys.get_shortcuts($action)
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join("/");
+                if shortcuts.is_empty() {
+                    res.push(("[disabled]".to_string(), $desc.to_string()));
+                } else {
+                    res.push((shortcuts, $desc.to_string()));
+                }
             )*
             res
         }
