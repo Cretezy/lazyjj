@@ -176,6 +176,13 @@ impl LogTab<'_> {
         head.clone_into(&mut self.head);
         self.refresh_head_output(commander);
     }
+
+    fn is_any_popup_opened(&self) -> bool {
+        // todo: check bookmark popup
+        self.describe_textarea.is_some()
+            || self.log_revset_textarea.is_some()
+            || self.popup.is_opened()
+    }
 }
 
 #[allow(clippy::invisible_characters)]
@@ -187,11 +194,14 @@ impl Component for LogTab<'_> {
     }
 
     fn update(&mut self, commander: &mut Commander) -> Result<Option<ComponentAction>> {
-        let latest_head = commander.get_head_latest(&self.head)?;
-        if latest_head != self.head {
-            self.head = latest_head;
-            self.refresh_log_output(commander);
-            self.refresh_head_output(commander);
+        // get_head_latest is somewhat expensive, do not call it when it's not necessary
+        if !self.is_any_popup_opened() {
+            let latest_head = commander.get_head_latest(&self.head)?;
+            if latest_head != self.head {
+                self.head = latest_head;
+                self.refresh_log_output(commander);
+                self.refresh_head_output(commander);
+            }
         }
 
         // Check for popup action
