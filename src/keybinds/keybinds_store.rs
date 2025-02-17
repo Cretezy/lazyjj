@@ -5,10 +5,7 @@ use crossterm::event::KeyEvent;
 use super::{Keybind, Shortcut};
 
 #[derive(Debug)]
-pub struct KeybindsStore<A>
-where
-    A: Clone + Eq,
-{
+pub struct KeybindsStore<A> {
     shortcut_actions: HashMap<Shortcut, A>,
 }
 
@@ -45,6 +42,7 @@ where
                     self.add_action(*s, action.clone());
                 }
             }
+            // in case Enable(false) action is only removed
             Keybind::Enable(_) => (),
         }
     }
@@ -57,10 +55,7 @@ where
     }
 }
 
-impl<A> Default for KeybindsStore<A>
-where
-    A: Clone + Eq,
-{
+impl<A> Default for KeybindsStore<A> {
     fn default() -> Self {
         Self {
             shortcut_actions: HashMap::new(),

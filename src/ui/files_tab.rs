@@ -44,7 +44,7 @@ fn get_current_file_index(
     if let (Some(current_file), Ok(files_output)) = (current_file, files_output) {
         files_output
             .iter()
-            .position(|file| (file.path.as_ref() == Some(current_file)))
+            .position(|file| file.path.as_ref() == Some(current_file))
     } else {
         None
     }

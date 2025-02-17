@@ -78,6 +78,7 @@ impl Shortcut {
     pub fn from_event(event: KeyEvent) -> Self {
         Self {
             key: match event.code {
+                // when shift is pressed character is in upper case, so normalize it here
                 KeyCode::Char(c) => KeyCode::Char(c.to_ascii_lowercase()),
                 c => c,
             },
