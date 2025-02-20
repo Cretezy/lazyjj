@@ -319,7 +319,7 @@ impl Component for FilesTab {
                     let head = &commander.get_current_head()?;
                     self.set_head(commander, head)?;
                 }
-                KeyCode::Char('h') | KeyCode::Char('?') => {
+                KeyCode::Char('?') => {
                     return Ok(ComponentInputResult::HandledAction(
                         ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
                             vec![

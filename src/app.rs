@@ -68,6 +68,26 @@ impl<'a> App<'a> {
         self.get_tab(self.current_tab)
     }
 
+    // TODO make this generic based on indices
+    pub fn set_prev_tab(&mut self) {
+        self.current_tab = match self.current_tab {
+            Tab::Log => Tab::CommandLog,
+            Tab::Files => Tab::Log,
+            Tab::Bookmarks => Tab::Files,
+            Tab::CommandLog => Tab::Bookmarks,
+        };
+    }
+
+    // TODO make this generic based on indices
+    pub fn set_next_tab(&mut self) {
+        self.current_tab = match self.current_tab {
+            Tab::Log => Tab::Files,
+            Tab::Files => Tab::Bookmarks,
+            Tab::Bookmarks => Tab::CommandLog,
+            Tab::CommandLog => Tab::Log,
+        };
+    }
+
     pub fn set_tab(&mut self, commander: &mut Commander, tab: Tab) -> Result<()> {
         info!("Setting tab to {}", tab);
         self.current_tab = tab;
@@ -255,6 +275,14 @@ impl<'a> App<'a> {
                             }
                             //
                             // Tab switching
+                            if key.code == KeyCode::Char('l')
+                            {
+                                self.set_next_tab();
+                            }
+                            if key.code == KeyCode::Char('h')
+                            {
+                                self.set_prev_tab();
+                            }
                             if let Some((_, tab)) = Tab::VALUES.iter().enumerate().find(|(i, _)| {
                                 key.code
                                     == KeyCode::Char(
