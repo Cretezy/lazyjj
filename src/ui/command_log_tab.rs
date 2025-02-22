@@ -260,7 +260,7 @@ impl Component for CommandLogTab {
                 KeyCode::Char('@') => {
                     self.scroll_commands(isize::MIN);
                 }
-                KeyCode::Char('h') | KeyCode::Char('?') => {
+                KeyCode::Char('?') => {
                     return Ok(ComponentInputResult::HandledAction(
                         ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
                             vec![

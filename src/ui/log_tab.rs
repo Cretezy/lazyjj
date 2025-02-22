@@ -743,7 +743,7 @@ impl Component for LogTab<'_> {
                     self.refresh_log_output(commander);
                     self.refresh_head_output(commander);
                 }
-                KeyCode::Char('h') | KeyCode::Char('?') => {
+                KeyCode::Char('?') => {
                     return Ok(ComponentInputResult::HandledAction(
                         ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
                             vec![

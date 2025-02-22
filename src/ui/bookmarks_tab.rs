@@ -911,7 +911,7 @@ impl Component for BookmarksTab<'_> {
                         }
                     }
                 }
-                KeyCode::Char('h') | KeyCode::Char('?') => {
+                KeyCode::Char('?') => {
                     return Ok(ComponentInputResult::HandledAction(
                         ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
                             vec![
