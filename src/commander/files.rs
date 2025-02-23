@@ -126,17 +126,11 @@ impl Commander {
         current_file: &str,
         diff_format: &DiffFormat,
     ) -> Result<String, CommandError> {
-        self.execute_jj_command(
-            vec![
-                "diff",
-                "-r",
-                head.commit_id.as_str(),
-                current_file,
-                diff_format.get_arg(),
-            ],
-            true,
-            true,
-        )
+        let mut args = vec!["diff", "-r", head.commit_id.as_str(), current_file];
+        if let Some(diff_format_arg) = diff_format.get_arg() {
+            args.push(diff_format_arg);
+        }
+        self.execute_jj_command(args, true, true)
     }
 }
 

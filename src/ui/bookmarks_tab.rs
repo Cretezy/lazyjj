@@ -757,10 +757,7 @@ impl Component for BookmarksTab<'_> {
                     );
                 }
                 KeyCode::Char('w') => {
-                    self.diff_format = match self.diff_format {
-                        DiffFormat::ColorWords => DiffFormat::Git,
-                        _ => DiffFormat::ColorWords,
-                    };
+                    self.diff_format = self.diff_format.get_next(self.config.has_diff_tool());
                     self.refresh_bookmark(commander);
                 }
                 KeyCode::Char('R') | KeyCode::F(5) => {
