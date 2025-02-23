@@ -68,11 +68,19 @@ impl<'a> App<'a> {
         self.get_tab(self.current_tab)
     }
 
-    pub fn set_next_tab_with_offset(&mut self, commander: &mut Commander, offset: i64) {
-        let current_index = Tab::VALUES.iter().position(|&t| t == self.current_tab).unwrap();
-        let new_index = (current_index as i64 + Tab::VALUES.len() as i64 + offset) as usize % Tab::VALUES.len();
+    pub fn set_next_tab_with_offset(
+        &mut self,
+        commander: &mut Commander,
+        offset: i64,
+    ) -> Result<()> {
+        let current_index = Tab::VALUES
+            .iter()
+            .position(|&t| t == self.current_tab)
+            .unwrap();
+        let new_index =
+            (current_index as i64 + Tab::VALUES.len() as i64 + offset) as usize % Tab::VALUES.len();
         let new_tab: Tab = Tab::VALUES[new_index];
-        self.set_tab(commander, new_tab);
+        self.set_tab(commander, new_tab)
     }
 
     pub fn set_tab(&mut self, commander: &mut Commander, tab: Tab) -> Result<()> {
@@ -262,21 +270,20 @@ impl<'a> App<'a> {
                             }
                             //
                             // Tab switching
-                            else if key.code == KeyCode::Char('l')
+                            else if key.code == KeyCode::Char('l') {
+                                self.set_next_tab_with_offset(commander, 1)?;
+                            } else if key.code == KeyCode::Char('h') {
+                                self.set_next_tab_with_offset(commander, -1)?;
+                            } else if let Some((_, tab)) =
+                                Tab::VALUES.iter().enumerate().find(|(i, _)| {
+                                    key.code
+                                        == KeyCode::Char(
+                                            char::from_digit((*i as u32) + 1u32, 10).expect(
+                                                "Tab index could not be converted to digit",
+                                            ),
+                                        )
+                                })
                             {
-                                self.set_next_tab_with_offset(commander, 1);
-                            }
-                            else if key.code == KeyCode::Char('h')
-                            {
-                                self.set_next_tab_with_offset(commander, -1);
-                            }
-                            else if let Some((_, tab)) = Tab::VALUES.iter().enumerate().find(|(i, _)| {
-                                key.code
-                                    == KeyCode::Char(
-                                        char::from_digit((*i as u32) + 1u32, 10)
-                                            .expect("Tab index could not be converted to digit"),
-                                    )
-                            }) {
                                 self.set_tab(commander, *tab)?;
                             }
                             // General jj command runner

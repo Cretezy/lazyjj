@@ -161,13 +161,12 @@ impl Commander {
         bookmark: &Bookmark,
         diff_format: &DiffFormat,
     ) -> Result<String, CommandError> {
-        Ok(self
-            .execute_jj_command(
-                vec!["show", &bookmark.to_string(), diff_format.get_arg()],
-                true,
-                true,
-            )?
-            .remove_end_line())
+        let bookmark_arg = &bookmark.to_string();
+        let mut args = vec!["show", bookmark_arg];
+        if let Some(diff_format_arg) = diff_format.get_arg() {
+            args.push(diff_format_arg);
+        }
+        Ok(self.execute_jj_command(args, true, true)?.remove_end_line())
     }
 }
 

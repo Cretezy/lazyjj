@@ -130,13 +130,11 @@ impl Commander {
         commit_id: &CommitId,
         diff_format: &DiffFormat,
     ) -> Result<String, CommandError> {
-        Ok(self
-            .execute_jj_command(
-                vec!["show", commit_id.as_str(), diff_format.get_arg()],
-                true,
-                true,
-            )?
-            .remove_end_line())
+        let mut args = vec!["show", commit_id.as_str()];
+        if let Some(diff_format_arg) = diff_format.get_arg() {
+            args.push(diff_format_arg);
+        }
+        Ok(self.execute_jj_command(args, true, true)?.remove_end_line())
     }
 
     /// Get the current head.

@@ -304,10 +304,7 @@ impl Component for FilesTab {
                     )?;
                 }
                 KeyCode::Char('w') => {
-                    self.diff_format = match self.diff_format {
-                        DiffFormat::ColorWords => DiffFormat::Git,
-                        _ => DiffFormat::ColorWords,
-                    };
+                    self.diff_format = self.diff_format.get_next(self.config.has_diff_tool());
                     self.refresh_diff(commander)?;
                 }
                 KeyCode::Char('R') | KeyCode::F(5) => {

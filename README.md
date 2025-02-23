@@ -86,7 +86,7 @@ See all key mappings for the current tab with `h` or `?`.
 - Select current change with `@`
 - View change files in files tab with `Enter`
 - Display different revset with `r` (`jj log -r`)
-- Change details panel diff format between color words (default) and Git with `w`
+- Change details panel diff format between color words (default) and Git (and diff tool if set) with `w`
 - Toggle details panel wrapping with `W`
 - Create new change after highlighted change with `n` (`jj new`)
   - Create new change and describe with `N` (`jj new -m`)
@@ -109,7 +109,7 @@ See all key mappings for the current tab with `h` or `?`.
 ### Files tab
 
 - Select current change with `@`
-- Change details panel diff format between color words (default) and Git with `w`
+- Change details panel diff format between color words (default) and Git (and diff tool if set) with `w`
 - Toggle details panel wrapping with `W`
 
 ### Bookmarks tab
@@ -121,7 +121,7 @@ See all key mappings for the current tab with `h` or `?`.
 - Forget a bookmark with `f` (`jj bookmark forget`)
 - Track a bookmark with `t` (only works for bookmarks with remotes) (`jj bookmark track`)
 - Untrack a bookmark with `T` (only works for bookmarks with remotes) (`jj bookmark untrack`)
-- Change details panel diff format between color words (default) and Git with `w`
+- Change details panel diff format between color words (default) and Git (and diff tool if set) with `w`
 - Toggle details panel wrapping with `W`
 - Create a new change after the highlighted bookmark's change with `n` (`jj new`)
   - Create a new change and describe with `N` (`jj new -m`)

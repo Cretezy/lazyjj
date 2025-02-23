@@ -21,6 +21,8 @@ pub struct Config {
     lazyjj_layout_percent: Option<u16>,
     #[serde(rename = "ui.diff.format")]
     ui_diff_format: Option<DiffFormat>,
+    #[serde(rename = "ui.diff.tool")]
+    ui_diff_tool: Option<()>,
     #[serde(rename = "git.push-bookmark-prefix")]
     git_push_bookmark_prefix: Option<String>,
 }
@@ -53,6 +55,7 @@ pub struct JjConfigUi {
 #[serde(rename_all = "kebab-case")]
 pub struct JjConfigUiDiff {
     format: Option<DiffFormat>,
+    tool: Option<toml::Value>,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -63,8 +66,17 @@ pub struct JjConfigGit {
 
 impl Config {
     pub fn diff_format(&self) -> DiffFormat {
+        let default = if self.has_diff_tool() {
+            DiffFormat::DiffTool
+        } else {
+            DiffFormat::ColorWords
+        };
         self.lazyjj_diff_format
-            .unwrap_or(self.ui_diff_format.unwrap_or(DiffFormat::ColorWords))
+            .unwrap_or(self.ui_diff_format.unwrap_or(default))
+    }
+
+    pub fn has_diff_tool(&self) -> bool {
+        self.ui_diff_tool.is_some()
     }
 
     pub fn highlight_color(&self) -> Color {
@@ -158,7 +170,13 @@ impl Env {
                             .and_then(|lazyjj| lazyjj.layout_percent),
                         ui_diff_format: config
                             .ui
-                            .and_then(|ui| ui.diff.and_then(|diff| diff.format)),
+                            .as_ref()
+                            .and_then(|ui| ui.diff.as_ref().and_then(|diff| diff.format)),
+                        ui_diff_tool: config.ui.as_ref().and_then(|ui| {
+                            ui.diff
+                                .as_ref()
+                                .and_then(|diff| diff.tool.as_ref().map(|_| ()))
+                        }),
                         git_push_bookmark_prefix: config
                             .git
                             .and_then(|git| git.push_bookmark_prefix),
@@ -180,8 +198,26 @@ pub enum DiffFormat {
     #[default]
     ColorWords,
     Git,
+    DiffTool,
+    // Unused
     Summary,
     Stat,
+}
+
+impl DiffFormat {
+    pub fn get_next(&self, has_diff_tool: bool) -> DiffFormat {
+        match self {
+            DiffFormat::ColorWords => DiffFormat::Git,
+            DiffFormat::Git => {
+                if has_diff_tool {
+                    DiffFormat::DiffTool
+                } else {
+                    DiffFormat::ColorWords
+                }
+            }
+            _ => DiffFormat::ColorWords,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Default, Copy, PartialEq)]
