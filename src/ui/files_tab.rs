@@ -42,11 +42,9 @@ fn get_current_file_index(
     files_output: Result<&Vec<File>, &CommandError>,
 ) -> Option<usize> {
     if let (Some(current_file), Ok(files_output)) = (current_file, files_output) {
-        files_output.iter().position(|file| {
-            file.path
-                .as_ref()
-                .map_or(false, |path| path == current_file)
-        })
+        files_output
+            .iter()
+            .position(|file| file.path.as_ref() == Some(current_file))
     } else {
         None
     }
@@ -203,9 +201,7 @@ impl Component for FilesTab {
                                             .collect();
                                     }
 
-                                    if current_file_index
-                                        .map_or(false, |current_file_index| i == current_file_index)
-                                    {
+                                    if current_file_index == Some(i) {
                                         line = line.bg(self.config.highlight_color());
 
                                         line.spans = line

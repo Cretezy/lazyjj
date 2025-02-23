@@ -272,7 +272,7 @@ mod tests {
 
     #[test]
     fn get_conflicts() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let file_path = test_repo.directory.path().join("README");
 

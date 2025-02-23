@@ -336,7 +336,7 @@ mod tests {
 
     #[test]
     fn get_log() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let log = test_repo.commander.get_log(&None)?;
 
@@ -355,7 +355,7 @@ mod tests {
 
     #[test]
     fn get_commit_show() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         fs::write(test_repo.directory.path().join("README"), b"AAA")?;
 
@@ -377,7 +377,7 @@ mod tests {
 
     #[test]
     fn get_commit_parent() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let head = test_repo.commander.get_current_head()?;
 
@@ -396,7 +396,7 @@ mod tests {
 
     #[test]
     fn get_head_latest() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let old_head = test_repo.commander.get_current_head()?;
 
@@ -413,7 +413,7 @@ mod tests {
 
     #[test]
     fn check_revision_immutable() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         assert!(!(test_repo.commander.check_revision_immutable("@")?));
 
@@ -422,7 +422,7 @@ mod tests {
 
     #[test]
     fn get_bookmark_head() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let head = test_repo.commander.get_current_head()?;
         // Git doesn't support bookmark pointing to root commit, so it will advance

@@ -94,7 +94,7 @@ pub fn tabs_to_spaces(line: &str) -> String {
             }
             AnsiState::Csi => {
                 out.push(c);
-                if c >= '\x40' && c <= '\x7f' {
+                if ('\x40'..='\x7f').contains(&c) {
                     ansi_state = AnsiState::Neutral;
                 }
             }

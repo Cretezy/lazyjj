@@ -28,6 +28,7 @@ ratatui = { version = "0.29.0", features = [
 ] }
 regex = "1.11.1"
 serde = { version = "1.0.217", features = ["derive"] }
+serde_with = "3.12.0"
 tempdir = "0.3.7"
 thiserror = "2.0.11"
 toml = "0.8.19"

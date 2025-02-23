@@ -47,6 +47,7 @@ pub enum CommandError {
 }
 
 impl CommandError {
+    #[expect(clippy::wrong_self_convention)]
     pub fn into_text<'a>(&self, title: &'a str) -> Result<Text<'a>, ansi_to_tui::Error> {
         let mut lines = vec![];
         if !title.is_empty() {
@@ -265,7 +266,7 @@ pub mod tests {
     fn test_repo() -> Result<()> {
         apply_common_filters!();
 
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         test_repo
             .commander
