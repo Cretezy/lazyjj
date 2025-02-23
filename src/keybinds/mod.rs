@@ -24,7 +24,7 @@ macro_rules! set_keybinds {
             $keys.add_action(Shortcut::from_str($shortcut).unwrap(), $action);
             __shortcuts_count += 1;
         )*
-        assert_eq!(__shortcuts_count, $keys.len(), "shortcuts should not duplicate");
+        debug_assert_eq!(__shortcuts_count, $keys.len(), "shortcuts should not duplicate");
     };
 }
 
