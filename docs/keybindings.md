@@ -46,5 +46,5 @@ push-all-new = "ctrl+shift+p"
 fetch = "f"
 fetch-all = "shift+f"
 
-open-help = ["h", "?"]
+open-help = "?"
 ```

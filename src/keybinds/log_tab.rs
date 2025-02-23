@@ -86,7 +86,6 @@ impl Default for LogTabKeybinds {
             event_push(true, true) => "ctrl+shift+p",
             LogTabEvent::Fetch { all_remotes: false } => "f",
             LogTabEvent::Fetch { all_remotes: true } => "shift+f",
-            LogTabEvent::OpenHelp => "h",
             LogTabEvent::OpenHelp => "?",
         );
 

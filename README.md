@@ -29,7 +29,7 @@ https://github.com/Cretezy/lazyjj/assets/2672503/b5e6b4f1-ebdb-448f-af9e-361e86f
 - Command log: View every command lazyjj executes
 - Config: Configure lazyjj with your jj config
 - Command box: Run jj commands directly in lazyjj with `:`
-- Help: See all key mappings with `h`/`?`
+- Help: See all key mappings with `?`
 
 ## Setup
 
@@ -66,12 +66,12 @@ To start with a different default revset: `lazyjj -r '::@'`
 
 ## Key mappings
 
-See all key mappings for the current tab with `h` or `?`.
+See all key mappings for the current tab with `?`.
 
 ### Basic navigation
 
 - Quit with `q`
-- Change tab with `1`/`2`/`3`
+- Change tab with `1`/`2`/`3` or with `h`/`l`
 - Scrolling in main panel
   - Scroll down/up by one line with `j`/`k` or down/up arrow
   - Scroll down/up by half page with `J`/`K` or down/up arrow
