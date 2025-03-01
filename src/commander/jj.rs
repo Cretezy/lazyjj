@@ -48,6 +48,7 @@ impl Commander {
             name: name.to_owned(),
             remote: None,
             present: true,
+            timestamp: chrono::Utc::now().timestamp(),
         })
     }
 
@@ -64,6 +65,7 @@ impl Commander {
             name: name.to_owned(),
             remote: None,
             present: true,
+            timestamp: chrono::Utc::now().timestamp(),
         })
     }
 
@@ -263,7 +265,15 @@ mod tests {
         let bookmark = test_repo.commander.create_bookmark("test")?;
         let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
 
-        assert_eq!(bookmarks, [bookmark]);
+        assert_eq!(
+            bookmarks,
+            [Bookmark {
+                name: bookmark.name,
+                remote: bookmark.remote,
+                present: bookmark.present,
+                timestamp: bookmarks[0].timestamp,
+            }]
+        );
 
         Ok(())
     }
@@ -361,7 +371,15 @@ mod tests {
         let bookmark = test_repo.commander.create_bookmark("test1")?;
 
         let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
-        assert_eq!(bookmarks, [bookmark.clone()]);
+        assert_eq!(
+            bookmarks,
+            [Bookmark {
+                name: bookmark.name.clone(),
+                remote: bookmark.remote,
+                present: bookmark.present,
+                timestamp: bookmarks[0].timestamp,
+            }]
+        );
 
         test_repo
             .commander
@@ -374,6 +392,7 @@ mod tests {
                 name: "test2".to_owned(),
                 remote: None,
                 present: true,
+                timestamp: bookmarks[0].timestamp,
             }]
         );
 
@@ -387,7 +406,15 @@ mod tests {
         let bookmark = test_repo.commander.create_bookmark("test")?;
 
         let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
-        assert_eq!(bookmarks, [bookmark.clone()]);
+        assert_eq!(
+            bookmarks,
+            [Bookmark {
+                name: bookmark.name.clone(),
+                remote: bookmark.remote,
+                present: bookmark.present,
+                timestamp: bookmarks[0].timestamp,
+            }]
+        );
 
         test_repo.commander.delete_bookmark(&bookmark.name)?;
 
@@ -404,7 +431,15 @@ mod tests {
         let bookmark = test_repo.commander.create_bookmark("test")?;
 
         let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
-        assert_eq!(bookmarks, [bookmark.clone()]);
+        assert_eq!(
+            bookmarks,
+            [Bookmark {
+                name: bookmark.name.clone(),
+                remote: bookmark.remote,
+                present: bookmark.present,
+                timestamp: bookmarks[0].timestamp,
+            }]
+        );
 
         test_repo.commander.forget_bookmark(&bookmark.name)?;
 

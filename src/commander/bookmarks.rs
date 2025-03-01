@@ -4,9 +4,10 @@ use crate::{
 };
 use ansi_to_tui::IntoText;
 use anyhow::Result;
+use itertools::Itertools;
 use ratatui::text::Text;
 use regex::Regex;
-use std::{fmt::Display, sync::LazyLock};
+use std::{cmp::Ordering, fmt::Display, sync::LazyLock};
 use tracing::instrument;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -14,6 +15,7 @@ pub struct Bookmark {
     pub name: String,
     pub remote: Option<String>,
     pub present: bool,
+    pub timestamp: i64,
 }
 
 impl Display for Bookmark {
@@ -28,10 +30,10 @@ impl Display for Bookmark {
 }
 
 // Template which outputs `[name@remote]`. Used to parse data from bookmark list
-const BRANCH_TEMPLATE: &str = r#""[" ++ name ++ "@" ++ remote ++ "|" ++ present ++ "]""#;
+const BRANCH_TEMPLATE: &str = r#""[" ++ name ++ "@" ++ remote ++ "|" ++ present ++ "|" ++ self.normal_target().committer().timestamp().format("%s") ++ "]""#;
 // Regex to parse bookmark
 static BRANCH_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\[(.*)@(.*)\|(.*)\]$").unwrap());
+    LazyLock::new(|| Regex::new(r"^\[(.*)@(.*)\|(true|false)\|(\d+)\]$").unwrap());
 
 fn parse_bookmark(text: &str) -> Option<Bookmark> {
     let captured = BRANCH_REGEX.captures(text);
@@ -39,7 +41,10 @@ fn parse_bookmark(text: &str) -> Option<Bookmark> {
         let name = captured.get(1);
         let remote = captured.get(2);
         let present = captured.get(3);
-        if let (Some(name), Some(remote), Some(present)) = (name, remote, present) {
+        let timestamp = captured.get(4);
+        if let (Some(name), Some(remote), Some(present), Some(timestamp)) =
+            (name, remote, present, timestamp)
+        {
             let remote = remote.as_str().to_owned();
             Some(Bookmark {
                 remote: if remote.is_empty() {
@@ -49,6 +54,7 @@ fn parse_bookmark(text: &str) -> Option<Bookmark> {
                 },
                 name: name.as_str().to_owned(),
                 present: present.as_str() == "true",
+                timestamp: timestamp.as_str().parse::<i64>().unwrap_or(0),
             })
         } else {
             None
@@ -127,6 +133,17 @@ impl Commander {
                 },
                 None => BookmarkLine::Unparsable(line_colored.to_owned()),
             })
+            .sorted_by(|a, b| {
+                if let (
+                    BookmarkLine::Parsed { bookmark: a, .. },
+                    BookmarkLine::Parsed { bookmark: b, .. },
+                ) = (a, b)
+                {
+                    b.timestamp.cmp(&a.timestamp)
+                } else {
+                    Ordering::Equal
+                }
+            })
             .collect();
 
         Ok(bookmarks)
@@ -148,6 +165,7 @@ impl Commander {
             .execute_jj_command(args, false, true)?
             .lines()
             .filter_map(parse_bookmark)
+            .sorted_by(|a, b| b.timestamp.cmp(&a.timestamp))
             .collect();
 
         Ok(bookmarks)
@@ -189,10 +207,20 @@ mod tests {
         assert_eq!(bookmarks.len(), 1);
         assert_eq!(
             bookmarks.first().and_then(|bookmark| match bookmark {
-                BookmarkLine::Parsed { bookmark, .. } => Some(bookmark),
+                BookmarkLine::Parsed { bookmark, .. } => Some(Bookmark {
+                    name: bookmark.name.clone(),
+                    remote: bookmark.remote.clone(),
+                    present: bookmark.present,
+                    timestamp: 0,
+                }),
                 _ => None,
             }),
-            Some(&bookmark)
+            Some(Bookmark {
+                name: bookmark.name.clone(),
+                remote: bookmark.remote.clone(),
+                present: bookmark.present,
+                timestamp: 0,
+            })
         );
 
         Ok(())
@@ -205,7 +233,23 @@ mod tests {
         let bookmark = test_repo.commander.create_bookmark("test")?;
         let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
 
-        assert_eq!(bookmarks, [bookmark]);
+        assert_eq!(
+            bookmarks
+                .iter()
+                .map(|b| Bookmark {
+                    name: b.name.clone(),
+                    remote: b.remote.clone(),
+                    present: b.present,
+                    timestamp: 0,
+                })
+                .collect::<Vec<_>>(),
+            [Bookmark {
+                name: bookmark.name,
+                remote: bookmark.remote,
+                present: bookmark.present,
+                timestamp: 0,
+            }]
+        );
 
         Ok(())
     }
