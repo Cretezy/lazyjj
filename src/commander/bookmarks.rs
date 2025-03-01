@@ -181,7 +181,7 @@ mod tests {
 
     #[test]
     fn get_bookmarks() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let bookmark = test_repo.commander.create_bookmark("test")?;
         let bookmarks = test_repo.commander.get_bookmarks(false)?;
@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn get_bookmarks_list() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let bookmark = test_repo.commander.create_bookmark("test")?;
         let bookmarks = test_repo.commander.get_bookmarks_list(false)?;
@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn get_bookmark_show() -> Result<()> {
-        let mut test_repo = TestRepo::new()?;
+        let test_repo = TestRepo::new()?;
 
         let bookmark = test_repo.commander.create_bookmark("test")?;
         let bookmark_show = test_repo

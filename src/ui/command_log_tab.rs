@@ -145,7 +145,6 @@ impl CommandLogTab {
     }
 }
 
-#[allow(clippy::invisible_characters)]
 impl Component for CommandLogTab {
     fn switch(&mut self, commander: &mut Commander) -> Result<()> {
         let command_history = commander.command_history.lock().unwrap().clone();
@@ -188,7 +187,7 @@ impl Component for CommandLogTab {
                                 .output
                                 .as_ref()
                                 .as_ref()
-                                .map_or(false, |output| output.status.success())
+                                .is_ok_and(|output| output.status.success())
                             {
                                 Color::Blue
                             } else {
@@ -233,7 +232,6 @@ impl Component for CommandLogTab {
         Ok(())
     }
 
-    #[allow(clippy::collapsible_if)]
     fn input(&mut self, _commander: &mut Commander, event: Event) -> Result<ComponentInputResult> {
         if let Event::Key(key) = event {
             if key.kind != KeyEventKind::Press {
