@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use crossterm::event::{Event, KeyCode};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
@@ -5,6 +6,7 @@ use ratatui::{
     text::Span,
     widgets::{Block, BorderType, Borders, Clear, Paragraph},
 };
+use shell_words::split;
 use tui_textarea::TextArea;
 
 use crate::{
@@ -72,12 +74,30 @@ impl Component for CommandPopup<'_> {
             match key.code {
                 KeyCode::Enter => {
                     let command_input = self.command_textarea.lines().join(" ");
-                    let command = command_input.split_whitespace().collect::<Vec<&str>>();
-                    let res = commander.execute_jj_command(command, false, false);
+                    let mut command_input = command_input.as_str();
+
+                    if command_input.trim().is_empty() {
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(None),
+                        ));
+                    }
+
+                    if command_input == "jj" {
+                        command_input = "";
+                    }
+                    command_input = command_input.trim_start_matches("jj ");
+
+                    let res: Result<String> = split(command_input)
+                        .context("Failed to split command input")
+                        .and_then(|command| {
+                            // TODO: Support color. PopupMessage (used by MessagePopup) breaks when colored
+                            Ok(commander.execute_jj_command(command, false, false)?)
+                        });
                     let message = match res {
                         Ok(str) => str,
                         Err(err) => [
-                            format!("Failed to execute jj command: jj {}", command_input,),
+                            format!("Failed to execute jj command: jj {}", command_input),
+                            String::new(),
                             err.to_string(),
                         ]
                         .join("\n"),

@@ -4,7 +4,7 @@ use ratatui::{
     layout::{Alignment, Rect},
     style::{Color, Style, Stylize},
     text::{Span, Text},
-    widgets::{block::Title, BorderType, Borders},
+    widgets::{block::Title, BorderType, Borders, Clear},
     Frame,
 };
 use tui_confirm_dialog::PopupMessage;
@@ -35,6 +35,7 @@ impl Component for MessagePopup<'_> {
             None => Alignment::Center,
         };
 
+        // TODO: Support scrolling long messages
         let popup = PopupMessage::new(title, self.messages.clone())
             .title_alignment(Alignment::Center)
             .text_alignment(text_align)
