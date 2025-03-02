@@ -87,7 +87,7 @@ impl<'a> App<'a> {
         info!("Setting tab to {}", tab);
         self.current_tab = tab;
 
-        self.get_or_init_current_tab(commander)?.switch(commander)?;
+        self.get_or_init_current_tab(commander)?.focus(commander)?;
         Ok(())
     }
 
@@ -248,6 +248,8 @@ impl<'a> App<'a> {
                     }
                 }
             };
+        } else if event == event::Event::FocusGained {
+            self.get_or_init_current_tab(commander)?.focus(commander)?;
         } else {
             match self
                 .get_or_init_current_tab(commander)?

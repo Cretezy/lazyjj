@@ -153,7 +153,7 @@ impl FilesTab {
 }
 
 impl Component for FilesTab {
-    fn switch(&mut self, commander: &mut Commander) -> Result<()> {
+    fn focus(&mut self, commander: &mut Commander) -> Result<()> {
         self.is_current_head = self.head == commander.get_current_head()?;
         self.refresh_files(commander)?;
         self.refresh_diff(commander)?;

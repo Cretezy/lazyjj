@@ -199,23 +199,17 @@ impl LogTab<'_> {
 }
 
 impl Component for LogTab<'_> {
-    fn switch(&mut self, commander: &mut Commander) -> Result<()> {
+    fn focus(&mut self, commander: &mut Commander) -> Result<()> {
+        let latest_head = commander.get_head_latest(&self.head)?;
+        if latest_head != self.head {
+            self.head = latest_head;
+        }
         self.refresh_log_output(commander);
         self.refresh_head_output(commander);
         Ok(())
     }
 
     fn update(&mut self, commander: &mut Commander) -> Result<Option<ComponentAction>> {
-        // get_head_latest is somewhat expensive, do not call it when it's not necessary
-        if !self.is_any_popup_opened() {
-            let latest_head = commander.get_head_latest(&self.head)?;
-            if latest_head != self.head {
-                self.head = latest_head;
-                self.refresh_log_output(commander);
-                self.refresh_head_output(commander);
-            }
-        }
-
         // Check for popup action
         if let Ok(res) = self.popup_rx.try_recv() {
             if res.1.unwrap_or(false) {

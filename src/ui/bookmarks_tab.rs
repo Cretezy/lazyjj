@@ -208,7 +208,7 @@ impl BookmarksTab<'_> {
 }
 
 impl Component for BookmarksTab<'_> {
-    fn switch(&mut self, commander: &mut Commander) -> Result<()> {
+    fn focus(&mut self, commander: &mut Commander) -> Result<()> {
         self.refresh_bookmarks(commander);
         self.refresh_bookmark(commander);
         Ok(())
