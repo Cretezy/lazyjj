@@ -33,6 +33,7 @@ pub struct LogTabKeybindsConfig {
     pub create_new: Option<Keybind>,
     pub create_new_describe: Option<Keybind>,
     pub squash: Option<Keybind>,
+    pub squash_ignore_immutable: Option<Keybind>,
     pub edit_change: Option<Keybind>,
     pub abandon: Option<Keybind>,
     pub describe: Option<Keybind>,

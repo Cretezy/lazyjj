@@ -34,8 +34,13 @@ impl Commander {
 
     /// Squash changes. Maps to `jj squash -u --into <revision>`
     #[instrument(level = "trace", skip(self))]
-    pub fn run_squash(&mut self, revision: &str) -> Result<()> {
-        self.execute_void_jj_command(vec!["squash", "-u", "--into", revision])
+    pub fn run_squash(&mut self, revision: &str, ignore_immutable: bool) -> Result<()> {
+        let mut args = vec!["squash", "-u", "--into", revision];
+        if ignore_immutable {
+            args.push("--ignore-immutable");
+        }
+
+        self.execute_void_jj_command(args)
             .context("Failed executing jj squash")
     }
 
