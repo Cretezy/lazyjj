@@ -146,7 +146,7 @@ impl CommandLogTab {
 }
 
 impl Component for CommandLogTab {
-    fn switch(&mut self, commander: &mut Commander) -> Result<()> {
+    fn focus(&mut self, commander: &mut Commander) -> Result<()> {
         let command_history = commander.command_history.lock().unwrap().clone();
         let selected_index = command_history.first().map(|_| 0);
         self.commands_list_state.select(selected_index);

@@ -36,7 +36,7 @@ pub enum ComponentAction {
 
 pub trait Component {
     // Called when switching to tab
-    fn switch(&mut self, _commander: &mut Commander) -> Result<()> {
+    fn focus(&mut self, _commander: &mut Commander) -> Result<()> {
         Ok(())
     }
 
