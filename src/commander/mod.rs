@@ -147,7 +147,7 @@ impl Commander {
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
-        let mut command = Command::new("jj");
+        let mut command = Command::new(&self.env.jj_bin);
         command.args(args);
         command.args(get_output_args(!self.force_no_color && color, quiet));
 
@@ -235,7 +235,9 @@ pub mod tests {
                 ui.color = "never"
             "#;
 
-            Command::new("jj")
+            let jj_bin = "jj".to_string();
+
+            Command::new(&jj_bin)
                 .arg("git")
                 .arg("init")
                 .arg("--colocate")
@@ -248,6 +250,7 @@ pub mod tests {
                 root: directory.path().to_string_lossy().to_string(),
                 config: Config::default(),
                 default_revset: None,
+                jj_bin,
             };
 
             let mut commander = Commander::new(&env);
