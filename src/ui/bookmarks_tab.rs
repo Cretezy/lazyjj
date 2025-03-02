@@ -129,7 +129,7 @@ impl BookmarksTab<'_> {
         let bookmark_output = bookmark.as_ref().and_then(|bookmark| match bookmark {
             BookmarkLine::Parsed { bookmark, .. } => Some(
                 commander
-                    .get_bookmark_show(bookmark, &diff_format)
+                    .get_bookmark_show(bookmark, &diff_format, true)
                     .map(|diff| tabs_to_spaces(&diff)),
             ),
             _ => None,
@@ -181,7 +181,7 @@ impl BookmarksTab<'_> {
         self.bookmark_output = self.bookmark.as_ref().and_then(|bookmark| match bookmark {
             BookmarkLine::Parsed { bookmark, .. } => Some(
                 commander
-                    .get_bookmark_show(bookmark, &self.diff_format)
+                    .get_bookmark_show(bookmark, &self.diff_format, true)
                     .map(|diff| tabs_to_spaces(&diff)),
             ),
             _ => None,

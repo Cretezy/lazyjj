@@ -93,7 +93,7 @@ impl LogTab<'_> {
         let log_list_state = ListState::default().with_selected(get_head_index(&head, &log_output));
 
         let head_output = commander
-            .get_commit_show(&head.commit_id, &diff_format)
+            .get_commit_show(&head.commit_id, &diff_format, true)
             .map(|text| tabs_to_spaces(&text));
 
         let (popup_tx, popup_rx) = std::sync::mpsc::channel();
@@ -166,7 +166,7 @@ impl LogTab<'_> {
 
     fn refresh_head_output(&mut self, commander: &mut Commander) {
         self.head_output = commander
-            .get_commit_show(&self.head.commit_id, &self.diff_format)
+            .get_commit_show(&self.head.commit_id, &self.diff_format, true)
             .map(|text| tabs_to_spaces(&text));
         self.head_panel.scroll = 0;
     }

@@ -129,11 +129,16 @@ impl Commander {
         &self,
         commit_id: &CommitId,
         diff_format: &DiffFormat,
+        ignore_working_copy: bool,
     ) -> Result<String, CommandError> {
         let mut args = vec!["show", commit_id.as_str()];
         if let Some(diff_format_arg) = diff_format.get_arg() {
             args.push(diff_format_arg);
         }
+        if ignore_working_copy {
+            args.push("--ignore-working-copy");
+        }
+
         Ok(self.execute_jj_command(args, true, true)?.remove_end_line())
     }
 
@@ -360,9 +365,10 @@ mod tests {
         fs::write(test_repo.directory.path().join("README"), b"AAA")?;
 
         let head = test_repo.commander.get_current_head()?;
-        let show = test_repo
-            .commander
-            .get_commit_show(&head.commit_id, &DiffFormat::ColorWords)?;
+        let show =
+            test_repo
+                .commander
+                .get_commit_show(&head.commit_id, &DiffFormat::ColorWords, false)?;
 
         let mut settings = insta::Settings::clone_current();
         settings.add_filter(r"Commit ID: [0-9a-fA-F]{40}", "Commit ID: [COMMIT_ID]");
