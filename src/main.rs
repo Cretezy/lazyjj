@@ -52,9 +52,13 @@ struct Args {
     #[arg(short, long)]
     path: Option<String>,
 
-    // Default revset
+    /// Default revset
     #[arg(short, long)]
     revisions: Option<String>,
+
+    /// Path to jj binary
+    #[arg(long, env = "JJ_BIN")]
+    jj_bin: Option<String>,
 }
 
 fn main() -> Result<()> {
@@ -106,15 +110,17 @@ fn main() -> Result<()> {
         None => current_dir()?,
     };
 
+    let jj_bin = args.jj_bin.unwrap_or("jj".to_string());
+
     // Check that jj exists
-    if let Err(err) = Command::new("jj").arg("help").output() {
+    if let Err(err) = Command::new(&jj_bin).arg("help").output() {
         if err.kind() == ErrorKind::NotFound {
             bail!("jj command not found. Please make sure it is installed: https://martinvonz.github.io/jj/latest/install-and-setup");
         }
     }
 
     // Setup environment
-    let env = Env::new(path, args.revisions)?;
+    let env = Env::new(path, args.revisions, jj_bin)?;
     let mut commander = Commander::new(&env);
 
     // Check that `jj status` works
