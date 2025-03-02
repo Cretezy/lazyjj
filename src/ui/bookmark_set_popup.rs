@@ -2,7 +2,6 @@ use ansi_to_tui::IntoText;
 use anyhow::bail;
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyModifiers};
-use itertools::Itertools;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
