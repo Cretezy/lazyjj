@@ -100,6 +100,7 @@ See all key mappings for the current tab with `?`.
   - Create a new bookmark with `c`
   - Use auto-generated name with `g`
 - Squash current changes (in @) to the selected change with `s`
+  - Squash current changes to the selected change ignoring immutability with `S`
 - Git fetch with `f` (`jj git fetch`)
   - Git fetch all remotes with `F` (`jj git fetch --all-remotes`)
 - Git push with `p` (`jj git push`)

@@ -4,7 +4,7 @@ use ratatui::{
     layout::{Alignment, Rect},
     style::{Color, Style, Stylize},
     text::{Span, Text},
-    widgets::{block::Title, BorderType, Borders, Clear},
+    widgets::{block::Title, BorderType, Borders},
     Frame,
 };
 use tui_confirm_dialog::PopupMessage;

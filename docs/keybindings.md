@@ -32,6 +32,7 @@ refresh = ["shift+r", "f5"]
 create-new = "n"
 create-new-describe = "shift+n"
 squash = "s"
+squash-ignore-immutable = "shift+s"
 edit-change = "e"
 abandon = "a"
 describe = "d"

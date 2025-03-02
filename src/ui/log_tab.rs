@@ -57,6 +57,8 @@ pub struct LogTab<'a> {
     describe_textarea: Option<TextArea<'a>>,
     describe_after_new: bool,
 
+    squash_ignore_immutable: bool,
+
     config: Config,
     keybinds: LogTabKeybinds,
 }
@@ -135,6 +137,8 @@ impl LogTab<'_> {
 
             describe_textarea: None,
             describe_after_new: false,
+
+            squash_ignore_immutable: false,
 
             config: commander.env.config.clone(),
             keybinds,
@@ -248,7 +252,10 @@ impl Component for LogTab<'_> {
                         }
                     }
                     SQUASH_POPUP_ID => {
-                        commander.run_squash(self.head.commit_id.as_str())?;
+                        commander.run_squash(
+                            self.head.commit_id.as_str(),
+                            self.squash_ignore_immutable,
+                        )?;
                         self.head = commander.get_current_head()?;
                         self.refresh_log_output(commander);
                         self.refresh_head_output(commander);
@@ -565,20 +572,43 @@ impl Component for LogTab<'_> {
 
                     self.describe_after_new = describe;
                 }
-                LogTabEvent::Squash => {
+                LogTabEvent::Squash { ignore_immutable } => {
+                    if self.head.change_id == commander.get_current_head()?.change_id {
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                title: "Squash".into(),
+                                messages: "Cannot squash onto current change".into_text()?,
+                                text_align: None,
+                            }))),
+                        ));
+                    }
+                    if self.head.immutable && !ignore_immutable {
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                title: "Squash".into(),
+                                messages: "Cannot squash onto immutable change".into_text()?,
+                                text_align: None,
+                            }))),
+                        ));
+                    }
+
+                    let mut lines = vec![
+                        Line::from("Are you sure you want to squash @ into this change?"),
+                        Line::from(format!("Squash into {}", self.head.change_id.as_str())),
+                    ];
+                    if ignore_immutable {
+                        lines.push(Line::from("This change is immutable."));
+                    }
                     self.popup = ConfirmDialogState::new(
                         SQUASH_POPUP_ID,
                         Span::styled(" Squash ", Style::new().bold().cyan()),
-                        Text::from(vec![
-                            Line::from("Are you sure you want to squash @ into this change?"),
-                            Line::from(format!("Squash into {}", self.head.change_id.as_str())),
-                        ])
-                        .fg(Color::default()),
+                        Text::from(lines).fg(Color::default()),
                     )
                     .with_yes_button(ButtonLabel::YES.clone())
                     .with_no_button(ButtonLabel::NO.clone())
                     .with_listener(Some(self.popup_tx.clone()))
                     .open();
+                    self.squash_ignore_immutable = ignore_immutable;
                 }
                 LogTabEvent::EditChange => {
                     if self.head.immutable {
