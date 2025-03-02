@@ -2,6 +2,7 @@ use ansi_to_tui::IntoText;
 use anyhow::bail;
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyModifiers};
+use itertools::Itertools;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
@@ -58,13 +59,11 @@ fn generate_options(
 
     if let Some(change_id) = change_id {
         let generated_name = generate_name(&commander.env.config.bookmark_prefix(), change_id);
-        let exists = if let Ok(bookmarks) = bookmarks.as_ref() {
+        let exists = bookmarks.as_ref().is_ok_and(|bookmarks| {
             bookmarks
                 .iter()
                 .any(|bookmark| bookmark.name == generated_name)
-        } else {
-            false
-        };
+        });
         options.push(BookmarkSetOption::GeneratedName(generated_name, exists));
     }
 
