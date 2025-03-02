@@ -59,6 +59,8 @@ pub struct LogTab<'a> {
 
     squash_ignore_immutable: bool,
 
+    edit_ignore_immutable: bool,
+
     config: Config,
     keybinds: LogTabKeybinds,
 }
@@ -139,6 +141,8 @@ impl LogTab<'_> {
             describe_after_new: false,
 
             squash_ignore_immutable: false,
+
+            edit_ignore_immutable: false,
 
             config: commander.env.config.clone(),
             keybinds,
@@ -231,7 +235,8 @@ impl Component for LogTab<'_> {
                         return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
                     }
                     EDIT_POPUP_ID => {
-                        commander.run_edit(self.head.commit_id.as_str())?;
+                        commander
+                            .run_edit(self.head.commit_id.as_str(), self.edit_ignore_immutable)?;
                         self.refresh_log_output(commander);
                         self.refresh_head_output(commander);
                         return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
@@ -610,11 +615,11 @@ impl Component for LogTab<'_> {
                     .open();
                     self.squash_ignore_immutable = ignore_immutable;
                 }
-                LogTabEvent::EditChange => {
-                    if self.head.immutable {
+                LogTabEvent::EditChange { ignore_immutable } => {
+                    if self.head.immutable && !ignore_immutable {
                         return Ok(ComponentInputResult::HandledAction(
                             ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                title: "Edit".into(),
+                                title: " Edit ".into(),
                                 messages: vec![
                                     "The change cannot be edited because it is immutable.".into(),
                                 ]
@@ -622,21 +627,25 @@ impl Component for LogTab<'_> {
                                 text_align: None,
                             }))),
                         ));
-                    } else {
-                        self.popup = ConfirmDialogState::new(
-                            EDIT_POPUP_ID,
-                            Span::styled(" Edit ", Style::new().bold().cyan()),
-                            Text::from(vec![
-                                Line::from("Are you sure you want to edit an existing change?"),
-                                Line::from(format!("Change: {}", self.head.change_id.as_str())),
-                            ])
-                            .fg(Color::default()),
-                        )
-                        .with_yes_button(ButtonLabel::YES.clone())
-                        .with_no_button(ButtonLabel::NO.clone())
-                        .with_listener(Some(self.popup_tx.clone()))
-                        .open();
                     }
+
+                    let mut lines = vec![
+                        Line::from("Are you sure you want to edit an existing change?"),
+                        Line::from(format!("Change: {}", self.head.change_id.as_str())),
+                    ];
+                    if ignore_immutable {
+                        lines.push(Line::from("This change is immutable."))
+                    }
+                    self.popup = ConfirmDialogState::new(
+                        EDIT_POPUP_ID,
+                        Span::styled(" Edit ", Style::new().bold().cyan()),
+                        Text::from(lines).fg(Color::default()),
+                    )
+                    .with_yes_button(ButtonLabel::YES.clone())
+                    .with_no_button(ButtonLabel::NO.clone())
+                    .with_listener(Some(self.popup_tx.clone()))
+                    .open();
+                    self.edit_ignore_immutable = ignore_immutable;
                 }
                 LogTabEvent::Abandon => {
                     if self.head.immutable {

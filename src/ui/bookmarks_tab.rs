@@ -66,6 +66,8 @@ pub struct BookmarksTab<'a> {
     describe_after_new: bool,
     describe_after_new_change: Option<ChangeId>,
 
+    edit_ignore_immutable: bool,
+
     popup: ConfirmDialogState,
     popup_tx: std::sync::mpsc::Sender<Listener>,
     popup_rx: std::sync::mpsc::Receiver<Listener>,
@@ -154,6 +156,8 @@ impl BookmarksTab<'_> {
             describe_after_new: false,
             describe_textarea: None,
             describe_after_new_change: None,
+
+            edit_ignore_immutable: false,
 
             popup: ConfirmDialogState::default(),
             popup_tx,
@@ -286,7 +290,8 @@ impl Component for BookmarksTab<'_> {
                     EDIT_POPUP_ID => {
                         if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref()
                         {
-                            commander.run_edit(&bookmark.to_string())?;
+                            commander
+                                .run_edit(&bookmark.to_string(), self.edit_ignore_immutable)?;
                             let head = commander.get_current_head()?;
                             return Ok(Some(ComponentAction::ViewLog(head)));
                         }
@@ -864,10 +869,13 @@ impl Component for BookmarksTab<'_> {
                         }
                     }
                 }
-                KeyCode::Char('e') => {
+                KeyCode::Char('e') | KeyCode::Char('E') => {
                     if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref() {
+                        let ignore_immutable = key.code == KeyCode::Char('E');
                         if bookmark.present {
-                            if commander.check_revision_immutable(&bookmark.to_string())? {
+                            if commander.check_revision_immutable(&bookmark.to_string())?
+                                && !ignore_immutable
+                            {
                                 return Ok(ComponentInputResult::HandledAction(
                                     ComponentAction::SetPopup(Some(Box::new(MessagePopup {
                                         title: "Edit".into(),
@@ -879,22 +887,21 @@ impl Component for BookmarksTab<'_> {
                                         text_align: None,
                                     }))),
                                 ));
-                            } else {
-                                self.popup = ConfirmDialogState::new(
-                                    EDIT_POPUP_ID,
-                                    Span::styled(" Edit ", Style::new().bold().cyan()),
-                                    Text::from(vec![
-                                        Line::from(
-                                            "Are you sure you want to edit an existing change?",
-                                        ),
-                                        Line::from(format!("Bookmark: {}", bookmark)),
-                                    ]),
-                                )
-                                .with_yes_button(ButtonLabel::YES.clone())
-                                .with_no_button(ButtonLabel::NO.clone())
-                                .with_listener(Some(self.popup_tx.clone()))
-                                .open();
                             }
+
+                            self.popup = ConfirmDialogState::new(
+                                EDIT_POPUP_ID,
+                                Span::styled(" Edit ", Style::new().bold().cyan()),
+                                Text::from(vec![
+                                    Line::from("Are you sure you want to edit an existing change?"),
+                                    Line::from(format!("Bookmark: {}", bookmark)),
+                                ]),
+                            )
+                            .with_yes_button(ButtonLabel::YES.clone())
+                            .with_no_button(ButtonLabel::NO.clone())
+                            .with_listener(Some(self.popup_tx.clone()))
+                            .open();
+                            self.edit_ignore_immutable = ignore_immutable;
                         }
                     }
                 }
