@@ -37,13 +37,13 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v4
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
         with:
           target: ${{ matrix.target }}
       - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.6.7
+        uses: cargo-bins/cargo-binstall@main
       - name: Install jj
         run: cargo binstall --no-confirm --strategies crate-meta-data jj-cli
       - name: Test
@@ -59,7 +59,7 @@ jobs:
         build: [linux-musl, macos-x86_64, macos-aarch64, win-msvc]
         include:
           - build: linux-musl
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             target: x86_64-unknown-linux-musl
           - build: macos-x86_64
             os: macos-13
@@ -75,7 +75,7 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v4
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
         with:
@@ -99,7 +99,7 @@ jobs:
             echo "ASSET=$name.tar.gz" >> $GITHUB_ENV
           fi
       - name: Upload archive
-        uses: actions/upload-artifact@v4.3.3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ASSET }}
           path: ${{ env.ASSET }}
@@ -108,7 +108,7 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v4
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
         with:
@@ -120,7 +120,7 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v4
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
         with:
