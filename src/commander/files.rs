@@ -22,6 +22,7 @@ pub enum DiffType {
     Added,
     Modified,
     Deleted,
+    Renamed,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -35,6 +36,7 @@ impl DiffType {
             "A" => Some(DiffType::Added),
             "M" => Some(DiffType::Modified),
             "D" => Some(DiffType::Deleted),
+            "R" => Some(DiffType::Renamed),
             _ => None,
         }
     }
@@ -43,6 +45,7 @@ impl DiffType {
         match self {
             DiffType::Added => Color::Green,
             DiffType::Modified => Color::Cyan,
+            DiffType::Renamed => Color::Cyan,
             DiffType::Deleted => Color::Red,
         }
     }
@@ -50,6 +53,7 @@ impl DiffType {
 
 // Example line: `A README.md`, `M src/main.rs`, `D Hello World`
 static FILES_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(.) (.*)").unwrap());
+static RENAME_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{(.*?) => (.*?)\}").unwrap());
 static CONFLICTS_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(.*)    .*").unwrap());
 
 impl Commander {
@@ -123,14 +127,30 @@ impl Commander {
     pub fn get_file_diff(
         &self,
         head: &Head,
-        current_file: &str,
+        current_file: &File,
         diff_format: &DiffFormat,
-    ) -> Result<String, CommandError> {
-        let mut args = vec!["diff", "-r", head.commit_id.as_str(), current_file];
+    ) -> Result<Option<String>, CommandError> {
+        let Some(path) = current_file.path.as_ref() else {
+            return Ok(None);
+        };
+
+        let path = if let (true, Some(captures)) = (
+            current_file.diff_type == Some(DiffType::Renamed),
+            RENAME_REGEX.captures(&path),
+        ) {
+            match captures.get(2) {
+                Some(path) => path.as_str(),
+                None => return Ok(None),
+            }
+        } else {
+            &path
+        };
+
+        let mut args = vec!["diff", "-r", head.commit_id.as_str(), path];
         if let Some(diff_format_arg) = diff_format.get_arg() {
             args.push(diff_format_arg);
         }
-        self.execute_jj_command(args, true, true)
+        self.execute_jj_command(args, true, true).map(|x| Some(x))
     }
 }
 
@@ -211,21 +231,26 @@ mod tests {
     fn get_file_diff() -> Result<()> {
         let test_repo = TestRepo::new()?;
 
-        let file_path = test_repo.directory.path().join("README");
+        let mut file_path = test_repo.directory.path().join("README");
 
         // Add file
         {
             fs::write(&file_path, b"AAA")?;
+            let file = File {
+                path: Some("README".to_string()),
+                diff_type: Some(DiffType::Added),
+                line: "A README".to_string(),
+            };
 
             let head = test_repo.commander.get_current_head()?;
             assert_debug_snapshot!(test_repo.commander.get_file_diff(
                 &head,
-                "README",
+                &file,
                 &DiffFormat::ColorWords
             )?);
             assert_debug_snapshot!(test_repo.commander.get_file_diff(
                 &head,
-                "README",
+                &file,
                 &DiffFormat::Git
             )?);
         }
@@ -236,33 +261,74 @@ mod tests {
         // Modify file
         {
             fs::write(&file_path, b"BBB")?;
+            let file = File {
+                path: Some("README".to_string()),
+                diff_type: Some(DiffType::Modified),
+                line: "M README".to_string(),
+            };
 
             let head = test_repo.commander.get_current_head()?;
             assert_debug_snapshot!(test_repo.commander.get_file_diff(
                 &head,
-                "README",
+                &file,
                 &DiffFormat::ColorWords
             )?);
             assert_debug_snapshot!(test_repo.commander.get_file_diff(
                 &head,
-                "README",
+                &file,
                 &DiffFormat::Git
             )?);
         }
 
-        // Delete file
+        // Commit
+        test_repo.commander.execute_void_jj_command(vec!["new"])?;
+
+        // Rename file
         {
-            fs::remove_file(&file_path)?;
+            let file_path_new = test_repo.directory.path().join("README2");
+            fs::rename(file_path, &file_path_new)?;
+            file_path = file_path_new;
+
+            let file = File {
+                path: Some("{README => README2}".to_string()),
+                diff_type: Some(DiffType::Renamed),
+                line: "R {README => README2}".to_string(),
+            };
 
             let head = test_repo.commander.get_current_head()?;
             assert_debug_snapshot!(test_repo.commander.get_file_diff(
                 &head,
-                "README",
+                &file,
                 &DiffFormat::ColorWords
             )?);
             assert_debug_snapshot!(test_repo.commander.get_file_diff(
                 &head,
-                "README",
+                &file,
+                &DiffFormat::Git
+            )?);
+        }
+
+        // Commit
+        test_repo.commander.execute_void_jj_command(vec!["new"])?;
+
+        // Delete file
+        {
+            fs::remove_file(&file_path)?;
+            let file = File {
+                path: Some("README2".to_string()),
+                diff_type: Some(DiffType::Deleted),
+                line: "D README2".to_string(),
+            };
+
+            let head = test_repo.commander.get_current_head()?;
+            assert_debug_snapshot!(test_repo.commander.get_file_diff(
+                &head,
+                &file,
+                &DiffFormat::ColorWords
+            )?);
+            assert_debug_snapshot!(test_repo.commander.get_file_diff(
+                &head,
+                &file,
                 &DiffFormat::Git
             )?);
         }

@@ -1,0 +1,7 @@
+---
+source: src/commander/files.rs
+expression: "test_repo.commander.get_file_diff(&head, &file, &DiffFormat::Git)?"
+---
+Some(
+    "diff --git a/README2 b/README2\ndeleted file mode 100644\nindex f6d5afa370..0000000000\n--- a/README2\n+++ /dev/null\n@@ -1,1 +0,0 @@\n-BBB\n\\ No newline at end of file\n",
+)

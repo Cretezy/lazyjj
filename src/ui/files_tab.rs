@@ -29,7 +29,7 @@ pub struct FilesTab {
     files_list_state: ListState,
     files_height: u16,
 
-    pub file: Option<String>,
+    pub file: Option<File>,
     diff_panel: DetailsPanel,
     diff_output: Result<Option<String>, CommandError>,
     diff_format: DiffFormat,
@@ -38,16 +38,18 @@ pub struct FilesTab {
 }
 
 fn get_current_file_index(
-    current_file: Option<&String>,
+    current_file: Option<&File>,
     files_output: Result<&Vec<File>, &CommandError>,
 ) -> Option<usize> {
     if let (Some(current_file), Ok(files_output)) = (current_file, files_output) {
-        files_output
-            .iter()
-            .position(|file| file.path.as_ref() == Some(current_file))
-    } else {
-        None
+        if let Some(path) = current_file.path.as_ref() {
+            return files_output
+                .iter()
+                .position(|file| file.path.as_ref() == Some(path));
+        }
     }
+
+    None
 }
 
 impl FilesTab {
@@ -63,11 +65,14 @@ impl FilesTab {
         let current_file = files_output
             .as_ref()
             .ok()
-            .and_then(|files_output| files_output.first().and_then(|change| change.path.clone()));
+            .and_then(|files_output| files_output.first())
+            .map(|file| file.to_owned());
         let diff_output = current_file
             .as_ref()
             .map(|current_change| commander.get_file_diff(&head, current_change, &diff_format))
-            .map_or(Ok(None), |r| r.map(|diff| Some(tabs_to_spaces(&diff))));
+            .map_or(Ok(None), |r| {
+                r.map(|diff| diff.map(|diff| tabs_to_spaces(&diff)))
+            });
 
         let files_list_state = ListState::default().with_selected(get_current_file_index(
             current_file.as_ref(),
@@ -98,10 +103,12 @@ impl FilesTab {
         self.is_current_head = self.head == commander.get_current_head()?;
 
         self.refresh_files(commander)?;
-        self.file =
-            self.files_output.as_ref().ok().and_then(|files_output| {
-                files_output.first().and_then(|change| change.path.clone())
-            });
+        self.file = self
+            .files_output
+            .as_ref()
+            .ok()
+            .and_then(|files_output| files_output.first())
+            .map(|file| file.to_owned());
         self.refresh_diff(commander)?;
 
         Ok(())
@@ -124,7 +131,9 @@ impl FilesTab {
             .map(|current_file| {
                 commander.get_file_diff(&self.head, current_file, &self.diff_format)
             })
-            .map_or(Ok(None), |r| r.map(|diff| Some(tabs_to_spaces(&diff))));
+            .map_or(Ok(None), |r| {
+                r.map(|diff| diff.map(|diff| tabs_to_spaces(&diff)))
+            });
         self.diff_panel.scroll = 0;
         Ok(())
     }
@@ -142,10 +151,8 @@ impl FilesTab {
             }
             .map(|x| x.to_owned());
             if let Some(next_file) = next_file {
-                if next_file.path.is_some() {
-                    self.file.clone_from(&next_file.path);
-                    self.refresh_diff(commander)?;
-                }
+                self.file = Some(next_file.to_owned());
+                self.refresh_diff(commander)?;
             }
         }
         Ok(())
@@ -155,6 +162,7 @@ impl FilesTab {
 impl Component for FilesTab {
     fn focus(&mut self, commander: &mut Commander) -> Result<()> {
         self.is_current_head = self.head == commander.get_current_head()?;
+        self.head = commander.get_head_latest(&self.head)?;
         self.refresh_files(commander)?;
         self.refresh_diff(commander)?;
         Ok(())
