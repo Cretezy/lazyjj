@@ -310,7 +310,7 @@ impl Component for FilesTab {
                     )?;
                 }
                 KeyCode::Char('w') => {
-                    self.diff_format = self.diff_format.get_next(self.config.has_diff_tool());
+                    self.diff_format = self.diff_format.get_next(self.config.diff_tool());
                     self.refresh_diff(commander)?;
                 }
                 KeyCode::Char('R') | KeyCode::F(5) => {

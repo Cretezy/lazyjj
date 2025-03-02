@@ -182,9 +182,7 @@ impl Commander {
     ) -> Result<String, CommandError> {
         let bookmark_arg = &bookmark.to_string();
         let mut args = vec!["show", bookmark_arg];
-        if let Some(diff_format_arg) = diff_format.get_arg() {
-            args.push(diff_format_arg);
-        }
+        args.append(&mut diff_format.get_args());
         if ignore_working_copy {
             args.push("--ignore-working-copy");
         }

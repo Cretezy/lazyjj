@@ -546,7 +546,7 @@ impl Component for LogTab<'_> {
                     self.refresh_head_output(commander);
                 }
                 LogTabEvent::ToggleDiffFormat => {
-                    self.diff_format = self.diff_format.get_next(self.config.has_diff_tool());
+                    self.diff_format = self.diff_format.get_next(self.config.diff_tool());
                     self.refresh_head_output(commander);
                 }
                 LogTabEvent::Refresh => {
