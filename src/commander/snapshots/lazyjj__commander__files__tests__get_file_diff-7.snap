@@ -3,5 +3,5 @@ source: src/commander/files.rs
 expression: "test_repo.commander.get_file_diff(&head, &file, &DiffFormat::ColorWords)?"
 ---
 Some(
-    "Modified regular file README2 (README => README2):\n",
+    "Removed regular file README2:\n   1     : BBB\n",
 )
