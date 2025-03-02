@@ -35,6 +35,7 @@ pub struct LogTabKeybindsConfig {
     pub squash: Option<Keybind>,
     pub squash_ignore_immutable: Option<Keybind>,
     pub edit_change: Option<Keybind>,
+    pub edit_change_ignore_immutable: Option<Keybind>,
     pub abandon: Option<Keybind>,
     pub describe: Option<Keybind>,
     pub edit_revset: Option<Keybind>,

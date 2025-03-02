@@ -9,14 +9,14 @@ https://github.com/Cretezy/lazyjj/assets/2672503/b5e6b4f1-ebdb-448f-af9e-361e86f
 - Log
   - Scroll through the jj log and view change details in side panel
   - Create new changes from selected change with `n`
-  - Edit changes with `e`
+  - Edit changes with `e`/`E`
   - Desribe changes with `d`
   - Abandon changes with `a`
   - Toggle between color words and git diff with `p`
   - See different revset with `r`
   - Set a bookmark to selected change with `b`
   - Fetch/push with `f`/`p`
-  - Squash current changes to selected change with `s`
+  - Squash current changes to selected change with `s`/`S`
 - Files
   - View files in current change and diff in side panel
   - See a change's files from the log tab with `Enter`
@@ -26,6 +26,7 @@ https://github.com/Cretezy/lazyjj/assets/2672503/b5e6b4f1-ebdb-448f-af9e-361e86f
   - View list of bookmarks, including from all remotes with `a`
   - Create with `c`, rename with `r`, delete with `d`, forget with `f`
   - Track bookmarks with `t`, untrack bookmarks with `T`
+  - Create new change with `n`, edit change with `e`/`E`
 - Command log: View every command lazyjj executes
 - Config: Configure lazyjj with your jj config
 - Command box: Run jj commands directly in lazyjj with `:`
@@ -90,7 +91,8 @@ See all key mappings for the current tab with `?`.
 - Toggle details panel wrapping with `W`
 - Create new change after highlighted change with `n` (`jj new`)
   - Create new change and describe with `N` (`jj new -m`)
-- Edit highlighted change `e` (`jj edit`)
+- Edit highlighted change with `e` (`jj edit`)
+  - Edit highlighted change ignoring immutability with `E` (`jj edit --ignore-immutable`)
 - Abandon a change with `a` (`jj abandon`)
 - Describe the highlighted change with `d` (`jj describe`)
   - Save with `Ctrl+s`
@@ -99,8 +101,8 @@ See all key mappings for the current tab with `?`.
   - Scroll in bookmark list with `j`/`k`
   - Create a new bookmark with `c`
   - Use auto-generated name with `g`
-- Squash current changes (in @) to the selected change with `s`
-  - Squash current changes to the selected change ignoring immutability with `S`
+- Squash current changes (in @) to the selected change with `s` (`jj squash`)
+  - Squash current changes to the selected change ignoring immutability with `S` (`jj squash --ignore-immutable`)
 - Git fetch with `f` (`jj git fetch`)
   - Git fetch all remotes with `F` (`jj git fetch --all-remotes`)
 - Git push with `p` (`jj git push`)
@@ -126,6 +128,8 @@ See all key mappings for the current tab with `?`.
 - Toggle details panel wrapping with `W`
 - Create a new change after the highlighted bookmark's change with `n` (`jj new`)
   - Create a new change and describe with `N` (`jj new -m`)
+- Edit the highlighted bookmark's change with `e` (`jj edit`)
+  - Edit the highlighted bookmark's change ignoring immutability with `E` (`jj edit --ignore-immutable`)
 
 ### Command log tab
 

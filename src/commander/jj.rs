@@ -13,8 +13,13 @@ impl Commander {
 
     /// Edit change. Maps to `jj edit <commit>`
     #[instrument(level = "trace", skip(self))]
-    pub fn run_edit(&self, revision: &str) -> Result<()> {
-        self.execute_void_jj_command(vec!["edit", revision])
+    pub fn run_edit(&self, revision: &str, ignore_immutable: bool) -> Result<()> {
+        let mut args = vec!["edit", revision];
+        if ignore_immutable {
+            args.push("--ignore-immutable");
+        }
+
+        self.execute_void_jj_command(args)
             .context("Failed executing jj edit")
     }
 
@@ -192,7 +197,9 @@ mod tests {
         let head = test_repo.commander.get_current_head()?;
         test_repo.commander.run_new(head.commit_id.as_str())?;
         assert_ne!(head, test_repo.commander.get_current_head()?);
-        test_repo.commander.run_edit(head.commit_id.as_str())?;
+        test_repo
+            .commander
+            .run_edit(head.commit_id.as_str(), false)?;
         assert_eq!(
             test_repo
                 .commander
