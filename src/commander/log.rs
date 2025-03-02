@@ -132,9 +132,7 @@ impl Commander {
         ignore_working_copy: bool,
     ) -> Result<String, CommandError> {
         let mut args = vec!["show", commit_id.as_str()];
-        if let Some(diff_format_arg) = diff_format.get_arg() {
-            args.push(diff_format_arg);
-        }
+        args.append(&mut diff_format.get_args());
         if ignore_working_copy {
             args.push("--ignore-working-copy");
         }

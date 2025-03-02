@@ -50,6 +50,8 @@ You can optionally configure the following options through your jj config:
 - `lazyjj.highlight-color`: Changes the highlight color. Can use named colors. Defaults to `#323264`
 - `lazyjj.diff-format`: Change the default diff format. Can be `color-words` or `git`. Defaults to `color_words`
   - If `lazyjj.diff-format` is not set but `ui.diff.format` is, the latter will be used
+- `lazyjj.diff-tool`: Specify which diff tool to use by default
+  - If `lazyjj.diff-tool` is not set but `ui.diff.tool` is, the latter will be used
 - `lazyjj.bookmark-prefix`: Change the bookmark name prefix for generated bookmark names. Defaults to `push-`
   - If `lazyjj.bookmark-prefix` is not set but `git.push-bookmark-prefix` is, the latter will be used
 - `lazyjj.layout`: Changes the layout of the main and details panel. Can be `horizontal` (default) or `vertical`

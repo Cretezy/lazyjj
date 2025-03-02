@@ -16,6 +16,8 @@ pub struct Config {
     lazyjj_highlight_color: Option<Color>,
     #[serde(rename = "lazyjj.diff-format")]
     lazyjj_diff_format: Option<DiffFormat>,
+    #[serde(rename = "lazyjj.diff-tool")]
+    lazyjj_diff_tool: Option<String>,
     #[serde(rename = "lazyjj.bookmark-prefix")]
     lazyjj_bookmark_prefix: Option<String>,
     #[serde(rename = "lazyjj.layout")]
@@ -45,6 +47,7 @@ pub struct JjConfig {
 pub struct JjConfigLazyjj {
     highlight_color: Option<Color>,
     diff_format: Option<DiffFormat>,
+    diff_tool: Option<String>,
     bookmark_prefix: Option<String>,
     layout: Option<JJLayout>,
     layout_percent: Option<u16>,
@@ -72,17 +75,26 @@ pub struct JjConfigGit {
 
 impl Config {
     pub fn diff_format(&self) -> DiffFormat {
-        let default = if self.has_diff_tool() {
-            DiffFormat::DiffTool
+        let default = if let Some(diff_tool) = self.diff_tool() {
+            DiffFormat::DiffTool(diff_tool)
         } else {
             DiffFormat::ColorWords
         };
         self.lazyjj_diff_format
-            .unwrap_or(self.ui_diff_format.unwrap_or(default))
+            .clone()
+            .unwrap_or(self.ui_diff_format.clone().unwrap_or(default))
     }
 
-    pub fn has_diff_tool(&self) -> bool {
-        self.ui_diff_tool.is_some()
+    pub fn diff_tool(&self) -> Option<Option<String>> {
+        if let Some(diff_tool) = self.lazyjj_diff_tool.as_ref() {
+            return Some(Some(diff_tool.to_owned()));
+        }
+
+        if self.ui_diff_tool.is_some() {
+            return Some(None);
+        }
+
+        None
     }
 
     pub fn highlight_color(&self) -> Color {
@@ -169,7 +181,11 @@ impl Env {
                         lazyjj_diff_format: config
                             .lazyjj
                             .as_ref()
-                            .and_then(|lazyjj| lazyjj.diff_format),
+                            .and_then(|lazyjj| lazyjj.diff_format.clone()),
+                        lazyjj_diff_tool: config
+                            .lazyjj
+                            .as_ref()
+                            .and_then(|lazyjj| lazyjj.diff_tool.clone()),
                         lazyjj_bookmark_prefix: config
                             .lazyjj
                             .as_ref()
@@ -186,7 +202,7 @@ impl Env {
                         ui_diff_format: config
                             .ui
                             .as_ref()
-                            .and_then(|ui| ui.diff.as_ref().and_then(|diff| diff.format)),
+                            .and_then(|ui| ui.diff.as_ref().and_then(|diff| diff.format.clone())),
                         ui_diff_tool: config.ui.as_ref().and_then(|ui| {
                             ui.diff
                                 .as_ref()
@@ -208,25 +224,25 @@ impl Env {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Default, Copy, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Default, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum DiffFormat {
     #[default]
     ColorWords,
     Git,
-    DiffTool,
+    DiffTool(Option<String>),
     // Unused
     Summary,
     Stat,
 }
 
 impl DiffFormat {
-    pub fn get_next(&self, has_diff_tool: bool) -> DiffFormat {
+    pub fn get_next(&self, diff_tool: Option<Option<String>>) -> DiffFormat {
         match self {
             DiffFormat::ColorWords => DiffFormat::Git,
             DiffFormat::Git => {
-                if has_diff_tool {
-                    DiffFormat::DiffTool
+                if let Some(diff_tool) = diff_tool {
+                    DiffFormat::DiffTool(diff_tool)
                 } else {
                     DiffFormat::ColorWords
                 }

@@ -148,9 +148,7 @@ impl Commander {
         };
 
         let mut args = vec!["diff", "-r", head.commit_id.as_str(), path];
-        if let Some(diff_format_arg) = diff_format.get_arg() {
-            args.push(diff_format_arg);
-        }
+        args.append(&mut diff_format.get_args());
         if ignore_working_copy {
             args.push("--ignore-working-copy");
         }

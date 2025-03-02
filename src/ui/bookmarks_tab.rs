@@ -761,7 +761,7 @@ impl Component for BookmarksTab<'_> {
                     );
                 }
                 KeyCode::Char('w') => {
-                    self.diff_format = self.diff_format.get_next(self.config.has_diff_tool());
+                    self.diff_format = self.diff_format.get_next(self.config.diff_tool());
                     self.refresh_bookmark(commander);
                 }
                 KeyCode::Char('R') | KeyCode::F(5) => {

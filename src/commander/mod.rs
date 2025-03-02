@@ -25,13 +25,14 @@ use std::{
 use thiserror::Error;
 
 impl DiffFormat {
-    pub fn get_arg(&self) -> Option<&str> {
+    pub fn get_args(&self) -> Vec<&str> {
         match self {
-            DiffFormat::ColorWords => Some("--color-words"),
-            DiffFormat::Git => Some("--git"),
-            DiffFormat::Summary => Some("--summary"),
-            DiffFormat::Stat => Some("--stat"),
-            DiffFormat::DiffTool => None,
+            DiffFormat::ColorWords => vec!["--color-words"],
+            DiffFormat::Git => vec!["--git"],
+            DiffFormat::Summary => vec!["--summary"],
+            DiffFormat::Stat => vec!["--stat"],
+            DiffFormat::DiffTool(Some(tool)) => vec!["--tool", tool],
+            DiffFormat::DiffTool(None) => vec![],
         }
     }
 }
