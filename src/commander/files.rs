@@ -129,6 +129,7 @@ impl Commander {
         head: &Head,
         current_file: &File,
         diff_format: &DiffFormat,
+        ignore_working_copy: bool,
     ) -> Result<Option<String>, CommandError> {
         let Some(path) = current_file.path.as_ref() else {
             return Ok(None);
@@ -150,6 +151,10 @@ impl Commander {
         if let Some(diff_format_arg) = diff_format.get_arg() {
             args.push(diff_format_arg);
         }
+        if ignore_working_copy {
+            args.push("--ignore-working-copy");
+        }
+
         self.execute_jj_command(args, true, true).map(Some)
     }
 }
@@ -246,12 +251,14 @@ mod tests {
             assert_debug_snapshot!(test_repo.commander.get_file_diff(
                 &head,
                 &file,
-                &DiffFormat::ColorWords
+                &DiffFormat::ColorWords,
+                false
             )?);
             assert_debug_snapshot!(test_repo.commander.get_file_diff(
                 &head,
                 &file,
-                &DiffFormat::Git
+                &DiffFormat::Git,
+                false
             )?);
         }
 
@@ -271,12 +278,14 @@ mod tests {
             assert_debug_snapshot!(test_repo.commander.get_file_diff(
                 &head,
                 &file,
-                &DiffFormat::ColorWords
+                &DiffFormat::ColorWords,
+                true
             )?);
             assert_debug_snapshot!(test_repo.commander.get_file_diff(
                 &head,
                 &file,
-                &DiffFormat::Git
+                &DiffFormat::Git,
+                true
             )?);
         }
 
@@ -299,12 +308,14 @@ mod tests {
             assert_debug_snapshot!(test_repo.commander.get_file_diff(
                 &head,
                 &file,
-                &DiffFormat::ColorWords
+                &DiffFormat::ColorWords,
+                true
             )?);
             assert_debug_snapshot!(test_repo.commander.get_file_diff(
                 &head,
                 &file,
-                &DiffFormat::Git
+                &DiffFormat::Git,
+                true
             )?);
         }
 
@@ -324,12 +335,14 @@ mod tests {
             assert_debug_snapshot!(test_repo.commander.get_file_diff(
                 &head,
                 &file,
-                &DiffFormat::ColorWords
+                &DiffFormat::ColorWords,
+                true
             )?);
             assert_debug_snapshot!(test_repo.commander.get_file_diff(
                 &head,
                 &file,
-                &DiffFormat::Git
+                &DiffFormat::Git,
+                true
             )?);
         }
 

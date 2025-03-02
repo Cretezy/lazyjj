@@ -69,7 +69,9 @@ impl FilesTab {
             .map(|file| file.to_owned());
         let diff_output = current_file
             .as_ref()
-            .map(|current_change| commander.get_file_diff(&head, current_change, &diff_format))
+            .map(|current_change| {
+                commander.get_file_diff(&head, current_change, &diff_format, true)
+            })
             .map_or(Ok(None), |r| {
                 r.map(|diff| diff.map(|diff| tabs_to_spaces(&diff)))
             });
@@ -129,7 +131,7 @@ impl FilesTab {
             .file
             .as_ref()
             .map(|current_file| {
-                commander.get_file_diff(&self.head, current_file, &self.diff_format)
+                commander.get_file_diff(&self.head, current_file, &self.diff_format, true)
             })
             .map_or(Ok(None), |r| {
                 r.map(|diff| diff.map(|diff| tabs_to_spaces(&diff)))
