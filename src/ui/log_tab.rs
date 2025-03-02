@@ -197,13 +197,6 @@ impl LogTab<'_> {
         head.clone_into(&mut self.head);
         self.refresh_head_output(commander);
     }
-
-    fn is_any_popup_opened(&self) -> bool {
-        // todo: check bookmark popup
-        self.describe_textarea.is_some()
-            || self.log_revset_textarea.is_some()
-            || self.popup.is_opened()
-    }
 }
 
 impl Component for LogTab<'_> {

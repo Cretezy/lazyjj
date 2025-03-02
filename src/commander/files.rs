@@ -136,21 +136,21 @@ impl Commander {
 
         let path = if let (true, Some(captures)) = (
             current_file.diff_type == Some(DiffType::Renamed),
-            RENAME_REGEX.captures(&path),
+            RENAME_REGEX.captures(path),
         ) {
             match captures.get(2) {
                 Some(path) => path.as_str(),
                 None => return Ok(None),
             }
         } else {
-            &path
+            path
         };
 
         let mut args = vec!["diff", "-r", head.commit_id.as_str(), path];
         if let Some(diff_format_arg) = diff_format.get_arg() {
             args.push(diff_format_arg);
         }
-        self.execute_jj_command(args, true, true).map(|x| Some(x))
+        self.execute_jj_command(args, true, true).map(Some)
     }
 }
 
