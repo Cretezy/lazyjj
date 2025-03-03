@@ -188,7 +188,6 @@ fn run_app<B: Backend>(
         })?;
         terminal_draw_res?;
 
-        start_time = Utc::now().time();
 
         // Input
         let input_spawn = trace_span!("input");
@@ -202,6 +201,9 @@ fn run_app<B: Backend>(
                 event => break event,
             }
         };
+
+        start_time = Utc::now().time();
+
         let should_stop = input_spawn.in_scope(|| -> Result<bool> {
             if app.input(event, commander)? {
                 return Ok(true);
