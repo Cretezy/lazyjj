@@ -5,10 +5,10 @@ use std::{
     fs::{canonicalize, OpenOptions},
     io::{self, ErrorKind},
     process::Command,
+    time::Instant,
 };
 
 use anyhow::{bail, Context, Result};
-use chrono::Utc;
 use clap::Parser;
 use crossterm::{
     event::{
@@ -145,7 +145,7 @@ fn run_app<B: Backend>(
     app: &mut App,
     commander: &mut Commander,
 ) -> Result<()> {
-    let mut start_time = Utc::now().time();
+    let mut start_time = Instant::now();
     loop {
         // Draw
         let mut terminal_draw_res = Ok(());
@@ -169,11 +169,11 @@ fn run_app<B: Backend>(
             terminal_draw_res = draw_span.in_scope(|| -> Result<()> {
                 ui(f, app)?;
 
-                let end_time = Utc::now().time();
+                let end_time = Instant::now();
                 let diff = end_time - start_time;
 
                 {
-                    let paragraph = Paragraph::new(format!("{}ms", diff.num_milliseconds()))
+                    let paragraph = Paragraph::new(format!("{}ms", diff.as_millis()))
                         .alignment(Alignment::Right);
                     let position = Rect {
                         x: 0,
@@ -188,8 +188,6 @@ fn run_app<B: Backend>(
         })?;
         terminal_draw_res?;
 
-        start_time = Utc::now().time();
-
         // Input
         let input_spawn = trace_span!("input");
         let event = loop {
@@ -202,6 +200,9 @@ fn run_app<B: Backend>(
                 event => break event,
             }
         };
+
+        start_time = Instant::now();
+
         let should_stop = input_spawn.in_scope(|| -> Result<bool> {
             if app.input(event, commander)? {
                 return Ok(true);
