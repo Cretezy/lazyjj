@@ -10,13 +10,14 @@ pub mod message_popup;
 pub mod styles;
 pub mod utils;
 
+use std::time::Instant;
+
 use crate::{
     app::{App, Tab},
     commander::{log::Head, Commander},
     ComponentInputResult,
 };
 use anyhow::Result;
-use chrono::Utc;
 use crossterm::event::Event;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -50,7 +51,7 @@ pub trait Component {
 }
 
 pub fn ui(f: &mut Frame, app: &mut App) -> Result<()> {
-    let start_time = Utc::now().time();
+    let start_time = Instant::now();
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -106,12 +107,10 @@ pub fn ui(f: &mut Frame, app: &mut App) -> Result<()> {
         popup.draw(f, f.area())?;
     }
 
-    let end_time = Utc::now().time();
-    let diff = end_time - start_time;
 
     {
         let paragraph =
-            Paragraph::new(format!("{}ms", diff.num_milliseconds())).alignment(Alignment::Right);
+            Paragraph::new(format!("{}ms", start_time.elapsed().as_millis())).alignment(Alignment::Right);
         let position = Rect {
             x: 0,
             y: 1,
