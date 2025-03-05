@@ -107,10 +107,9 @@ pub fn ui(f: &mut Frame, app: &mut App) -> Result<()> {
         popup.draw(f, f.area())?;
     }
 
-
     {
-        let paragraph =
-            Paragraph::new(format!("{}ms", start_time.elapsed().as_millis())).alignment(Alignment::Right);
+        let paragraph = Paragraph::new(format!("{}ms", start_time.elapsed().as_millis()))
+            .alignment(Alignment::Right);
         let position = Rect {
             x: 0,
             y: 1,
