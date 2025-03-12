@@ -111,7 +111,7 @@ impl FromStr for Shortcut {
                     }
                 }
                 s if s.chars().count() == 1 => {
-                    let s = s.chars().last().unwrap();
+                    let s = s.chars().next().unwrap();
                     key = Some(KeyCode::Char(s));
                 }
                 _ => (),
