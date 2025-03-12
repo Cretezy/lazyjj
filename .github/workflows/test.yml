@@ -35,6 +35,8 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     timeout-minutes: 15
+    # this often fails for some reason because of cargo-binstall
+    continue-on-error: ${{ matrix.build == 'macos-aarch64' || matrix.build == 'macos-x86_64' }}
 
     steps:
       - uses: actions/checkout@v4
