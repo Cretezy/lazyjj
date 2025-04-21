@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crossterm::event::KeyEvent;
+use ratatui::crossterm::event::KeyEvent;
 
 use crate::{make_keybinds_help, set_keybinds, update_keybinds};
 

@@ -1,8 +1,8 @@
 use ansi_to_tui::IntoText;
 use anyhow::bail;
 use anyhow::Result;
-use crossterm::event::{Event, KeyCode, KeyModifiers};
 use ratatui::{
+    crossterm::event::{Event, KeyCode, KeyModifiers},
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
     text::{Span, Text},

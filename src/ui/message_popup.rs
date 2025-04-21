@@ -1,6 +1,6 @@
 use anyhow::Result;
-use crossterm::event::Event;
 use ratatui::{
+    crossterm::event::Event,
     layout::{Alignment, Rect},
     style::{Color, Style, Stylize},
     text::{Span, Text},

@@ -1,6 +1,6 @@
 use std::{fmt::Display, str::FromStr};
 
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 pub use config::{Keybind, KeybindsConfig};
 pub use log_tab::{LogTabEvent, LogTabKeybinds};

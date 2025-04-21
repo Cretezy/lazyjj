@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crossterm::event::KeyEvent;
+use ratatui::crossterm::event::KeyEvent;
 
 use super::{Keybind, Shortcut};
 

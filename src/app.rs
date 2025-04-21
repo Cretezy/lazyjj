@@ -9,7 +9,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use core::fmt;
-use crossterm::event::{self, Event, KeyCode, KeyModifiers};
+use ratatui::crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use tracing::{info, info_span};
 
 #[derive(PartialEq, Copy, Clone)]

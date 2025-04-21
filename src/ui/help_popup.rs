@@ -1,5 +1,5 @@
-use crossterm::event::{self, Event, KeyCode};
 use ratatui::{
+    crossterm::event::{self, Event, KeyCode},
     layout::{Constraint, Direction, Layout},
     style::Stylize,
     text::Span,
@@ -84,7 +84,7 @@ impl Component for HelpPopup {
     fn input(
         &mut self,
         _commander: &mut crate::commander::Commander,
-        event: crossterm::event::Event,
+        event: Event,
     ) -> anyhow::Result<crate::ComponentInputResult> {
         if let Event::Key(key) = event {
             if key.kind == event::KeyEventKind::Press {

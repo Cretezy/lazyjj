@@ -16,8 +16,11 @@ use crate::{
 };
 
 use ansi_to_tui::IntoText;
-use crossterm::event::{Event, KeyCode, KeyEventKind};
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{
+    crossterm::event::{Event, KeyCode, KeyEventKind},
+    prelude::*,
+    widgets::*,
+};
 
 /// Files tab. Shows files in selected change in main panel and selected file diff in details panel
 pub struct FilesTab {
