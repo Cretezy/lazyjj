@@ -48,6 +48,8 @@ jobs:
         uses: cargo-bins/cargo-binstall@main
       - name: Install jj
         run: cargo binstall --no-confirm --strategies crate-meta-data jj-cli
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Test
         run: cargo test --all-targets --verbose
         env:
