@@ -3,8 +3,11 @@ use std::borrow::Borrow;
 use anyhow::Result;
 
 use ansi_to_tui::IntoText;
-use crossterm::event::{Event, KeyCode, KeyEventKind};
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{
+    crossterm::event::{Event, KeyCode, KeyEventKind},
+    prelude::*,
+    widgets::*,
+};
 use tracing::instrument;
 
 use crate::{

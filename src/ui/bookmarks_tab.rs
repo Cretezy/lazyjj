@@ -14,8 +14,11 @@ use crate::{
 };
 use ansi_to_tui::IntoText;
 use anyhow::Result;
-use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{
+    crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers},
+    prelude::*,
+    widgets::*,
+};
 use tracing::instrument;
 use tui_confirm_dialog::{ButtonLabel, ConfirmDialog, ConfirmDialogState, Listener};
 use tui_textarea::{CursorMove, TextArea};
@@ -738,7 +741,7 @@ impl Component for BookmarksTab<'_> {
                 if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc {
                     self.popup = ConfirmDialogState::default();
                 } else {
-                    self.popup.handle(key);
+                    self.popup.handle(&key);
                 }
 
                 return Ok(ComponentInputResult::Handled);
@@ -804,11 +807,12 @@ impl Component for BookmarksTab<'_> {
                                 "Are you sure you want to delete the {} bookmark?",
                                 bookmark.name
                             ))]),
-                        )
-                        .with_yes_button(ButtonLabel::YES.clone())
-                        .with_no_button(ButtonLabel::NO.clone())
-                        .with_listener(Some(self.popup_tx.clone()))
-                        .open();
+                        );
+                        self.popup
+                            .with_yes_button(ButtonLabel::YES.clone())
+                            .with_no_button(ButtonLabel::NO.clone())
+                            .with_listener(Some(self.popup_tx.clone()))
+                            .open();
                     }
                 }
                 KeyCode::Char('f') => {
@@ -823,11 +827,12 @@ impl Component for BookmarksTab<'_> {
                                 "Are you sure you want to forget the {} bookmark?",
                                 bookmark.name
                             ))]),
-                        )
-                        .with_yes_button(ButtonLabel::YES.clone())
-                        .with_no_button(ButtonLabel::NO.clone())
-                        .with_listener(Some(self.popup_tx.clone()))
-                        .open();
+                        );
+                        self.popup
+                            .with_yes_button(ButtonLabel::YES.clone())
+                            .with_no_button(ButtonLabel::NO.clone())
+                            .with_listener(Some(self.popup_tx.clone()))
+                            .open();
                     }
                 }
                 // TODO: Ask for confirmation?
@@ -859,11 +864,12 @@ impl Component for BookmarksTab<'_> {
                                     Line::from("Are you sure you want to create a new change?"),
                                     Line::from(format!("Bookmark: {}", bookmark)),
                                 ]),
-                            )
-                            .with_yes_button(ButtonLabel::YES.clone())
-                            .with_no_button(ButtonLabel::NO.clone())
-                            .with_listener(Some(self.popup_tx.clone()))
-                            .open();
+                            );
+                            self.popup
+                                .with_yes_button(ButtonLabel::YES.clone())
+                                .with_no_button(ButtonLabel::NO.clone())
+                                .with_listener(Some(self.popup_tx.clone()))
+                                .open();
 
                             self.describe_after_new = key.code == KeyCode::Char('N');
                         }
@@ -896,11 +902,12 @@ impl Component for BookmarksTab<'_> {
                                     Line::from("Are you sure you want to edit an existing change?"),
                                     Line::from(format!("Bookmark: {}", bookmark)),
                                 ]),
-                            )
-                            .with_yes_button(ButtonLabel::YES.clone())
-                            .with_no_button(ButtonLabel::NO.clone())
-                            .with_listener(Some(self.popup_tx.clone()))
-                            .open();
+                            );
+                            self.popup
+                                .with_yes_button(ButtonLabel::YES.clone())
+                                .with_no_button(ButtonLabel::NO.clone())
+                                .with_listener(Some(self.popup_tx.clone()))
+                                .open();
                             self.edit_ignore_immutable = ignore_immutable;
                         }
                     }

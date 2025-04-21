@@ -2,8 +2,11 @@
 
 use ansi_to_tui::IntoText;
 use anyhow::Result;
-use crossterm::event::{Event, KeyEventKind};
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{
+    crossterm::event::{Event, KeyEventKind},
+    prelude::*,
+    widgets::*,
+};
 use tracing::instrument;
 use tui_confirm_dialog::{ButtonLabel, ConfirmDialog, ConfirmDialogState, Listener};
 use tui_textarea::{CursorMove, TextArea};
@@ -515,7 +518,7 @@ impl Component for LogTab<'_> {
                 ) {
                     self.popup = ConfirmDialogState::default();
                 } else {
-                    self.popup.handle(key);
+                    self.popup.handle(&key);
                 }
 
                 return Ok(ComponentInputResult::Handled);
@@ -562,12 +565,12 @@ impl Component for LogTab<'_> {
                             Line::from(format!("New parent: {}", self.head.change_id.as_str())),
                         ])
                         .fg(Color::default()),
-                    )
-                    .with_yes_button(ButtonLabel::YES.clone())
-                    .with_no_button(ButtonLabel::NO.clone())
-                    .with_listener(Some(self.popup_tx.clone()))
-                    .open();
-
+                    );
+                    self.popup
+                        .with_yes_button(ButtonLabel::YES.clone())
+                        .with_no_button(ButtonLabel::NO.clone())
+                        .with_listener(Some(self.popup_tx.clone()))
+                        .open();
                     self.describe_after_new = describe;
                 }
                 LogTabEvent::Squash { ignore_immutable } => {
@@ -601,11 +604,12 @@ impl Component for LogTab<'_> {
                         SQUASH_POPUP_ID,
                         Span::styled(" Squash ", Style::new().bold().cyan()),
                         Text::from(lines).fg(Color::default()),
-                    )
-                    .with_yes_button(ButtonLabel::YES.clone())
-                    .with_no_button(ButtonLabel::NO.clone())
-                    .with_listener(Some(self.popup_tx.clone()))
-                    .open();
+                    );
+                    self.popup
+                        .with_yes_button(ButtonLabel::YES.clone())
+                        .with_no_button(ButtonLabel::NO.clone())
+                        .with_listener(Some(self.popup_tx.clone()))
+                        .open();
                     self.squash_ignore_immutable = ignore_immutable;
                 }
                 LogTabEvent::EditChange { ignore_immutable } => {
@@ -633,11 +637,12 @@ impl Component for LogTab<'_> {
                         EDIT_POPUP_ID,
                         Span::styled(" Edit ", Style::new().bold().cyan()),
                         Text::from(lines).fg(Color::default()),
-                    )
-                    .with_yes_button(ButtonLabel::YES.clone())
-                    .with_no_button(ButtonLabel::NO.clone())
-                    .with_listener(Some(self.popup_tx.clone()))
-                    .open();
+                    );
+                    self.popup
+                        .with_yes_button(ButtonLabel::YES.clone())
+                        .with_no_button(ButtonLabel::NO.clone())
+                        .with_listener(Some(self.popup_tx.clone()))
+                        .open();
                     self.edit_ignore_immutable = ignore_immutable;
                 }
                 LogTabEvent::Abandon => {
@@ -662,11 +667,12 @@ impl Component for LogTab<'_> {
                                 Line::from(format!("Change: {}", self.head.change_id.as_str())),
                             ])
                             .fg(Color::default()),
-                        )
-                        .with_yes_button(ButtonLabel::YES.clone())
-                        .with_no_button(ButtonLabel::NO.clone())
-                        .with_listener(Some(self.popup_tx.clone()))
-                        .open();
+                        );
+                        self.popup
+                            .with_yes_button(ButtonLabel::YES.clone())
+                            .with_no_button(ButtonLabel::NO.clone())
+                            .with_listener(Some(self.popup_tx.clone()))
+                            .open();
                     }
                 }
                 LogTabEvent::Describe => {

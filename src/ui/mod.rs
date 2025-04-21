@@ -18,8 +18,8 @@ use crate::{
     ComponentInputResult,
 };
 use anyhow::Result;
-use crossterm::event::Event;
 use ratatui::{
+    crossterm::event::Event,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     symbols, Frame,

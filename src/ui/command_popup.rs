@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
-use crossterm::event::{Event, KeyCode};
 use ratatui::{
+    crossterm::event::{Event, KeyCode},
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Style, Stylize},
     text::Span,
@@ -68,7 +68,7 @@ impl Component for CommandPopup<'_> {
     fn input(
         &mut self,
         commander: &mut Commander,
-        event: crossterm::event::Event,
+        event: Event,
     ) -> anyhow::Result<ComponentInputResult> {
         if let Event::Key(key) = event {
             match key.code {

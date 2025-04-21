@@ -10,19 +10,20 @@ use std::{
 
 use anyhow::{bail, Context, Result};
 use clap::Parser;
-use crossterm::{
-    event::{
-        self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
-        Event, KeyboardEnhancementFlags, MouseEvent, MouseEventKind, PushKeyboardEnhancementFlags,
-    },
-    execute,
-    terminal::{
-        disable_raw_mode, enable_raw_mode, supports_keyboard_enhancement, EnterAlternateScreen,
-        LeaveAlternateScreen,
-    },
-};
 use ratatui::{
     backend::{Backend, CrosstermBackend},
+    crossterm::{
+        event::{
+            self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
+            Event, KeyboardEnhancementFlags, MouseEvent, MouseEventKind,
+            PushKeyboardEnhancementFlags,
+        },
+        execute,
+        terminal::{
+            disable_raw_mode, enable_raw_mode, supports_keyboard_enhancement, EnterAlternateScreen,
+            LeaveAlternateScreen,
+        },
+    },
     layout::{Alignment, Rect},
     widgets::Paragraph,
     Terminal,
