@@ -3,7 +3,8 @@
 use ansi_to_tui::IntoText;
 use anyhow::Result;
 use ratatui::{
-    crossterm::event::{Event, KeyEventKind},
+    crossterm::event::{Event, KeyEventKind, MouseEvent, MouseEventKind},
+    layout::Rect,
     prelude::*,
     widgets::*,
 };
@@ -21,6 +22,7 @@ use crate::{
     ui::{
         bookmark_set_popup::BookmarkSetPopup,
         details_panel::DetailsPanel,
+        details_panel::DetailsPanelEvent,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
@@ -47,6 +49,9 @@ pub struct LogTab<'a> {
     head_panel: DetailsPanel,
     head_output: Result<String, CommandError>,
     head: Head,
+
+    // Rect of panels [0] = log, [1] = details
+    panel_rect: [Rect; 2],
 
     diff_format: DiffFormat,
 
@@ -130,6 +135,8 @@ impl LogTab<'_> {
             head,
             head_panel: DetailsPanel::new(),
             head_output,
+
+            panel_rect: [Rect::ZERO, Rect::ZERO],
 
             diff_format,
 
@@ -575,6 +582,7 @@ impl Component for LogTab<'_> {
                 Constraint::Percentage(100 - self.config.layout_percent()),
             ])
             .split(area);
+        self.panel_rect = [chunks[0], chunks[1]];
 
         // Draw log
         {
@@ -818,6 +826,47 @@ impl Component for LogTab<'_> {
 
             let log_tab_event = self.keybinds.match_event(key);
             return self.handle_event(commander, log_tab_event);
+        }
+
+        if let Event::Mouse(mouse_event) = event {
+            // Determine if mouse event is inside log-view or details-view
+            fn contains(rect: &Rect, mouse_event: &MouseEvent) -> bool {
+                rect.x <= mouse_event.column
+                    && mouse_event.column < rect.x + rect.width
+                    && rect.y <= mouse_event.row
+                    && mouse_event.row < rect.y + rect.height
+            }
+            let find_panel = || -> Option<usize> {
+                for (i, rect) in self.panel_rect.iter().enumerate() {
+                    if contains(rect, &mouse_event) {
+                        return Some(i);
+                    }
+                }
+                return None;
+            };
+            let panel = find_panel();
+            // Execute command dependent on panel and event kind
+            const LOG_PANEL: Option<usize> = Some(0);
+            const DETAILS_PANEL: Option<usize> = Some(1);
+            match (panel, mouse_event.kind) {
+                (LOG_PANEL, MouseEventKind::ScrollUp) => {
+                    self.handle_event(commander, LogTabEvent::ScrollUp)?;
+                }
+                (LOG_PANEL, MouseEventKind::ScrollDown) => {
+                    self.handle_event(commander, LogTabEvent::ScrollDown)?;
+                }
+                (DETAILS_PANEL, MouseEventKind::ScrollUp) => {
+                    self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
+                    self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
+                    self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
+                }
+                (DETAILS_PANEL, MouseEventKind::ScrollDown) => {
+                    self.head_panel.handle_event(DetailsPanelEvent::ScrollDown);
+                    self.head_panel.handle_event(DetailsPanelEvent::ScrollDown);
+                    self.head_panel.handle_event(DetailsPanelEvent::ScrollDown);
+                }
+                _ => {} // Handle other mouse events if necessary
+            }
         }
 
         Ok(ComponentInputResult::Handled)
