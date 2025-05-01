@@ -14,6 +14,17 @@ pub struct DetailsPanel {
     wrap: bool,
 }
 
+/// Commands that can be handled by the details panel
+pub enum DetailsPanelEvent {
+    ScrollDown,
+    ScrollUp,
+    ScrollDownHalfPage,
+    ScrollUpHalfPage,
+    ScrollDownPage,
+    ScrollUpPage,
+    ToggleWrap,
+}
+
 impl DetailsPanel {
     pub fn new() -> Self {
         Self {
@@ -47,26 +58,42 @@ impl DetailsPanel {
         self.scroll = (self.scroll.saturating_add_signed(scroll as i16)).min(self.lines - 1)
     }
 
+    pub fn handle_event(&mut self, details_panel_event: DetailsPanelEvent) {
+        match details_panel_event {
+            DetailsPanelEvent::ScrollDown => self.scroll(1),
+            DetailsPanelEvent::ScrollUp => self.scroll(-1),
+            DetailsPanelEvent::ScrollDownHalfPage => self.scroll(self.height as isize / 2),
+            DetailsPanelEvent::ScrollUpHalfPage => {
+                self.scroll((self.height as isize / 2).saturating_neg())
+            }
+            DetailsPanelEvent::ScrollDownPage => self.scroll(self.height as isize),
+            DetailsPanelEvent::ScrollUpPage => self.scroll((self.height as isize).saturating_neg()),
+            DetailsPanelEvent::ToggleWrap => self.wrap = !self.wrap,
+        }
+    }
+
     /// Handle input. Returns bool of if event was handled
     pub fn input(&mut self, key: KeyEvent) -> bool {
         match key.code {
-            KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => self.scroll(1),
-            KeyCode::Char('y') if key.modifiers.contains(KeyModifiers::CONTROL) => self.scroll(-1),
+            KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.handle_event(DetailsPanelEvent::ScrollDown)
+            }
+            KeyCode::Char('y') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.handle_event(DetailsPanelEvent::ScrollUp)
+            }
             KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.scroll(self.height as isize / 2)
+                self.handle_event(DetailsPanelEvent::ScrollDownHalfPage)
             }
             KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.scroll((self.height as isize / 2).saturating_neg())
+                self.handle_event(DetailsPanelEvent::ScrollUpHalfPage)
             }
             KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.scroll(self.height as isize)
+                self.handle_event(DetailsPanelEvent::ScrollDownPage)
             }
             KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.scroll((self.height as isize).saturating_neg())
+                self.handle_event(DetailsPanelEvent::ScrollUpPage)
             }
-            KeyCode::Char('W') => {
-                self.wrap = !self.wrap;
-            }
+            KeyCode::Char('W') => self.handle_event(DetailsPanelEvent::ToggleWrap),
             _ => return false,
         };
 
