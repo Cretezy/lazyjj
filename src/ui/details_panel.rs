@@ -59,7 +59,7 @@ impl DetailsPanel {
                 self.scroll((self.height as isize / 2).saturating_neg())
             }
             KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.scroll(self.height as isize / 2)
+                self.scroll(self.height as isize)
             }
             KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.scroll((self.height as isize).saturating_neg())
