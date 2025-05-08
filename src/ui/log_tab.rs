@@ -277,6 +277,13 @@ impl<'a> LogTab<'a> {
         }
     }
 
+    /// Number of log list items that fit on screen
+    fn log_visible_items(&self) -> u16 {
+        // Every item in the log list is 2 lines high, so divide screen rows
+        // by 2 to get the number of log items that fit in it.
+        self.log_height / 2
+    }
+
     fn handle_event(
         &mut self,
         commander: &mut Commander,
@@ -290,12 +297,12 @@ impl<'a> LogTab<'a> {
                 self.scroll_log(commander, -1);
             }
             LogTabEvent::ScrollDownHalf => {
-                self.scroll_log(commander, self.log_height as isize / 2 / 2);
+                self.scroll_log(commander, self.log_visible_items() as isize / 2);
             }
             LogTabEvent::ScrollUpHalf => {
                 self.scroll_log(
                     commander,
-                    (self.log_height as isize / 2 / 2).saturating_neg(),
+                    (self.log_visible_items() as isize / 2).saturating_neg(),
                 );
             }
             LogTabEvent::FocusCurrent => {
