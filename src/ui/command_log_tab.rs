@@ -14,8 +14,8 @@ use crate::{
     commander::{CommandLogItem, Commander},
     env::Config,
     ui::{
-        details_panel::DetailsPanel, help_popup::HelpPopup, utils::tabs_to_spaces, Component,
-        ComponentAction,
+        details_panel::DetailsPanel, help_popup::HelpPopup, scrollbar, utils::tabs_to_spaces,
+        Component, ComponentAction,
     },
     ComponentInputResult,
 };
@@ -214,22 +214,30 @@ impl Component for CommandLogTab {
                 )
                 .scroll_padding(3);
 
+            let commands_len = commands.len();
             f.render_stateful_widget(commands, chunks[0], &mut self.commands_list_state);
             self.commands_height = chunks[0].height.saturating_sub(2);
+
+            if commands_len > self.commands_height as usize {
+                let index = self.commands_list_state.selected().unwrap_or(0);
+                scrollbar::draw_scrollbar(
+                    f,
+                    chunks[0],
+                    commands_len - 1,
+                    index,
+                    scrollbar::Orientation::Vertical,
+                );
+            }
         }
 
         // Draw output
         {
-            let output_block = Block::bordered()
+            let output_lines = self.get_output_lines()?;
+            self.output_panel
+                .render_context()
                 .title(" Output ")
-                .border_type(BorderType::Rounded)
-                .padding(Padding::horizontal(1));
-            let output = self
-                .output_panel
-                .render(self.get_output_lines()?, output_block.inner(chunks[1]))
-                .block(output_block);
-
-            f.render_widget(output, chunks[1]);
+                .content(output_lines)
+                .draw(f, chunks[1]);
         }
 
         Ok(())
