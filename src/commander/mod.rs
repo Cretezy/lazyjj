@@ -30,7 +30,7 @@ use crate::env::DiffFormat;
 use crate::env::Env;
 
 use ansi_to_tui::IntoText;
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use chrono::{DateTime, Local, TimeDelta};
 use ratatui::{
     style::{Color, Stylize},
@@ -45,6 +45,12 @@ use std::{
     sync::Arc,
 };
 use thiserror::Error;
+use tracing::{instrument, trace};
+use version_compare::{Cmp, compare};
+
+/// The oldest version of jj that is known to work with lazyjj.
+/// 0.22.0 introduced the bookmark command.
+const JJ_MIN_VERSION: &str = "0.22.0";
 
 impl DiffFormat {
     pub fn get_args(&self) -> Vec<&str> {
@@ -192,9 +198,42 @@ impl Commander {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn init(&self) -> Result<()> {
-        self.execute_void_jj_command(vec!["status"])
-            .context("Failed getting initial status")
+        // Ask jj about its version
+        let (color, quiet) = (false, false);
+        let found_version = self
+            .execute_jj_command(vec!["version"], color, quiet)
+            .context("Run jj version")?;
+
+        // Extract version number
+        if found_version[0..3] != *"jj " {
+            trace!("jj version output \"{}\"", found_version);
+            bail!("Jujutsu version string was not recognized");
+        }
+        let found_version = &found_version[3..].trim();
+        let min_version = JJ_MIN_VERSION;
+
+        trace!(
+            found_version = found_version,
+            min_version = min_version,
+            "Check jj version",
+        );
+
+        // Verify that jj is not too old
+        match compare(found_version, min_version) {
+            Err(_) => bail!(
+                "Unable to compare version '{}' to '{}'",
+                found_version,
+                min_version
+            ),
+            Ok(Cmp::Lt) => bail!(
+                "jujutsu version {} is too old. Must be at least {}",
+                found_version,
+                min_version
+            ),
+            Ok(_) => Ok(()), // found >= min, so jj is recent enough
+        }
     }
 }
 
