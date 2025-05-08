@@ -6,6 +6,7 @@ use ratatui::{
     crossterm::event::{Event, KeyEventKind, MouseEvent, MouseEventKind},
     layout::Rect,
     prelude::*,
+    text::ToText,
     widgets::*,
 };
 use tracing::instrument;
@@ -41,6 +42,7 @@ pub struct LogTab<'a> {
     log_output: Result<LogOutput, CommandError>,
     log_output_text: Text<'a>,
     log_list_state: ListState,
+    log_rect: Rect,
     log_height: u16,
 
     log_revset: Option<String>,
@@ -128,6 +130,7 @@ impl<'a> LogTab<'a> {
             log_output,
             log_list_state,
             log_height: 0,
+            log_rect: Rect::ZERO,
 
             log_revset,
             log_revset_textarea: None,
@@ -253,6 +256,17 @@ impl<'a> LogTab<'a> {
             .graph_heads
             .iter()
             .position(|opt_h| opt_h.as_ref().is_some_and(|h| h == &self.head))
+    }
+
+    /// Find head of the provided log_output line
+    fn head_at_log_line(&mut self, log_line: usize) -> Option<Head> {
+        let Ok(log_output) = self.log_output.as_ref() else {
+            return None;
+        };
+
+        let graph_head = log_output.graph_heads.get(log_line)?;
+
+        graph_head.clone()
     }
 
     /// Get lines to show in log list
@@ -648,6 +662,7 @@ impl Component for LogTab<'_> {
             let log_block = Block::bordered()
                 .title(title)
                 .border_type(BorderType::Rounded);
+            self.log_rect = log_block.inner(chunks[0]);
             self.log_height = log_block.inner(chunks[0]).height;
             self.log_list_state.select(self.selected_log_line());
             let log = List::new(log_lines)
@@ -875,6 +890,28 @@ impl Component for LogTab<'_> {
                 (LOG_PANEL, MouseEventKind::ScrollDown) => {
                     self.handle_event(commander, LogTabEvent::ScrollDown)?;
                 }
+                (LOG_PANEL, MouseEventKind::Up(_)) => {
+                    // Check all items in list
+
+                    // TODO make a function that constructs the log list
+                    let log_lines = self.log_lines();
+                    let log_items: Vec<ListItem> = log_lines
+                        .iter()
+                        .map(|line| ListItem::from(line.to_text()))
+                        .collect();
+
+                    // Select the clicked change
+                    if let Some(inx) = list_item_from_mouse_event(
+                        &log_items,
+                        self.log_rect,
+                        &self.log_list_state,
+                        &mouse_event,
+                    ) {
+                        if let Some(head) = self.head_at_log_line(inx) {
+                            self.set_head(commander, head);
+                        }
+                    }
+                }
                 (DETAILS_PANEL, MouseEventKind::ScrollUp) => {
                     self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
                     self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
@@ -891,4 +928,43 @@ impl Component for LogTab<'_> {
 
         Ok(ComponentInputResult::Handled)
     }
+}
+
+// Determine which list item a mouse event is related to
+fn list_item_from_mouse_event(
+    list: &[ListItem],
+    list_rect: Rect,
+    list_state: &ListState,
+    mouse_event: &MouseEvent,
+) -> Option<usize> {
+    fn contains(rect: &Rect, mouse_event: &MouseEvent) -> bool {
+        rect.x <= mouse_event.column
+            && mouse_event.column < rect.x + rect.width
+            && rect.y <= mouse_event.row
+            && mouse_event.row < rect.y + rect.height
+    }
+
+    if !contains(&list_rect, mouse_event) {
+        return None;
+    }
+
+    // for each item on screen check if it contains the mouse cursor
+
+    let mut item_row = list_rect.y;
+    let mut item_inx = list_state.offset();
+    while item_row <= mouse_event.row {
+        let next_row = item_row + list[item_inx].height() as u16;
+        if mouse_event.row < next_row {
+            return Some(item_inx);
+        }
+        item_row = next_row;
+        item_inx += 1;
+        if item_row >= list_rect.bottom() {
+            return None;
+        }
+        if item_inx >= list.len() {
+            return None;
+        }
+    }
+    None
 }
