@@ -214,8 +214,26 @@ impl Component for CommandLogTab {
                 )
                 .scroll_padding(3);
 
+            let commands_len = commands.len();
             f.render_stateful_widget(commands, chunks[0], &mut self.commands_list_state);
             self.commands_height = chunks[0].height.saturating_sub(2);
+
+            if commands_len > self.commands_height as usize {
+                let index = self.commands_list_state.selected().unwrap_or(0);
+                let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
+                let mut scrollbar_state = ScrollbarState::default()
+                    .content_length(commands_len)
+                    .position(index);
+
+                f.render_stateful_widget(
+                    scrollbar,
+                    chunks[0].inner(Margin {
+                        vertical: 1,
+                        horizontal: 0,
+                    }),
+                    &mut scrollbar_state,
+                );
+            }
         }
 
         // Draw output

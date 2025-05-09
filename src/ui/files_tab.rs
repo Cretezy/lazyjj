@@ -265,8 +265,26 @@ impl Component for FilesTab {
                 )
                 .scroll_padding(3);
             *self.files_list_state.selected_mut() = current_file_index;
-            f.render_stateful_widget(files, chunks[0], &mut self.files_list_state);
+            f.render_stateful_widget(&files, chunks[0], &mut self.files_list_state);
             self.files_height = chunks[0].height - 2;
+
+            if let Some(index) = current_file_index {
+                if files.len() > self.files_height as usize {
+                    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
+                    let mut scrollbar_state = ScrollbarState::default()
+                        .content_length(files.len())
+                        .position(index);
+
+                    f.render_stateful_widget(
+                        scrollbar,
+                        chunks[0].inner(Margin {
+                            vertical: 1,
+                            horizontal: 0,
+                        }),
+                        &mut scrollbar_state,
+                    );
+                }
+            }
         }
 
         // Draw diff
