@@ -139,7 +139,7 @@ impl FilesTab {
             .map_or(Ok(None), |r| {
                 r.map(|diff| diff.map(|diff| tabs_to_spaces(&diff)))
             });
-        self.diff_panel.scroll = 0;
+        self.diff_panel.scroll_to(0);
         Ok(())
     }
 

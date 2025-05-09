@@ -190,7 +190,7 @@ impl BookmarksTab<'_> {
             _ => None,
         });
 
-        self.bookmark_panel.scroll = 0;
+        self.bookmark_panel.scroll_to(0);
     }
 
     fn scroll_bookmarks(&mut self, commander: &mut Commander, scroll: isize) {
