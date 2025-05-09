@@ -178,7 +178,7 @@ impl LogTab<'_> {
         self.head_output = commander
             .get_commit_show(&self.head.commit_id, &self.diff_format, true)
             .map(|text| tabs_to_spaces(&text));
-        self.head_panel.scroll = 0;
+        self.head_panel.scroll_to(0);
     }
 
     fn scroll_log(&mut self, commander: &mut Commander, scroll: isize) {

@@ -144,7 +144,7 @@ impl CommandLogTab {
             .min(self.command_history.len() - 1)
             .max(0),
         );
-        self.output_panel.scroll = 0;
+        self.output_panel.scroll_to(0);
     }
 }
 
