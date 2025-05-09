@@ -388,9 +388,28 @@ impl Component for BookmarksTab<'_> {
                 .title(" Bookmarks ")
                 .border_type(BorderType::Rounded);
             self.bookmarks_height = bookmarks_block.inner(chunks[0]).height;
+            let bookmark_count = lines.len();
             let bookmarks = List::new(lines).block(bookmarks_block).scroll_padding(3);
             *self.bookmarks_list_state.selected_mut() = current_bookmark_index;
             f.render_stateful_widget(bookmarks, chunks[0], &mut self.bookmarks_list_state);
+
+            // Draw scrollbar on left panel
+            if bookmark_count > self.bookmarks_height.into() {
+                let index = current_bookmark_index.unwrap_or(0);
+                let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
+                let mut scrollbar_state = ScrollbarState::default()
+                    .content_length(bookmark_count)
+                    .position(index);
+
+                f.render_stateful_widget(
+                    scrollbar,
+                    chunks[0].inner(Margin {
+                        vertical: 1,
+                        horizontal: 0,
+                    }),
+                    &mut scrollbar_state,
+                );
+            }
         }
 
         // Draw bookmark

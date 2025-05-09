@@ -639,12 +639,31 @@ impl Component for LogTab<'_> {
                 None => " Log ",
             };
 
+            let log_length: usize = log_lines.len();
             let log_block = Block::bordered()
                 .title(title)
                 .border_type(BorderType::Rounded);
             self.log_height = log_block.inner(chunks[0]).height;
             let log = List::new(log_lines).block(log_block).scroll_padding(7);
             f.render_stateful_widget(log, chunks[0], &mut self.log_list_state);
+
+            // Show scrollbar if lines don't fit the screen height
+            if log_length > self.log_height.into() {
+                let index = self.log_list_state.selected().unwrap_or(0);
+                let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
+                let mut scrollbar_state = ScrollbarState::default()
+                    .content_length(log_length)
+                    .position(index);
+
+                f.render_stateful_widget(
+                    scrollbar,
+                    chunks[0].inner(Margin {
+                        vertical: 1,
+                        horizontal: 0,
+                    }),
+                    &mut scrollbar_state,
+                );
+            }
         }
 
         // Draw change details
