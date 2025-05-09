@@ -8,7 +8,7 @@ use ratatui::{
 /// Details panel used for the right side of each tab.
 /// This handles scrolling and wrapping.
 pub struct DetailsPanel {
-    pub scroll: u16,
+    scroll: u16,
     height: u16,
     lines: u16,
     wrap: bool,
@@ -54,8 +54,12 @@ impl DetailsPanel {
         paragraph
     }
 
+    pub fn scroll_to(&mut self, line_no: u16) {
+        self.scroll = line_no.min(self.lines.saturating_sub(1))
+    }
+
     pub fn scroll(&mut self, scroll: isize) {
-        self.scroll = (self.scroll.saturating_add_signed(scroll as i16)).min(self.lines - 1)
+        self.scroll_to(self.scroll.saturating_add_signed(scroll as i16))
     }
 
     pub fn handle_event(&mut self, details_panel_event: DetailsPanelEvent) {
