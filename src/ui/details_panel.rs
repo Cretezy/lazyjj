@@ -1,8 +1,11 @@
 use ratatui::{
     crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
-    layout::Rect,
-    text::Text,
-    widgets::{Paragraph, Wrap},
+    layout::{Margin, Rect},
+    text::{Line, Text},
+    widgets::{
+        Block, BorderType, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
+        Wrap,
+    },
 };
 
 /// Details panel used for the right side of each tab.
@@ -12,6 +15,13 @@ pub struct DetailsPanel {
     height: u16,
     lines: u16,
     wrap: bool,
+}
+
+/// Transient object holding render data
+pub struct DetailsPanelRenderContext<'a> {
+    panel: &'a mut DetailsPanel,
+    title: Option<Line<'a>>,
+    content: Option<Text<'a>>,
 }
 
 /// Commands that can be handled by the details panel
@@ -25,6 +35,75 @@ pub enum DetailsPanelEvent {
     ToggleWrap,
 }
 
+impl<'a> DetailsPanelRenderContext<'a> {
+    pub fn new(panel: &'a mut DetailsPanel) -> Self {
+        Self {
+            panel,
+            title: None,
+            content: None,
+        }
+    }
+    /// Set the title on the frame that surrounds the content
+    pub fn title<T>(&mut self, title: T) -> &mut Self
+    where
+        T: Into<Line<'a>>,
+    {
+        self.title = Some(title.into());
+        self
+    }
+    /// Set the text inside the panel
+    pub fn content<T>(&mut self, content: T) -> &mut Self
+    where
+        T: Into<Text<'a>>,
+    {
+        self.content = Some(content.into());
+        self
+    }
+
+    pub fn draw(&mut self, f: &mut ratatui::prelude::Frame<'_>, area: ratatui::prelude::Rect) {
+        // Define border block
+        let mut border = Block::bordered()
+            .border_type(BorderType::Rounded)
+            .padding(Padding::horizontal(1));
+        // Apply title if provided
+        if let Some(title) = &self.title {
+            border = border.title_top(title.clone());
+        }
+
+        // Find text inside border
+        let content_text = match &self.content {
+            Some(text) => text,
+            None => &Text::raw(""),
+        };
+        // Create content widget that uses border
+        let paragraph_area = border.inner(area);
+        let paragraph = self
+            .panel
+            .render(content_text.clone(), paragraph_area)
+            .block(border);
+
+        // render content and border
+        f.render_widget(paragraph, area);
+
+        // render scrollbar on top of border
+        if self.panel.lines > paragraph_area.height {
+            let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
+
+            let mut scrollbar_state =
+                ScrollbarState::new(self.panel.lines.into()).position(self.panel.scroll.into());
+
+            f.render_stateful_widget(
+                scrollbar,
+                area.inner(Margin {
+                    vertical: 1,
+                    horizontal: 0,
+                }),
+                &mut scrollbar_state,
+            );
+        }
+    }
+}
+
 impl DetailsPanel {
     pub fn new() -> Self {
         Self {
@@ -33,6 +112,10 @@ impl DetailsPanel {
             lines: 0,
             wrap: true,
         }
+    }
+
+    pub fn render_context(&mut self) -> DetailsPanelRenderContext {
+        DetailsPanelRenderContext::new(self)
     }
 
     /// Render the parent into the area.

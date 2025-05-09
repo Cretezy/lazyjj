@@ -653,16 +653,11 @@ impl Component for LogTab<'_> {
                 Ok(head_output) => head_output.into_text()?.lines,
                 Err(err) => err.into_text("Error getting head details")?.lines,
             };
-            let head_block = Block::bordered()
+            self.head_panel
+                .render_context()
                 .title(format!(" Details for {} ", self.head.change_id))
-                .border_type(BorderType::Rounded)
-                .padding(Padding::horizontal(1));
-            let head = self
-                .head_panel
-                .render(head_content, head_block.inner(chunks[1]))
-                .block(head_block);
-
-            f.render_widget(head, chunks[1]);
+                .content(head_content)
+                .draw(f, chunks[1])
         }
 
         // Draw popup

@@ -283,20 +283,16 @@ impl Component for FilesTab {
 
         // Draw diff
         {
-            let diff_block = Block::bordered()
-                .title(" Diff ")
-                .border_type(BorderType::Rounded)
-                .padding(Padding::horizontal(1));
             let diff_content = match self.diff_output.as_ref() {
                 Ok(Some(diff_content)) => diff_content.into_text()?,
                 Ok(None) => Text::default(),
                 Err(err) => err.into_text("Error getting diff")?,
             };
-            let diff = self
-                .diff_panel
-                .render(diff_content, diff_block.inner(chunks[1]))
-                .block(diff_block);
-            f.render_widget(diff, chunks[1]);
+            self.diff_panel
+                .render_context()
+                .title(" Diff ")
+                .content(diff_content)
+                .draw(f, chunks[1]);
         }
 
         Ok(())

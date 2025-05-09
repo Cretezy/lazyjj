@@ -401,21 +401,16 @@ impl Component for BookmarksTab<'_> {
             } else {
                 " Bookmark ".to_owned()
             };
-
-            let bookmark_block = Block::bordered()
-                .title(title)
-                .border_type(BorderType::Rounded)
-                .padding(Padding::horizontal(1));
             let bookmark_content: Vec<Line> = match self.bookmark_output.as_ref() {
                 Some(Ok(bookmark_output)) => bookmark_output.into_text()?.lines,
                 Some(Err(err)) => err.into_text("Error getting bookmark")?.lines,
                 None => vec![],
             };
-            let bookmark = self
-                .bookmark_panel
-                .render(bookmark_content, bookmark_block.inner(chunks[1]))
-                .block(bookmark_block);
-            f.render_widget(bookmark, chunks[1]);
+            self.bookmark_panel
+                .render_context()
+                .title(title)
+                .content(bookmark_content)
+                .draw(f, chunks[1]);
         }
 
         // Draw popup
