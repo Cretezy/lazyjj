@@ -220,16 +220,12 @@ impl Component for CommandLogTab {
 
         // Draw output
         {
-            let output_block = Block::bordered()
+            let output_lines = self.get_output_lines()?;
+            self.output_panel
+                .render_context()
                 .title(" Output ")
-                .border_type(BorderType::Rounded)
-                .padding(Padding::horizontal(1));
-            let output = self
-                .output_panel
-                .render(self.get_output_lines()?, output_block.inner(chunks[1]))
-                .block(output_block);
-
-            f.render_widget(output, chunks[1]);
+                .content(output_lines)
+                .draw(f, chunks[1]);
         }
 
         Ok(())
