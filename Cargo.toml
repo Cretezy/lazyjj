@@ -38,3 +38,11 @@ tracing-log = "0.2.0"
 tracing-subscriber = "0.3.19"
 tui-textarea = "0.7.0"
 tui_confirm_dialog = "0.3.1"
+
+# Release build optimize size.
+# Run strip manually after build to reduce further.
+[profile.release]
+lto = true
+opt-level = 's'     # Optimize for size.
+codegen-units = 1
+strip = "symbols"
