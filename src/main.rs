@@ -5,7 +5,7 @@ use std::{
     fs::{canonicalize, OpenOptions},
     io::{self, ErrorKind},
     process::Command,
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use anyhow::{bail, Context, Result};
@@ -15,8 +15,7 @@ use ratatui::{
     crossterm::{
         event::{
             self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
-            Event, KeyboardEnhancementFlags, MouseEvent, MouseEventKind,
-            PushKeyboardEnhancementFlags,
+            KeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
         },
         execute,
         terminal::{
@@ -202,25 +201,11 @@ fn run_app<B: Backend>(
 /// Return true if application should stop
 fn input_to_app(app: &mut App, commander: &mut Commander) -> Result<bool> {
     let input_spawn = trace_span!("input");
-    let event = loop {
-        match event::read()? {
-            event::Event::FocusLost => continue,
-            Event::Mouse(MouseEvent {
-                kind: MouseEventKind::Moved,
-                ..
-            }) => continue,
-            event => break event,
-        }
-    };
-
-    let should_stop = input_spawn.in_scope(|| -> Result<bool> {
-        if app.input(event, commander)? {
-            return Ok(true);
-        }
-
-        Ok(false)
-    })?;
-
+    let mut should_stop: bool = false;
+    while event::poll(Duration::ZERO)? && !should_stop {
+        let event = event::read()?;
+        should_stop = input_spawn.in_scope(|| app.input(event, commander))?;
+    }
     Ok(should_stop)
 }
 
