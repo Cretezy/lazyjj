@@ -188,32 +188,40 @@ fn run_app<B: Backend>(
         terminal_draw_res?;
 
         // Input
-        let input_spawn = trace_span!("input");
-        let event = loop {
-            match event::read()? {
-                event::Event::FocusLost => continue,
-                Event::Mouse(MouseEvent {
-                    kind: MouseEventKind::Moved,
-                    ..
-                }) => continue,
-                event => break event,
-            }
-        };
-
         start_time = Instant::now();
 
-        let should_stop = input_spawn.in_scope(|| -> Result<bool> {
-            if app.input(event, commander)? {
-                return Ok(true);
-            }
-
-            Ok(false)
-        })?;
+        let should_stop = input_to_app(app, commander)?;
 
         if should_stop {
             return Ok(());
         }
     }
+}
+
+/// Let app process all input events in queue before returning
+/// Return true if application should stop
+fn input_to_app(app: &mut App, commander: &mut Commander) -> Result<bool> {
+    let input_spawn = trace_span!("input");
+    let event = loop {
+        match event::read()? {
+            event::Event::FocusLost => continue,
+            Event::Mouse(MouseEvent {
+                kind: MouseEventKind::Moved,
+                ..
+            }) => continue,
+            event => break event,
+        }
+    };
+
+    let should_stop = input_spawn.in_scope(|| -> Result<bool> {
+        if app.input(event, commander)? {
+            return Ok(true);
+        }
+
+        Ok(false)
+    })?;
+
+    Ok(should_stop)
 }
 
 fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
