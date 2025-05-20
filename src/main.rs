@@ -148,43 +148,7 @@ fn run_app<B: Backend>(
     let mut start_time = Instant::now();
     loop {
         // Draw
-        let mut terminal_draw_res = Ok(());
-        terminal.draw(|f| {
-            // Update current tab
-            let update_span = trace_span!("update");
-            terminal_draw_res = update_span.in_scope(|| -> Result<()> {
-                if let Some(component_action) =
-                    app.get_or_init_current_tab(commander)?.update(commander)?
-                {
-                    app.handle_action(component_action, commander)?;
-                }
-
-                Ok(())
-            });
-            if terminal_draw_res.is_err() {
-                return;
-            }
-
-            let draw_span = trace_span!("draw");
-            terminal_draw_res = draw_span.in_scope(|| -> Result<()> {
-                ui(f, app)?;
-
-                {
-                    let paragraph =
-                        Paragraph::new(format!("{}ms", start_time.elapsed().as_millis()))
-                            .alignment(Alignment::Right);
-                    let position = Rect {
-                        x: 0,
-                        y: 1,
-                        height: 1,
-                        width: f.area().width - 1,
-                    };
-                    f.render_widget(paragraph, position);
-                }
-                Ok(())
-            });
-        })?;
-        terminal_draw_res?;
+        draw_app(app, terminal, commander, &start_time)?;
 
         // Input
         start_time = Instant::now();
@@ -195,6 +159,50 @@ fn run_app<B: Backend>(
             return Ok(());
         }
     }
+}
+
+fn draw_app<B: Backend>(
+    app: &mut App,
+    terminal: &mut Terminal<B>,
+    commander: &mut Commander,
+    start_time: &Instant,
+) -> Result<()> {
+    let mut terminal_draw_res = Ok(());
+    terminal.draw(|f| {
+        // Update current tab
+        let update_span = trace_span!("update");
+        terminal_draw_res = update_span.in_scope(|| -> Result<()> {
+            if let Some(component_action) =
+                app.get_or_init_current_tab(commander)?.update(commander)?
+            {
+                app.handle_action(component_action, commander)?;
+            }
+
+            Ok(())
+        });
+        if terminal_draw_res.is_err() {
+            return;
+        }
+
+        let draw_span = trace_span!("draw");
+        terminal_draw_res = draw_span.in_scope(|| -> Result<()> {
+            ui(f, app)?;
+
+            {
+                let paragraph = Paragraph::new(format!("{}ms", start_time.elapsed().as_millis()))
+                    .alignment(Alignment::Right);
+                let position = Rect {
+                    x: 0,
+                    y: 1,
+                    height: 1,
+                    width: f.area().width - 1,
+                };
+                f.render_widget(paragraph, position);
+            }
+            Ok(())
+        });
+    })?;
+    terminal_draw_res
 }
 
 /// Let app process all input events in queue before returning
