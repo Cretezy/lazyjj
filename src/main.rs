@@ -5,7 +5,7 @@ use std::{
     fs::{canonicalize, OpenOptions},
     io::{self, ErrorKind},
     process::Command,
-    time::{Duration, Instant},
+    time::Instant,
 };
 
 use anyhow::{bail, Context, Result};
@@ -14,7 +14,7 @@ use ratatui::{
     backend::{Backend, CrosstermBackend},
     crossterm::{
         event::{
-            self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
+            DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
             KeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
         },
         execute,
@@ -34,6 +34,7 @@ use tracing_subscriber::layer::SubscriberExt;
 mod app;
 mod commander;
 mod env;
+mod event;
 mod keybinds;
 mod ui;
 
@@ -134,6 +135,8 @@ fn main() -> Result<()> {
 
     // Run app
     let res = run_app(&mut terminal, &mut app, &mut commander);
+
+    // restore terminal before possible panic from run_app
     restore_terminal()?;
     res?;
 
@@ -145,6 +148,8 @@ fn run_app<B: Backend>(
     app: &mut App,
     commander: &mut Commander,
 ) -> Result<()> {
+    app.launch_input_channel();
+
     let mut start_time = Instant::now();
     loop {
         // Draw
@@ -156,9 +161,10 @@ fn run_app<B: Backend>(
         let should_stop = input_to_app(app, commander)?;
 
         if should_stop {
-            return Ok(());
+            break;
         }
     }
+    Ok(())
 }
 
 fn draw_app<B: Backend>(
@@ -205,16 +211,20 @@ fn draw_app<B: Backend>(
     terminal_draw_res
 }
 
+/// Wait for next event, then process it.
 /// Let app process all input events in queue before returning
 /// Return true if application should stop
 fn input_to_app(app: &mut App, commander: &mut Commander) -> Result<bool> {
-    let input_spawn = trace_span!("input");
-    let mut should_stop: bool = false;
-    while event::poll(Duration::ZERO)? && !should_stop {
-        let event = event::read()?;
-        should_stop = input_spawn.in_scope(|| app.input(event, commander))?;
+    let input_span = trace_span!("input");
+    let mut stop_app: bool = false;
+    while !stop_app {
+        let Some(event) = app.try_recv_app_event() else {
+            break;
+        };
+
+        stop_app = input_span.in_scope(|| app.input(event, commander))?;
     }
-    Ok(should_stop)
+    Ok(stop_app)
 }
 
 fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {

@@ -21,6 +21,7 @@ chrono = "0.4.39"
 clap = { version = "4.5.31", features = ["derive", "env"] }
 insta = { version = "1.42.1", features = ["filters"] }
 itertools = "0.14.0"
+notify = "8.0.0"
 ratatui = { version = "0.29.0", features = [
   "serde",
   "unstable-rendered-line-info",
