@@ -3,7 +3,8 @@
 use ansi_to_tui::IntoText;
 use anyhow::Result;
 use ratatui::{
-    crossterm::event::{Event, KeyEventKind},
+    crossterm::event::{Event, KeyEventKind, MouseEvent, MouseEventKind},
+    layout::Rect,
     prelude::*,
     widgets::*,
 };
@@ -21,6 +22,7 @@ use crate::{
     ui::{
         bookmark_set_popup::BookmarkSetPopup,
         details_panel::DetailsPanel,
+        details_panel::DetailsPanelEvent,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
@@ -47,6 +49,9 @@ pub struct LogTab<'a> {
     head_panel: DetailsPanel,
     head_output: Result<String, CommandError>,
     head: Head,
+
+    // Rect of panels [0] = log, [1] = details
+    panel_rect: [Rect; 2],
 
     diff_format: DiffFormat,
 
@@ -131,6 +136,8 @@ impl LogTab<'_> {
             head_panel: DetailsPanel::new(),
             head_output,
 
+            panel_rect: [Rect::ZERO, Rect::ZERO],
+
             diff_format,
 
             popup: ConfirmDialogState::default(),
@@ -199,6 +206,294 @@ impl LogTab<'_> {
     pub fn set_head(&mut self, commander: &mut Commander, head: Head) {
         head.clone_into(&mut self.head);
         self.refresh_head_output(commander);
+    }
+
+    fn handle_event(
+        &mut self,
+        commander: &mut Commander,
+        log_tab_event: LogTabEvent,
+    ) -> Result<ComponentInputResult> {
+        match log_tab_event {
+            LogTabEvent::ScrollDown => {
+                self.scroll_log(commander, 1);
+            }
+            LogTabEvent::ScrollUp => {
+                self.scroll_log(commander, -1);
+            }
+            LogTabEvent::ScrollDownHalf => {
+                self.scroll_log(commander, self.log_height as isize / 2 / 2);
+            }
+            LogTabEvent::ScrollUpHalf => {
+                self.scroll_log(
+                    commander,
+                    (self.log_height as isize / 2 / 2).saturating_neg(),
+                );
+            }
+            LogTabEvent::FocusCurrent => {
+                self.head = commander.get_current_head()?;
+                self.refresh_head_output(commander);
+            }
+            LogTabEvent::ToggleDiffFormat => {
+                self.diff_format = self.diff_format.get_next(self.config.diff_tool());
+                self.refresh_head_output(commander);
+            }
+            LogTabEvent::Refresh => {
+                self.refresh_log_output(commander);
+                self.refresh_head_output(commander);
+            }
+            LogTabEvent::CreateNew { describe } => {
+                self.popup = ConfirmDialogState::new(
+                    NEW_POPUP_ID,
+                    Span::styled(" New ", Style::new().bold().cyan()),
+                    Text::from(vec![
+                        Line::from("Are you sure you want to create a new change?"),
+                        Line::from(format!("New parent: {}", self.head.change_id.as_str())),
+                    ])
+                    .fg(Color::default()),
+                );
+                self.popup
+                    .with_yes_button(ButtonLabel::YES.clone())
+                    .with_no_button(ButtonLabel::NO.clone())
+                    .with_listener(Some(self.popup_tx.clone()))
+                    .open();
+                self.describe_after_new = describe;
+            }
+            LogTabEvent::Squash { ignore_immutable } => {
+                if self.head.change_id == commander.get_current_head()?.change_id {
+                    return Ok(ComponentInputResult::HandledAction(
+                        ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                            title: "Squash".into(),
+                            messages: "Cannot squash onto current change".into_text()?,
+                            text_align: None,
+                        }))),
+                    ));
+                }
+                if self.head.immutable && !ignore_immutable {
+                    return Ok(ComponentInputResult::HandledAction(
+                        ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                            title: "Squash".into(),
+                            messages: "Cannot squash onto immutable change".into_text()?,
+                            text_align: None,
+                        }))),
+                    ));
+                }
+
+                let mut lines = vec![
+                    Line::from("Are you sure you want to squash @ into this change?"),
+                    Line::from(format!("Squash into {}", self.head.change_id.as_str())),
+                ];
+                if ignore_immutable {
+                    lines.push(Line::from("This change is immutable."));
+                }
+                self.popup = ConfirmDialogState::new(
+                    SQUASH_POPUP_ID,
+                    Span::styled(" Squash ", Style::new().bold().cyan()),
+                    Text::from(lines).fg(Color::default()),
+                );
+                self.popup
+                    .with_yes_button(ButtonLabel::YES.clone())
+                    .with_no_button(ButtonLabel::NO.clone())
+                    .with_listener(Some(self.popup_tx.clone()))
+                    .open();
+                self.squash_ignore_immutable = ignore_immutable;
+            }
+            LogTabEvent::EditChange { ignore_immutable } => {
+                if self.head.immutable && !ignore_immutable {
+                    return Ok(ComponentInputResult::HandledAction(
+                        ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                            title: " Edit ".into(),
+                            messages: vec![
+                                "The change cannot be edited because it is immutable.".into()
+                            ]
+                            .into(),
+                            text_align: None,
+                        }))),
+                    ));
+                }
+
+                let mut lines = vec![
+                    Line::from("Are you sure you want to edit an existing change?"),
+                    Line::from(format!("Change: {}", self.head.change_id.as_str())),
+                ];
+                if ignore_immutable {
+                    lines.push(Line::from("This change is immutable."))
+                }
+                self.popup = ConfirmDialogState::new(
+                    EDIT_POPUP_ID,
+                    Span::styled(" Edit ", Style::new().bold().cyan()),
+                    Text::from(lines).fg(Color::default()),
+                );
+                self.popup
+                    .with_yes_button(ButtonLabel::YES.clone())
+                    .with_no_button(ButtonLabel::NO.clone())
+                    .with_listener(Some(self.popup_tx.clone()))
+                    .open();
+                self.edit_ignore_immutable = ignore_immutable;
+            }
+            LogTabEvent::Abandon => {
+                if self.head.immutable {
+                    return Ok(ComponentInputResult::HandledAction(
+                        ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                            title: "Abandon".into(),
+                            messages: vec![
+                                "The change cannot be abandoned because it is immutable.".into(),
+                            ]
+                            .into(),
+                            text_align: None,
+                        }))),
+                    ));
+                } else {
+                    self.popup = ConfirmDialogState::new(
+                        ABANDON_POPUP_ID,
+                        Span::styled(" Abandon ", Style::new().bold().cyan()),
+                        Text::from(vec![
+                            Line::from("Are you sure you want to abandon this change?"),
+                            Line::from(format!("Change: {}", self.head.change_id.as_str())),
+                        ])
+                        .fg(Color::default()),
+                    );
+                    self.popup
+                        .with_yes_button(ButtonLabel::YES.clone())
+                        .with_no_button(ButtonLabel::NO.clone())
+                        .with_listener(Some(self.popup_tx.clone()))
+                        .open();
+                }
+            }
+            LogTabEvent::Describe => {
+                if self.head.immutable {
+                    return Ok(ComponentInputResult::HandledAction(
+                        ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                            title: "Describe".into(),
+                            messages: vec![
+                                "The change cannot be described because it is immutable.".into(),
+                            ]
+                            .into(),
+                            text_align: None,
+                        }))),
+                    ));
+                } else {
+                    let mut textarea = TextArea::new(
+                        commander
+                            .get_commit_description(&self.head.commit_id)?
+                            .split("\n")
+                            .map(|line| line.to_string())
+                            .collect(),
+                    );
+                    textarea.move_cursor(CursorMove::End);
+                    self.describe_textarea = Some(textarea);
+                    return Ok(ComponentInputResult::Handled);
+                }
+            }
+            LogTabEvent::EditRevset => {
+                let mut textarea = TextArea::new(
+                    self.log_revset
+                        .as_ref()
+                        .unwrap_or(&"".to_owned())
+                        .lines()
+                        .map(String::from)
+                        .collect(),
+                );
+                textarea.move_cursor(CursorMove::End);
+                self.log_revset_textarea = Some(textarea);
+                return Ok(ComponentInputResult::Handled);
+            }
+            LogTabEvent::SetBookmark => {
+                return Ok(ComponentInputResult::HandledAction(
+                    ComponentAction::SetPopup(Some(Box::new(BookmarkSetPopup::new(
+                        self.config.clone(),
+                        commander,
+                        Some(self.head.change_id.clone()),
+                        self.head.commit_id.clone(),
+                        self.bookmark_set_popup_tx.clone(),
+                    )))),
+                ));
+            }
+            LogTabEvent::OpenFiles => {
+                return Ok(ComponentInputResult::HandledAction(
+                    ComponentAction::ViewFiles(self.head.clone()),
+                ));
+            }
+            LogTabEvent::Push {
+                all_bookmarks,
+                allow_new,
+            } => {
+                match commander.git_push(all_bookmarks, allow_new, &self.head.commit_id) {
+                    Ok(result) if !result.is_empty() => {
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                title: "Push message".into(),
+                                messages: result.into_text()?,
+                                text_align: None,
+                            }))),
+                        ));
+                    }
+                    Err(err) => {
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                title: "Push error".into(),
+                                messages: err.into_text("")?,
+                                text_align: None,
+                            }))),
+                        ));
+                    }
+                    _ => (),
+                }
+
+                self.refresh_log_output(commander);
+                self.refresh_head_output(commander);
+            }
+            LogTabEvent::Fetch { all_remotes } => {
+                match commander.git_fetch(all_remotes) {
+                    Ok(result) if !result.is_empty() => {
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                title: "Fetch message".into(),
+                                messages: result.into_text()?,
+                                text_align: None,
+                            }))),
+                        ));
+                    }
+                    Err(err) => {
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                title: "Fetch error".into(),
+                                messages: err.into_text("")?,
+                                text_align: None,
+                            }))),
+                        ));
+                    }
+                    _ => (),
+                }
+
+                self.refresh_log_output(commander);
+                self.refresh_head_output(commander);
+            }
+            LogTabEvent::OpenHelp => {
+                return Ok(ComponentInputResult::HandledAction(
+                    ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
+                        self.keybinds.make_main_panel_help(),
+                        vec![
+                            ("Ctrl+e/Ctrl+y".to_owned(), "scroll down/up".to_owned()),
+                            (
+                                "Ctrl+d/Ctrl+u".to_owned(),
+                                "scroll down/up by ½ page".to_owned(),
+                            ),
+                            (
+                                "Ctrl+f/Ctrl+b".to_owned(),
+                                "scroll down/up by page".to_owned(),
+                            ),
+                            ("w".to_owned(), "toggle diff format".to_owned()),
+                            ("W".to_owned(), "toggle wrapping".to_owned()),
+                        ],
+                    )))),
+                ))
+            }
+            LogTabEvent::Save
+            | LogTabEvent::Cancel
+            | LogTabEvent::ClosePopup
+            | LogTabEvent::Unbound => return Ok(ComponentInputResult::NotHandled),
+        };
+        return Ok(ComponentInputResult::Handled);
     }
 }
 
@@ -287,6 +582,7 @@ impl Component for LogTab<'_> {
                 Constraint::Percentage(100 - self.config.layout_percent()),
             ])
             .split(area);
+        self.panel_rect = [chunks[0], chunks[1]];
 
         // Draw log
         {
@@ -528,288 +824,49 @@ impl Component for LogTab<'_> {
                 return Ok(ComponentInputResult::Handled);
             }
 
-            match self.keybinds.match_event(key) {
-                LogTabEvent::ScrollDown => {
-                    self.scroll_log(commander, 1);
-                }
-                LogTabEvent::ScrollUp => {
-                    self.scroll_log(commander, -1);
-                }
-                LogTabEvent::ScrollDownHalf => {
-                    self.scroll_log(commander, self.log_height as isize / 2 / 2);
-                }
-                LogTabEvent::ScrollUpHalf => {
-                    self.scroll_log(
-                        commander,
-                        (self.log_height as isize / 2 / 2).saturating_neg(),
-                    );
-                }
-                LogTabEvent::FocusCurrent => {
-                    self.head = commander.get_current_head()?;
-                    self.refresh_head_output(commander);
-                }
-                LogTabEvent::ToggleDiffFormat => {
-                    self.diff_format = self.diff_format.get_next(self.config.diff_tool());
-                    self.refresh_head_output(commander);
-                }
-                LogTabEvent::Refresh => {
-                    self.refresh_log_output(commander);
-                    self.refresh_head_output(commander);
-                }
-                LogTabEvent::CreateNew { describe } => {
-                    self.popup = ConfirmDialogState::new(
-                        NEW_POPUP_ID,
-                        Span::styled(" New ", Style::new().bold().cyan()),
-                        Text::from(vec![
-                            Line::from("Are you sure you want to create a new change?"),
-                            Line::from(format!("New parent: {}", self.head.change_id.as_str())),
-                        ])
-                        .fg(Color::default()),
-                    );
-                    self.popup
-                        .with_yes_button(ButtonLabel::YES.clone())
-                        .with_no_button(ButtonLabel::NO.clone())
-                        .with_listener(Some(self.popup_tx.clone()))
-                        .open();
-                    self.describe_after_new = describe;
-                }
-                LogTabEvent::Squash { ignore_immutable } => {
-                    if self.head.change_id == commander.get_current_head()?.change_id {
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                title: "Squash".into(),
-                                messages: "Cannot squash onto current change".into_text()?,
-                                text_align: None,
-                            }))),
-                        ));
-                    }
-                    if self.head.immutable && !ignore_immutable {
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                title: "Squash".into(),
-                                messages: "Cannot squash onto immutable change".into_text()?,
-                                text_align: None,
-                            }))),
-                        ));
-                    }
+            let log_tab_event = self.keybinds.match_event(key);
+            return self.handle_event(commander, log_tab_event);
+        }
 
-                    let mut lines = vec![
-                        Line::from("Are you sure you want to squash @ into this change?"),
-                        Line::from(format!("Squash into {}", self.head.change_id.as_str())),
-                    ];
-                    if ignore_immutable {
-                        lines.push(Line::from("This change is immutable."));
-                    }
-                    self.popup = ConfirmDialogState::new(
-                        SQUASH_POPUP_ID,
-                        Span::styled(" Squash ", Style::new().bold().cyan()),
-                        Text::from(lines).fg(Color::default()),
-                    );
-                    self.popup
-                        .with_yes_button(ButtonLabel::YES.clone())
-                        .with_no_button(ButtonLabel::NO.clone())
-                        .with_listener(Some(self.popup_tx.clone()))
-                        .open();
-                    self.squash_ignore_immutable = ignore_immutable;
-                }
-                LogTabEvent::EditChange { ignore_immutable } => {
-                    if self.head.immutable && !ignore_immutable {
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                title: " Edit ".into(),
-                                messages: vec![
-                                    "The change cannot be edited because it is immutable.".into(),
-                                ]
-                                .into(),
-                                text_align: None,
-                            }))),
-                        ));
-                    }
-
-                    let mut lines = vec![
-                        Line::from("Are you sure you want to edit an existing change?"),
-                        Line::from(format!("Change: {}", self.head.change_id.as_str())),
-                    ];
-                    if ignore_immutable {
-                        lines.push(Line::from("This change is immutable."))
-                    }
-                    self.popup = ConfirmDialogState::new(
-                        EDIT_POPUP_ID,
-                        Span::styled(" Edit ", Style::new().bold().cyan()),
-                        Text::from(lines).fg(Color::default()),
-                    );
-                    self.popup
-                        .with_yes_button(ButtonLabel::YES.clone())
-                        .with_no_button(ButtonLabel::NO.clone())
-                        .with_listener(Some(self.popup_tx.clone()))
-                        .open();
-                    self.edit_ignore_immutable = ignore_immutable;
-                }
-                LogTabEvent::Abandon => {
-                    if self.head.immutable {
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                title: "Abandon".into(),
-                                messages: vec![
-                                    "The change cannot be abandoned because it is immutable."
-                                        .into(),
-                                ]
-                                .into(),
-                                text_align: None,
-                            }))),
-                        ));
-                    } else {
-                        self.popup = ConfirmDialogState::new(
-                            ABANDON_POPUP_ID,
-                            Span::styled(" Abandon ", Style::new().bold().cyan()),
-                            Text::from(vec![
-                                Line::from("Are you sure you want to abandon this change?"),
-                                Line::from(format!("Change: {}", self.head.change_id.as_str())),
-                            ])
-                            .fg(Color::default()),
-                        );
-                        self.popup
-                            .with_yes_button(ButtonLabel::YES.clone())
-                            .with_no_button(ButtonLabel::NO.clone())
-                            .with_listener(Some(self.popup_tx.clone()))
-                            .open();
+        if let Event::Mouse(mouse_event) = event {
+            // Determine if mouse event is inside log-view or details-view
+            fn contains(rect: &Rect, mouse_event: &MouseEvent) -> bool {
+                rect.x <= mouse_event.column
+                    && mouse_event.column < rect.x + rect.width
+                    && rect.y <= mouse_event.row
+                    && mouse_event.row < rect.y + rect.height
+            }
+            let find_panel = || -> Option<usize> {
+                for (i, rect) in self.panel_rect.iter().enumerate() {
+                    if contains(rect, &mouse_event) {
+                        return Some(i);
                     }
                 }
-                LogTabEvent::Describe => {
-                    if self.head.immutable {
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                title: "Describe".into(),
-                                messages: vec![
-                                    "The change cannot be described because it is immutable."
-                                        .into(),
-                                ]
-                                .into(),
-                                text_align: None,
-                            }))),
-                        ));
-                    } else {
-                        let mut textarea = TextArea::new(
-                            commander
-                                .get_commit_description(&self.head.commit_id)?
-                                .split("\n")
-                                .map(|line| line.to_string())
-                                .collect(),
-                        );
-                        textarea.move_cursor(CursorMove::End);
-                        self.describe_textarea = Some(textarea);
-                        return Ok(ComponentInputResult::Handled);
-                    }
-                }
-                LogTabEvent::EditRevset => {
-                    let mut textarea = TextArea::new(
-                        self.log_revset
-                            .as_ref()
-                            .unwrap_or(&"".to_owned())
-                            .lines()
-                            .map(String::from)
-                            .collect(),
-                    );
-                    textarea.move_cursor(CursorMove::End);
-                    self.log_revset_textarea = Some(textarea);
-                    return Ok(ComponentInputResult::Handled);
-                }
-                LogTabEvent::SetBookmark => {
-                    return Ok(ComponentInputResult::HandledAction(
-                        ComponentAction::SetPopup(Some(Box::new(BookmarkSetPopup::new(
-                            self.config.clone(),
-                            commander,
-                            Some(self.head.change_id.clone()),
-                            self.head.commit_id.clone(),
-                            self.bookmark_set_popup_tx.clone(),
-                        )))),
-                    ));
-                }
-                LogTabEvent::OpenFiles => {
-                    return Ok(ComponentInputResult::HandledAction(
-                        ComponentAction::ViewFiles(self.head.clone()),
-                    ));
-                }
-                LogTabEvent::Push {
-                    all_bookmarks,
-                    allow_new,
-                } => {
-                    match commander.git_push(all_bookmarks, allow_new, &self.head.commit_id) {
-                        Ok(result) if !result.is_empty() => {
-                            return Ok(ComponentInputResult::HandledAction(
-                                ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                    title: "Push message".into(),
-                                    messages: result.into_text()?,
-                                    text_align: None,
-                                }))),
-                            ));
-                        }
-                        Err(err) => {
-                            return Ok(ComponentInputResult::HandledAction(
-                                ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                    title: "Push error".into(),
-                                    messages: err.into_text("")?,
-                                    text_align: None,
-                                }))),
-                            ));
-                        }
-                        _ => (),
-                    }
-
-                    self.refresh_log_output(commander);
-                    self.refresh_head_output(commander);
-                }
-                LogTabEvent::Fetch { all_remotes } => {
-                    match commander.git_fetch(all_remotes) {
-                        Ok(result) if !result.is_empty() => {
-                            return Ok(ComponentInputResult::HandledAction(
-                                ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                    title: "Fetch message".into(),
-                                    messages: result.into_text()?,
-                                    text_align: None,
-                                }))),
-                            ));
-                        }
-                        Err(err) => {
-                            return Ok(ComponentInputResult::HandledAction(
-                                ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                    title: "Fetch error".into(),
-                                    messages: err.into_text("")?,
-                                    text_align: None,
-                                }))),
-                            ));
-                        }
-                        _ => (),
-                    }
-
-                    self.refresh_log_output(commander);
-                    self.refresh_head_output(commander);
-                }
-                LogTabEvent::OpenHelp => {
-                    return Ok(ComponentInputResult::HandledAction(
-                        ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
-                            self.keybinds.make_main_panel_help(),
-                            vec![
-                                ("Ctrl+e/Ctrl+y".to_owned(), "scroll down/up".to_owned()),
-                                (
-                                    "Ctrl+d/Ctrl+u".to_owned(),
-                                    "scroll down/up by ½ page".to_owned(),
-                                ),
-                                (
-                                    "Ctrl+f/Ctrl+b".to_owned(),
-                                    "scroll down/up by page".to_owned(),
-                                ),
-                                ("w".to_owned(), "toggle diff format".to_owned()),
-                                ("W".to_owned(), "toggle wrapping".to_owned()),
-                            ],
-                        )))),
-                    ))
-                }
-                LogTabEvent::Save
-                | LogTabEvent::Cancel
-                | LogTabEvent::ClosePopup
-                | LogTabEvent::Unbound => return Ok(ComponentInputResult::NotHandled),
+                return None;
             };
+            let panel = find_panel();
+            // Execute command dependent on panel and event kind
+            const LOG_PANEL: Option<usize> = Some(0);
+            const DETAILS_PANEL: Option<usize> = Some(1);
+            match (panel, mouse_event.kind) {
+                (LOG_PANEL, MouseEventKind::ScrollUp) => {
+                    self.handle_event(commander, LogTabEvent::ScrollUp)?;
+                }
+                (LOG_PANEL, MouseEventKind::ScrollDown) => {
+                    self.handle_event(commander, LogTabEvent::ScrollDown)?;
+                }
+                (DETAILS_PANEL, MouseEventKind::ScrollUp) => {
+                    self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
+                    self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
+                    self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
+                }
+                (DETAILS_PANEL, MouseEventKind::ScrollDown) => {
+                    self.head_panel.handle_event(DetailsPanelEvent::ScrollDown);
+                    self.head_panel.handle_event(DetailsPanelEvent::ScrollDown);
+                    self.head_panel.handle_event(DetailsPanelEvent::ScrollDown);
+                }
+                _ => {} // Handle other mouse events if necessary
+            }
         }
 
         Ok(ComponentInputResult::Handled)
