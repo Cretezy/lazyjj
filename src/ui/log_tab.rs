@@ -493,7 +493,7 @@ impl LogTab<'_> {
             | LogTabEvent::ClosePopup
             | LogTabEvent::Unbound => return Ok(ComponentInputResult::NotHandled),
         };
-        return Ok(ComponentInputResult::Handled);
+        Ok(ComponentInputResult::Handled)
     }
 }
 
@@ -842,7 +842,7 @@ impl Component for LogTab<'_> {
                         return Some(i);
                     }
                 }
-                return None;
+                None
             };
             let panel = find_panel();
             // Execute command dependent on panel and event kind
