@@ -118,7 +118,7 @@ jobs:
         with:
           components: clippy
       - name: Clippy
-        run: cargo clippy --workspace --all-targets --verbose
+        run: cargo clippy --workspace --all-targets --verbose -- -D warnings
 
   rustfmt:
     name: Format
