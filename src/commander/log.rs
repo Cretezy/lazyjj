@@ -351,7 +351,7 @@ mod tests {
 
         assert!(log.graph_heads.iter().all(|graph_head| graph_head
             .as_ref()
-            .map_or(true, |graph_head| log.heads.contains(graph_head))));
+            .is_none_or(|graph_head| log.heads.contains(graph_head))));
 
         Ok(())
     }
