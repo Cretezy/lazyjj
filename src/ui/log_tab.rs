@@ -25,6 +25,7 @@ use crate::{
         details_panel::DetailsPanelEvent,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
+        scrollbar,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
         Component, ComponentAction,
     },
@@ -178,7 +179,7 @@ impl LogTab<'_> {
         self.head_output = commander
             .get_commit_show(&self.head.commit_id, &self.diff_format, true)
             .map(|text| tabs_to_spaces(&text));
-        self.head_panel.scroll = 0;
+        self.head_panel.scroll_to(0);
     }
 
     fn scroll_log(&mut self, commander: &mut Commander, scroll: isize) {
@@ -642,12 +643,24 @@ impl Component for LogTab<'_> {
                 None => " Log ",
             };
 
+            let log_length: usize = log_lines.len();
             let log_block = Block::bordered()
                 .title(title)
                 .border_type(BorderType::Rounded);
             self.log_height = log_block.inner(chunks[0]).height;
             let log = List::new(log_lines).block(log_block).scroll_padding(7);
             f.render_stateful_widget(log, chunks[0], &mut self.log_list_state);
+
+            // Show scrollbar if more lines than fits in screen height
+            if log_length > self.log_height.into() {
+                scrollbar::draw_scrollbar(
+                    f,
+                    chunks[0],
+                    log_length - 1,
+                    self.log_list_state.selected().unwrap_or(0),
+                    scrollbar::Orientation::Vertical,
+                );
+            }
         }
 
         // Draw change details
@@ -656,16 +669,11 @@ impl Component for LogTab<'_> {
                 Ok(head_output) => head_output.into_text()?.lines,
                 Err(err) => err.into_text("Error getting head details")?.lines,
             };
-            let head_block = Block::bordered()
+            self.head_panel
+                .render_context()
                 .title(format!(" Details for {} ", self.head.change_id))
-                .border_type(BorderType::Rounded)
-                .padding(Padding::horizontal(1));
-            let head = self
-                .head_panel
-                .render(head_content, head_block.inner(chunks[1]))
-                .block(head_block);
-
-            f.render_widget(head, chunks[1]);
+                .content(head_content)
+                .draw(f, chunks[1])
         }
 
         // Draw popup
