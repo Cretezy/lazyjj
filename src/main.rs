@@ -45,7 +45,7 @@ use crate::{
     ui::{ui, ComponentAction},
 };
 
-/// Simple program to greet a person
+/// Command line arguments
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
