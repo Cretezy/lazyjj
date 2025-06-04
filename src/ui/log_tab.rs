@@ -8,7 +8,7 @@ use ratatui::{
     prelude::*,
     widgets::*,
 };
-use tracing::instrument;
+use tracing::{instrument, trace};
 use tui_confirm_dialog::{ButtonLabel, ConfirmDialog, ConfirmDialogState, Listener};
 use tui_textarea::{CursorMove, TextArea};
 
@@ -204,6 +204,7 @@ impl LogTab<'_> {
     }
 
     pub fn set_head(&mut self, commander: &mut Commander, head: Head) {
+        trace!("INSIDE SIDS HEAD!! .. i mean sed_head..");
         head.clone_into(&mut self.head);
         self.refresh_head_output(commander);
     }

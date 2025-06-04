@@ -255,9 +255,14 @@ impl<'a> App<'a> {
     /// Process an AppEvent
     pub fn input(&mut self, event: AppEvent, commander: &mut Commander) -> Result<bool> {
         let AppEvent::UserInput(event) = event else {
+            if event != AppEvent::DirtyJj {
+                panic!("Unknown AppEvent {:?}", event);
+            }
             // Trigger update of jj data - simulate focus gained
-            trace!("no-event trigger update of jj data");
+            trace!("no-event trigger re-read of jj data");
+            commander.jj_ignore_working_copy = true;
             self.get_or_init_current_tab(commander)?.focus(commander)?;
+            commander.jj_ignore_working_copy = false;
             return Ok(false); // do not terminate the app
         };
         if let Some(popup) = self.popup.as_mut() {

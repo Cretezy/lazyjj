@@ -21,7 +21,7 @@ const IDLE_TIMEOUT: Duration = Duration::from_secs(1);
 const NOTIFY_DELAY: Duration = Duration::from_millis(100);
 
 /// Input event to the app
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum AppEvent {
     /// Keyboard or mouse input from user
     UserInput(crossterm::event::Event),
