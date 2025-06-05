@@ -18,10 +18,16 @@ pub struct DetailsPanel {
 pub enum DetailsPanelEvent {
     ScrollDown,
     ScrollUp,
+
+    ScrollDownRows(isize),
+    ScrollUpRows(isize),
+
     ScrollDownHalfPage,
     ScrollUpHalfPage,
+
     ScrollDownPage,
     ScrollUpPage,
+
     ToggleWrap,
 }
 
@@ -62,6 +68,8 @@ impl DetailsPanel {
         match details_panel_event {
             DetailsPanelEvent::ScrollDown => self.scroll(1),
             DetailsPanelEvent::ScrollUp => self.scroll(-1),
+            DetailsPanelEvent::ScrollDownRows(i) => self.scroll(i),
+            DetailsPanelEvent::ScrollUpRows(i) => self.scroll(-i),
             DetailsPanelEvent::ScrollDownHalfPage => self.scroll(self.height as isize / 2),
             DetailsPanelEvent::ScrollUpHalfPage => {
                 self.scroll((self.height as isize / 2).saturating_neg())
