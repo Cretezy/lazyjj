@@ -80,6 +80,7 @@ impl FilesTabKeybinds {
             FilesTabEvent::ScrollDownHalf => "scroll down by ½ page",
             FilesTabEvent::ScrollUpHalf => "scroll up by ½ page",
             FilesTabEvent::FocusCurrent => "view files from current change",
+            FilesTabEvent::Refresh => "refresh",
         )
     }
 }
