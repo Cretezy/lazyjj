@@ -820,8 +820,7 @@ impl Component for LogTab<'_> {
                 return Ok(ComponentInputResult::Handled);
             }
 
-            let log_tab_event = self.keybinds.match_event(key);
-            return self.handle_event(commander, log_tab_event);
+            return self.handle_event(commander, self.keybinds.match_event(key));
         }
 
         if let Event::Mouse(mouse_event) = event {

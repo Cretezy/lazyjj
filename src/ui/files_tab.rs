@@ -175,6 +175,58 @@ impl FilesTab {
         }
         Ok(())
     }
+
+    fn handle_event(
+        &mut self,
+        commander: &mut Commander,
+        event: FilesTabEvent,
+    ) -> Result<ComponentInputResult> {
+        match event {
+            FilesTabEvent::ScrollDown => self.scroll_files(commander, 1)?,
+            FilesTabEvent::ScrollUp => self.scroll_files(commander, -1)?,
+            FilesTabEvent::ScrollDownHalf => {
+                self.scroll_files(commander, self.files_height as isize / 2)?;
+            }
+            FilesTabEvent::ScrollUpHalf => {
+                self.scroll_files(commander, (self.files_height as isize / 2).saturating_neg())?;
+            }
+            FilesTabEvent::ToggleDiffFormat => {
+                self.diff_format = self.diff_format.get_next(self.config.diff_tool());
+                self.refresh_diff(commander)?;
+            }
+            FilesTabEvent::Refresh => {
+                self.head = commander.get_head_latest(&self.head)?;
+                self.refresh_files(commander)?;
+                self.refresh_diff(commander)?;
+            }
+            FilesTabEvent::FocusCurrent => {
+                let head = &commander.get_current_head()?;
+                self.set_head(commander, head)?;
+            }
+            FilesTabEvent::OpenHelp => {
+                return Ok(ComponentInputResult::HandledAction(
+                    ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
+                        self.keybinds.make_main_panel_help(),
+                        vec![
+                            ("Ctrl+e/Ctrl+y".to_owned(), "scroll down/up".to_owned()),
+                            (
+                                "Ctrl+d/Ctrl+u".to_owned(),
+                                "scroll down/up by ½ page".to_owned(),
+                            ),
+                            (
+                                "Ctrl+f/Ctrl+b".to_owned(),
+                                "scroll down/up by page".to_owned(),
+                            ),
+                            ("w".to_owned(), "toggle diff format".to_owned()),
+                            ("W".to_owned(), "toggle wrapping".to_owned()),
+                        ],
+                    )))),
+                ))
+            }
+            FilesTabEvent::Unbound => return Ok(ComponentInputResult::NotHandled),
+        };
+        Ok(ComponentInputResult::Handled)
+    }
 }
 
 impl Component for FilesTab {
@@ -313,53 +365,7 @@ impl Component for FilesTab {
                 return Ok(ComponentInputResult::Handled);
             }
 
-            match self.keybinds.match_event(key) {
-                FilesTabEvent::ScrollDown => self.scroll_files(commander, 1)?,
-                FilesTabEvent::ScrollUp => self.scroll_files(commander, -1)?,
-                FilesTabEvent::ScrollDownHalf => {
-                    self.scroll_files(commander, self.files_height as isize / 2)?;
-                }
-                FilesTabEvent::ScrollUpHalf => {
-                    self.scroll_files(
-                        commander,
-                        (self.files_height as isize / 2).saturating_neg(),
-                    )?;
-                }
-                FilesTabEvent::ToggleDiffFormat => {
-                    self.diff_format = self.diff_format.get_next(self.config.diff_tool());
-                    self.refresh_diff(commander)?;
-                }
-                FilesTabEvent::Refresh => {
-                    self.head = commander.get_head_latest(&self.head)?;
-                    self.refresh_files(commander)?;
-                    self.refresh_diff(commander)?;
-                }
-                FilesTabEvent::FocusCurrent => {
-                    let head = &commander.get_current_head()?;
-                    self.set_head(commander, head)?;
-                }
-                FilesTabEvent::OpenHelp => {
-                    return Ok(ComponentInputResult::HandledAction(
-                        ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
-                            self.keybinds.make_main_panel_help(),
-                            vec![
-                                ("Ctrl+e/Ctrl+y".to_owned(), "scroll down/up".to_owned()),
-                                (
-                                    "Ctrl+d/Ctrl+u".to_owned(),
-                                    "scroll down/up by ½ page".to_owned(),
-                                ),
-                                (
-                                    "Ctrl+f/Ctrl+b".to_owned(),
-                                    "scroll down/up by page".to_owned(),
-                                ),
-                                ("w".to_owned(), "toggle diff format".to_owned()),
-                                ("W".to_owned(), "toggle wrapping".to_owned()),
-                            ],
-                        )))),
-                    ))
-                }
-                _ => return Ok(ComponentInputResult::NotHandled),
-            };
+            return self.handle_event(commander, self.keybinds.match_event(key));
         }
 
         Ok(ComponentInputResult::Handled)
