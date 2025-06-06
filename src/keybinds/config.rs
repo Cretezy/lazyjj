@@ -3,6 +3,7 @@ use super::Shortcut;
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct KeybindsConfig {
     pub log_tab: Option<LogTabKeybindsConfig>,
+    pub files_tab: Option<FilesTabKeybindsConfig>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -49,5 +50,20 @@ pub struct LogTabKeybindsConfig {
     pub fetch: Option<Keybind>,
     pub fetch_all: Option<Keybind>,
 
+    pub open_help: Option<Keybind>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct FilesTabKeybindsConfig {
+    pub scroll_down: Option<Keybind>,
+    pub scroll_up: Option<Keybind>,
+    pub scroll_down_half: Option<Keybind>,
+    pub scroll_up_half: Option<Keybind>,
+
+    pub focus_current: Option<Keybind>,
+    pub toggle_diff_format: Option<Keybind>,
+
+    pub refresh: Option<Keybind>,
     pub open_help: Option<Keybind>,
 }
