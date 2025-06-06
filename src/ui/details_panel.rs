@@ -1,5 +1,5 @@
 use ratatui::{
-    crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
+    crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind},
     layout::Rect,
     text::Text,
     widgets::{Paragraph, Wrap},
@@ -106,5 +106,23 @@ impl DetailsPanel {
         };
 
         true
+    }
+
+    pub fn match_mouse_event(
+        &self,
+        event: MouseEvent,
+        is_big_scroll: bool,
+    ) -> Option<DetailsPanelEvent> {
+        const DETAILS_SCROLL: isize = 3;
+
+        match event.kind {
+            MouseEventKind::ScrollUp if is_big_scroll => Some(DetailsPanelEvent::ScrollUpHalfPage),
+            MouseEventKind::ScrollUp => Some(DetailsPanelEvent::ScrollUpRows(DETAILS_SCROLL)),
+            MouseEventKind::ScrollDown if is_big_scroll => {
+                Some(DetailsPanelEvent::ScrollDownHalfPage)
+            }
+            MouseEventKind::ScrollDown => Some(DetailsPanelEvent::ScrollDownRows(DETAILS_SCROLL)),
+            _ => None,
+        }
     }
 }

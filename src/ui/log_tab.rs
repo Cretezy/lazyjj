@@ -22,7 +22,6 @@ use crate::{
     ui::{
         bookmark_set_popup::BookmarkSetPopup,
         details_panel::DetailsPanel,
-        details_panel::DetailsPanelEvent,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
@@ -826,7 +825,6 @@ impl Component for LogTab<'_> {
         }
 
         if let Event::Mouse(mouse_event) = event {
-            const DETAILS_SCROLL: isize = 3;
             let is_big_scroll = mouse_event.modifiers.contains(KeyModifiers::SHIFT);
 
             // Determine if mouse event is inside log-view or details-view
@@ -858,14 +856,10 @@ impl Component for LogTab<'_> {
                     }
                 }
                 DETAILS_PANEL => {
-                    let action = match mouse_event.kind {
-                        MouseEventKind::ScrollUp if is_big_scroll => Some(DetailsPanelEvent::ScrollUpHalfPage),
-                        MouseEventKind::ScrollUp => Some(DetailsPanelEvent::ScrollUpRows(DETAILS_SCROLL)),
-                        MouseEventKind::ScrollDown if is_big_scroll => Some(DetailsPanelEvent::ScrollDownHalfPage),
-                        MouseEventKind::ScrollDown => Some(DetailsPanelEvent::ScrollDownRows(DETAILS_SCROLL)),
-                        _ => None,
-                    };
-                    if let Some(action) = action {
+                    if let Some(action) = self
+                        .head_panel
+                        .match_mouse_event(mouse_event, is_big_scroll)
+                    {
                         self.head_panel.handle_event(action);
                     }
                 }
