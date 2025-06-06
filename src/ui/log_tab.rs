@@ -641,9 +641,9 @@ impl Component for LogTab<'_> {
             let log_block = Block::bordered()
                 .title(title)
                 .border_type(BorderType::Rounded);
-            self.log_height = log_block.inner(chunks[0]).height;
+            self.log_height = log_block.inner(self.panel_rect[0]).height;
             let log = List::new(log_lines).block(log_block).scroll_padding(7);
-            f.render_stateful_widget(log, chunks[0], &mut self.log_list_state);
+            f.render_stateful_widget(log, self.panel_rect[0], &mut self.log_list_state);
         }
 
         // Draw change details
@@ -658,10 +658,10 @@ impl Component for LogTab<'_> {
                 .padding(Padding::horizontal(1));
             let head = self
                 .head_panel
-                .render(head_content, head_block.inner(chunks[1]))
+                .render(head_content, head_block.inner(self.panel_rect[1]))
                 .block(head_block);
 
-            f.render_widget(head, chunks[1]);
+            f.render_widget(head, self.panel_rect[1]);
         }
 
         // Draw popup
@@ -823,6 +823,7 @@ impl Component for LogTab<'_> {
             return self.handle_event(commander, self.keybinds.match_event(key));
         }
 
+        // todo: this code is the same as in other components
         if let Event::Mouse(mouse_event) = event {
             let is_big_scroll = mouse_event.modifiers.contains(KeyModifiers::SHIFT);
 

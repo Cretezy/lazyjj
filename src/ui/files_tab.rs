@@ -18,7 +18,7 @@ use crate::{
 
 use ansi_to_tui::IntoText;
 use ratatui::{
-    crossterm::event::{Event, KeyEventKind},
+    crossterm::event::{Event, KeyEventKind, KeyModifiers, MouseEventKind},
     prelude::*,
     widgets::*,
 };
@@ -37,6 +37,9 @@ pub struct FilesTab {
     diff_panel: DetailsPanel,
     diff_output: Result<Option<String>, CommandError>,
     diff_format: DiffFormat,
+
+    // Rect of panels [0] = files, [1] = details
+    panel_rect: [Rect; 2],
 
     config: Config,
     keybinds: FilesTabKeybinds,
@@ -110,6 +113,8 @@ impl FilesTab {
             diff_output,
             diff_format,
             diff_panel: DetailsPanel::new(),
+
+            panel_rect: [Rect::ZERO, Rect::ZERO],
 
             config: commander.env.config.clone(),
             keybinds,
@@ -250,6 +255,7 @@ impl Component for FilesTab {
                 Constraint::Percentage(100 - self.config.layout_percent()),
             ])
             .split(area);
+        self.panel_rect = [chunks[0], chunks[1]];
 
         // Draw files
         {
@@ -366,6 +372,50 @@ impl Component for FilesTab {
             }
 
             return self.handle_event(commander, self.keybinds.match_event(key));
+        }
+
+        // todo: this code is the same as in other components
+        if let Event::Mouse(mouse_event) = event {
+            let is_big_scroll = mouse_event.modifiers.contains(KeyModifiers::SHIFT);
+
+            // Determine if mouse event is inside files-view or details-view
+            let panel = self
+                .panel_rect
+                .iter()
+                .enumerate()
+                .find(|(_, rect)| rect.contains(Position::new(mouse_event.column, mouse_event.row)))
+                .map(|(i, _)| i);
+            // Execute command dependent on panel and event kind
+            const FILES_PANEL: Option<usize> = Some(0);
+            const DETAILS_PANEL: Option<usize> = Some(1);
+
+            match panel {
+                FILES_PANEL => {
+                    let action = match mouse_event.kind {
+                        MouseEventKind::ScrollUp if is_big_scroll => {
+                            Some(FilesTabEvent::ScrollUpHalf)
+                        }
+                        MouseEventKind::ScrollUp => Some(FilesTabEvent::ScrollUp),
+                        MouseEventKind::ScrollDown if is_big_scroll => {
+                            Some(FilesTabEvent::ScrollDownHalf)
+                        }
+                        MouseEventKind::ScrollDown => Some(FilesTabEvent::ScrollDown),
+                        _ => None,
+                    };
+                    if let Some(action) = action {
+                        self.handle_event(commander, action)?;
+                    }
+                }
+                DETAILS_PANEL => {
+                    if let Some(action) = self
+                        .diff_panel
+                        .match_mouse_event(mouse_event, is_big_scroll)
+                    {
+                        self.diff_panel.handle_event(action);
+                    }
+                }
+                _ => {}
+            }
         }
 
         Ok(ComponentInputResult::Handled)
