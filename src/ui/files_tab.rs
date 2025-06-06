@@ -8,6 +8,7 @@ use crate::{
         CommandError, Commander,
     },
     env::{Config, DiffFormat},
+    keybinds::{FilesTabEvent, FilesTabKeybinds},
     ui::{
         details_panel::DetailsPanel, help_popup::HelpPopup, utils::tabs_to_spaces, Component,
         ComponentAction,
@@ -17,7 +18,7 @@ use crate::{
 
 use ansi_to_tui::IntoText;
 use ratatui::{
-    crossterm::event::{Event, KeyCode, KeyEventKind},
+    crossterm::event::{Event, KeyEventKind},
     prelude::*,
     widgets::*,
 };
@@ -38,6 +39,7 @@ pub struct FilesTab {
     diff_format: DiffFormat,
 
     config: Config,
+    keybinds: FilesTabKeybinds,
 }
 
 fn get_current_file_index(
@@ -84,6 +86,16 @@ impl FilesTab {
             files_output.as_ref(),
         ));
 
+        let mut keybinds = FilesTabKeybinds::default();
+        if let Some(new_keybinds) = commander
+            .env
+            .config
+            .keybinds()
+            .and_then(|k| k.files_tab.clone())
+        {
+            keybinds.extend_from_config(&new_keybinds);
+        }
+
         Ok(Self {
             head,
             is_current_head,
@@ -100,6 +112,7 @@ impl FilesTab {
             diff_panel: DetailsPanel::new(),
 
             config: commander.env.config.clone(),
+            keybinds,
         })
     }
 
@@ -300,39 +313,35 @@ impl Component for FilesTab {
                 return Ok(ComponentInputResult::Handled);
             }
 
-            match key.code {
-                KeyCode::Char('j') | KeyCode::Down => self.scroll_files(commander, 1)?,
-                KeyCode::Char('k') | KeyCode::Up => self.scroll_files(commander, -1)?,
-                KeyCode::Char('J') => {
+            match self.keybinds.match_event(key) {
+                FilesTabEvent::ScrollDown => self.scroll_files(commander, 1)?,
+                FilesTabEvent::ScrollUp => self.scroll_files(commander, -1)?,
+                FilesTabEvent::ScrollDownHalf => {
                     self.scroll_files(commander, self.files_height as isize / 2)?;
                 }
-                KeyCode::Char('K') => {
+                FilesTabEvent::ScrollUpHalf => {
                     self.scroll_files(
                         commander,
                         (self.files_height as isize / 2).saturating_neg(),
                     )?;
                 }
-                KeyCode::Char('w') => {
+                FilesTabEvent::ToggleDiffFormat => {
                     self.diff_format = self.diff_format.get_next(self.config.diff_tool());
                     self.refresh_diff(commander)?;
                 }
-                KeyCode::Char('R') | KeyCode::F(5) => {
+                FilesTabEvent::Refresh => {
                     self.head = commander.get_head_latest(&self.head)?;
                     self.refresh_files(commander)?;
                     self.refresh_diff(commander)?;
                 }
-                KeyCode::Char('@') => {
+                FilesTabEvent::FocusCurrent => {
                     let head = &commander.get_current_head()?;
                     self.set_head(commander, head)?;
                 }
-                KeyCode::Char('?') => {
+                FilesTabEvent::OpenHelp => {
                     return Ok(ComponentInputResult::HandledAction(
                         ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
-                            vec![
-                                ("j/k".to_owned(), "scroll down/up".to_owned()),
-                                ("J/K".to_owned(), "scroll down by ½ page".to_owned()),
-                                ("@".to_owned(), "view current change files".to_owned()),
-                            ],
+                            self.keybinds.make_main_panel_help(),
                             vec![
                                 ("Ctrl+e/Ctrl+y".to_owned(), "scroll down/up".to_owned()),
                                 (

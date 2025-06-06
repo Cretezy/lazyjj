@@ -3,9 +3,11 @@ use std::{fmt::Display, str::FromStr};
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 pub use config::{Keybind, KeybindsConfig};
+pub use files_tab::{FilesTabEvent, FilesTabKeybinds};
 pub use log_tab::{LogTabEvent, LogTabKeybinds};
 
 mod config;
+mod files_tab;
 mod keybinds_store;
 mod log_tab;
 
