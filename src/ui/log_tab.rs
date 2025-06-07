@@ -583,7 +583,6 @@ impl Component for LogTab<'_> {
 
         // Draw log
         {
-            let mut scroll_offset = 0;
             let log_lines = match self.log_output.as_ref() {
                 Ok(log_output) => {
                     let log_lines: Vec<Line> = self
@@ -612,7 +611,7 @@ impl Component for LogTab<'_> {
                                             .collect();
                                     }
                                 }
-                                _ => scroll_offset += 1,
+                                _ => (),
                             };
 
                             line
