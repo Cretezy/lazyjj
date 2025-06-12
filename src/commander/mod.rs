@@ -1,3 +1,25 @@
+/*!
+This module contains all functions used to interact with jj via command
+line execution.
+
+
+The module has one primary struct: [`Commander`] which implements
+several member functions that each call a jj command and handles the output.
+Since the number of jj commands are quite high and some are quite complex,
+the implementation is found in multiple source files. This is why you
+will find multiple "impl Commander" sections in Commander, one for each source file.
+
+This module implements the low level functions used by the
+command implementation functions:
+
+* [Commander::new] - Create a new instance
+* [Commander::init] - Prepare for commands. This will panic if jj does not work
+* [Commander::execute_command] - Execute any command and log the result
+* [Commander::execute_jj_command] - Execute a jj command.
+* [Commander::execute_void_jj_command] - Execute a jj command and discard the output.
+
+*/
+
 pub mod bookmarks;
 pub mod files;
 pub mod ids;
