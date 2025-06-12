@@ -1,3 +1,10 @@
+/*!
+[Commander] member functions related to various simpler jj commands.
+
+The module implementes a number of jj commands.
+Surprisingly, this module also contains jj bookmark commands.
+These functions are used everywhere (bookmark tab, log tab).
+*/
 use crate::commander::{bookmarks::Bookmark, ids::CommitId, CommandError, Commander};
 
 use anyhow::{Context, Result};
