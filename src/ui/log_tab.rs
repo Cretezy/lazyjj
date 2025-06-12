@@ -220,10 +220,14 @@ impl LogTab<'_> {
                 self.scroll_log(commander, -1);
             }
             LogTabEvent::ScrollDownHalf => {
-                self.scroll_log(commander, self.log_height as isize / 4);
+                // calculate number of items
+                let log_height_in_items = self.log_height as isize / 2;
+                self.scroll_log(commander, log_height_in_items / 2);
             }
             LogTabEvent::ScrollUpHalf => {
-                self.scroll_log(commander, (self.log_height as isize / 4).saturating_neg());
+                // calculate number of items
+                let log_height_in_items = self.log_height as isize / 2;
+                self.scroll_log(commander, (log_height_in_items / 2).saturating_neg());
             }
             LogTabEvent::FocusCurrent => {
                 self.head = commander.get_current_head()?;
