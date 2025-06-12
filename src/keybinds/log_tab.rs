@@ -149,6 +149,7 @@ impl LogTabKeybinds {
             LogTabEvent::ScrollUpHalf => "scroll up by ½ page",
             LogTabEvent::OpenFiles => "see files",
             LogTabEvent::FocusCurrent => "current change",
+            LogTabEvent::Refresh => "refresh",
             LogTabEvent::EditRevset => "set revset",
             LogTabEvent::Describe => "describe change",
             LogTabEvent::EditChange { ignore_immutable: false } => "edit change",

@@ -1,5 +1,5 @@
 use ratatui::{
-    crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
+    crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind},
     layout::Rect,
     text::Text,
     widgets::{Paragraph, Wrap},
@@ -18,10 +18,16 @@ pub struct DetailsPanel {
 pub enum DetailsPanelEvent {
     ScrollDown,
     ScrollUp,
+
+    ScrollDownRows(isize),
+    ScrollUpRows(isize),
+
     ScrollDownHalfPage,
     ScrollUpHalfPage,
+
     ScrollDownPage,
     ScrollUpPage,
+
     ToggleWrap,
 }
 
@@ -62,6 +68,8 @@ impl DetailsPanel {
         match details_panel_event {
             DetailsPanelEvent::ScrollDown => self.scroll(1),
             DetailsPanelEvent::ScrollUp => self.scroll(-1),
+            DetailsPanelEvent::ScrollDownRows(i) => self.scroll(i),
+            DetailsPanelEvent::ScrollUpRows(i) => self.scroll(-i),
             DetailsPanelEvent::ScrollDownHalfPage => self.scroll(self.height as isize / 2),
             DetailsPanelEvent::ScrollUpHalfPage => {
                 self.scroll((self.height as isize / 2).saturating_neg())
@@ -98,5 +106,23 @@ impl DetailsPanel {
         };
 
         true
+    }
+
+    pub fn match_mouse_event(
+        &self,
+        event: MouseEvent,
+        is_big_scroll: bool,
+    ) -> Option<DetailsPanelEvent> {
+        const DETAILS_SCROLL: isize = 3;
+
+        match event.kind {
+            MouseEventKind::ScrollUp if is_big_scroll => Some(DetailsPanelEvent::ScrollUpHalfPage),
+            MouseEventKind::ScrollUp => Some(DetailsPanelEvent::ScrollUpRows(DETAILS_SCROLL)),
+            MouseEventKind::ScrollDown if is_big_scroll => {
+                Some(DetailsPanelEvent::ScrollDownHalfPage)
+            }
+            MouseEventKind::ScrollDown => Some(DetailsPanelEvent::ScrollDownRows(DETAILS_SCROLL)),
+            _ => None,
+        }
     }
 }

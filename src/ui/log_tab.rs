@@ -3,7 +3,7 @@
 use ansi_to_tui::IntoText;
 use anyhow::Result;
 use ratatui::{
-    crossterm::event::{Event, KeyEventKind, MouseEvent, MouseEventKind},
+    crossterm::event::{Event, KeyEventKind, KeyModifiers, MouseEventKind},
     layout::Rect,
     prelude::*,
     widgets::*,
@@ -22,7 +22,6 @@ use crate::{
     ui::{
         bookmark_set_popup::BookmarkSetPopup,
         details_panel::DetailsPanel,
-        details_panel::DetailsPanelEvent,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
@@ -221,13 +220,14 @@ impl LogTab<'_> {
                 self.scroll_log(commander, -1);
             }
             LogTabEvent::ScrollDownHalf => {
-                self.scroll_log(commander, self.log_height as isize / 2 / 2);
+                // calculate number of items
+                let log_height_in_items = self.log_height as isize / 2;
+                self.scroll_log(commander, log_height_in_items / 2);
             }
             LogTabEvent::ScrollUpHalf => {
-                self.scroll_log(
-                    commander,
-                    (self.log_height as isize / 2 / 2).saturating_neg(),
-                );
+                // calculate number of items
+                let log_height_in_items = self.log_height as isize / 2;
+                self.scroll_log(commander, (log_height_in_items / 2).saturating_neg());
             }
             LogTabEvent::FocusCurrent => {
                 self.head = commander.get_current_head()?;
@@ -645,9 +645,9 @@ impl Component for LogTab<'_> {
             let log_block = Block::bordered()
                 .title(title)
                 .border_type(BorderType::Rounded);
-            self.log_height = log_block.inner(chunks[0]).height;
+            self.log_height = log_block.inner(self.panel_rect[0]).height;
             let log = List::new(log_lines).block(log_block).scroll_padding(7);
-            f.render_stateful_widget(log, chunks[0], &mut self.log_list_state);
+            f.render_stateful_widget(log, self.panel_rect[0], &mut self.log_list_state);
         }
 
         // Draw change details
@@ -662,10 +662,10 @@ impl Component for LogTab<'_> {
                 .padding(Padding::horizontal(1));
             let head = self
                 .head_panel
-                .render(head_content, head_block.inner(chunks[1]))
+                .render(head_content, head_block.inner(self.panel_rect[1]))
                 .block(head_block);
 
-            f.render_widget(head, chunks[1]);
+            f.render_widget(head, self.panel_rect[1]);
         }
 
         // Draw popup
@@ -824,48 +824,50 @@ impl Component for LogTab<'_> {
                 return Ok(ComponentInputResult::Handled);
             }
 
-            let log_tab_event = self.keybinds.match_event(key);
-            return self.handle_event(commander, log_tab_event);
+            return self.handle_event(commander, self.keybinds.match_event(key));
         }
 
+        // todo: this code is the same as in other components
         if let Event::Mouse(mouse_event) = event {
+            let is_big_scroll = mouse_event.modifiers.contains(KeyModifiers::SHIFT);
+
             // Determine if mouse event is inside log-view or details-view
-            fn contains(rect: &Rect, mouse_event: &MouseEvent) -> bool {
-                rect.x <= mouse_event.column
-                    && mouse_event.column < rect.x + rect.width
-                    && rect.y <= mouse_event.row
-                    && mouse_event.row < rect.y + rect.height
-            }
-            let find_panel = || -> Option<usize> {
-                for (i, rect) in self.panel_rect.iter().enumerate() {
-                    if contains(rect, &mouse_event) {
-                        return Some(i);
-                    }
-                }
-                return None;
-            };
-            let panel = find_panel();
+            let panel = self
+                .panel_rect
+                .iter()
+                .enumerate()
+                .find(|(_, rect)| rect.contains(Position::new(mouse_event.column, mouse_event.row)))
+                .map(|(i, _)| i);
             // Execute command dependent on panel and event kind
             const LOG_PANEL: Option<usize> = Some(0);
             const DETAILS_PANEL: Option<usize> = Some(1);
-            match (panel, mouse_event.kind) {
-                (LOG_PANEL, MouseEventKind::ScrollUp) => {
-                    self.handle_event(commander, LogTabEvent::ScrollUp)?;
+
+            match panel {
+                LOG_PANEL => {
+                    let action = match mouse_event.kind {
+                        MouseEventKind::ScrollUp if is_big_scroll => {
+                            Some(LogTabEvent::ScrollUpHalf)
+                        }
+                        MouseEventKind::ScrollUp => Some(LogTabEvent::ScrollUp),
+                        MouseEventKind::ScrollDown if is_big_scroll => {
+                            Some(LogTabEvent::ScrollDownHalf)
+                        }
+                        MouseEventKind::ScrollDown => Some(LogTabEvent::ScrollDown),
+                        _ => None,
+                    };
+                    if let Some(action) = action {
+                        self.handle_event(commander, action)?;
+                    }
                 }
-                (LOG_PANEL, MouseEventKind::ScrollDown) => {
-                    self.handle_event(commander, LogTabEvent::ScrollDown)?;
+                DETAILS_PANEL => {
+                    if let Some(action) = self
+                        .head_panel
+                        .match_mouse_event(mouse_event, is_big_scroll)
+                    {
+                        self.head_panel.handle_event(action);
+                    }
                 }
-                (DETAILS_PANEL, MouseEventKind::ScrollUp) => {
-                    self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
-                    self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
-                    self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
-                }
-                (DETAILS_PANEL, MouseEventKind::ScrollDown) => {
-                    self.head_panel.handle_event(DetailsPanelEvent::ScrollDown);
-                    self.head_panel.handle_event(DetailsPanelEvent::ScrollDown);
-                    self.head_panel.handle_event(DetailsPanelEvent::ScrollDown);
-                }
-                _ => {} // Handle other mouse events if necessary
+                _ => {}
             }
         }
 

@@ -270,7 +270,6 @@ impl<'a> App<'a> {
                             {
                                 return Ok(true);
                             }
-                            //
                             // Tab switching
                             else if key.code == KeyCode::Char('l') {
                                 self.set_next_tab_with_offset(commander, 1)?;
