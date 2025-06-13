@@ -1,3 +1,6 @@
+/*!
+Helper structs [ChangeId] and [CommitId]
+*/
 use std::{ffi::OsStr, fmt::Display};
 
 /// Wrapper around change ID.

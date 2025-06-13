@@ -1,3 +1,11 @@
+/*!
+[Commander] member functions related to jj bookmark.
+
+This module has features to parse the `jj bookmark list` output. The
+other jj bookmark commands are defined in module [jj][super::jj].
+
+It is mostly used in the [bookmarks_tab][crate::ui::bookmarks_tab] module.
+*/
 use crate::{
     commander::{CommandError, Commander, RemoveEndLine},
     env::DiffFormat,
