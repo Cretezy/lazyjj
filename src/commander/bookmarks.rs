@@ -134,14 +134,17 @@ impl Commander {
                 None => BookmarkLine::Unparsable(line_colored.to_owned()),
             })
             .sorted_by(|a, b| {
-                if let (
-                    BookmarkLine::Parsed { bookmark: a, .. },
-                    BookmarkLine::Parsed { bookmark: b, .. },
-                ) = (a, b)
-                {
-                    b.timestamp.cmp(&a.timestamp)
-                } else {
-                    Ordering::Equal
+                use BookmarkLine::*;
+
+                match (a, b) {
+                    (Parsed { bookmark: a, .. }, Parsed { bookmark: b, .. }) => {
+                        b.timestamp.cmp(&a.timestamp)
+                    }
+                    // Just move unparsable lines to the back, we don't care about the actual
+                    // order, but sorted_by() expects to be given a total order
+                    (Parsed { .. }, Unparsable(..)) => Ordering::Less,
+                    (Unparsable(..), Parsed { .. }) => Ordering::Greater,
+                    (Unparsable(..), Unparsable(..)) => Ordering::Equal,
                 }
             })
             .collect();
