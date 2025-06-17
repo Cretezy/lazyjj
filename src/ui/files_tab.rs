@@ -8,6 +8,7 @@ use crate::{
         CommandError, Commander,
     },
     env::{Config, DiffFormat},
+    keybinds::{FilesTabEvent, FilesTabKeybinds},
     ui::{
         details_panel::DetailsPanel, help_popup::HelpPopup, utils::tabs_to_spaces, Component,
         ComponentAction,
@@ -17,7 +18,7 @@ use crate::{
 
 use ansi_to_tui::IntoText;
 use ratatui::{
-    crossterm::event::{Event, KeyCode, KeyEventKind},
+    crossterm::event::{Event, KeyEventKind, KeyModifiers, MouseEventKind},
     prelude::*,
     widgets::*,
 };
@@ -37,7 +38,11 @@ pub struct FilesTab {
     diff_output: Result<Option<String>, CommandError>,
     diff_format: DiffFormat,
 
+    // Rect of panels [0] = files, [1] = details
+    panel_rect: [Rect; 2],
+
     config: Config,
+    keybinds: FilesTabKeybinds,
 }
 
 fn get_current_file_index(
@@ -84,6 +89,16 @@ impl FilesTab {
             files_output.as_ref(),
         ));
 
+        let mut keybinds = FilesTabKeybinds::default();
+        if let Some(new_keybinds) = commander
+            .env
+            .config
+            .keybinds()
+            .and_then(|k| k.files_tab.clone())
+        {
+            keybinds.extend_from_config(&new_keybinds);
+        }
+
         Ok(Self {
             head,
             is_current_head,
@@ -99,7 +114,10 @@ impl FilesTab {
             diff_format,
             diff_panel: DetailsPanel::new(),
 
+            panel_rect: [Rect::ZERO, Rect::ZERO],
+
             config: commander.env.config.clone(),
+            keybinds,
         })
     }
 
@@ -162,6 +180,58 @@ impl FilesTab {
         }
         Ok(())
     }
+
+    fn handle_event(
+        &mut self,
+        commander: &mut Commander,
+        event: FilesTabEvent,
+    ) -> Result<ComponentInputResult> {
+        match event {
+            FilesTabEvent::ScrollDown => self.scroll_files(commander, 1)?,
+            FilesTabEvent::ScrollUp => self.scroll_files(commander, -1)?,
+            FilesTabEvent::ScrollDownHalf => {
+                self.scroll_files(commander, self.files_height as isize / 2)?;
+            }
+            FilesTabEvent::ScrollUpHalf => {
+                self.scroll_files(commander, (self.files_height as isize / 2).saturating_neg())?;
+            }
+            FilesTabEvent::ToggleDiffFormat => {
+                self.diff_format = self.diff_format.get_next(self.config.diff_tool());
+                self.refresh_diff(commander)?;
+            }
+            FilesTabEvent::Refresh => {
+                self.head = commander.get_head_latest(&self.head)?;
+                self.refresh_files(commander)?;
+                self.refresh_diff(commander)?;
+            }
+            FilesTabEvent::FocusCurrent => {
+                let head = &commander.get_current_head()?;
+                self.set_head(commander, head)?;
+            }
+            FilesTabEvent::OpenHelp => {
+                return Ok(ComponentInputResult::HandledAction(
+                    ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
+                        self.keybinds.make_main_panel_help(),
+                        vec![
+                            ("Ctrl+e/Ctrl+y".to_owned(), "scroll down/up".to_owned()),
+                            (
+                                "Ctrl+d/Ctrl+u".to_owned(),
+                                "scroll down/up by ½ page".to_owned(),
+                            ),
+                            (
+                                "Ctrl+f/Ctrl+b".to_owned(),
+                                "scroll down/up by page".to_owned(),
+                            ),
+                            ("w".to_owned(), "toggle diff format".to_owned()),
+                            ("W".to_owned(), "toggle wrapping".to_owned()),
+                        ],
+                    )))),
+                ))
+            }
+            FilesTabEvent::Unbound => return Ok(ComponentInputResult::NotHandled),
+        };
+        Ok(ComponentInputResult::Handled)
+    }
 }
 
 impl Component for FilesTab {
@@ -185,6 +255,7 @@ impl Component for FilesTab {
                 Constraint::Percentage(100 - self.config.layout_percent()),
             ])
             .split(area);
+        self.panel_rect = [chunks[0], chunks[1]];
 
         // Draw files
         {
@@ -300,57 +371,51 @@ impl Component for FilesTab {
                 return Ok(ComponentInputResult::Handled);
             }
 
-            match key.code {
-                KeyCode::Char('j') | KeyCode::Down => self.scroll_files(commander, 1)?,
-                KeyCode::Char('k') | KeyCode::Up => self.scroll_files(commander, -1)?,
-                KeyCode::Char('J') => {
-                    self.scroll_files(commander, self.files_height as isize / 2)?;
+            return self.handle_event(commander, self.keybinds.match_event(key));
+        }
+
+        // todo: this code is the same as in other components
+        if let Event::Mouse(mouse_event) = event {
+            let is_big_scroll = mouse_event.modifiers.contains(KeyModifiers::SHIFT);
+
+            // Determine if mouse event is inside files-view or details-view
+            let panel = self
+                .panel_rect
+                .iter()
+                .enumerate()
+                .find(|(_, rect)| rect.contains(Position::new(mouse_event.column, mouse_event.row)))
+                .map(|(i, _)| i);
+            // Execute command dependent on panel and event kind
+            const FILES_PANEL: Option<usize> = Some(0);
+            const DETAILS_PANEL: Option<usize> = Some(1);
+
+            match panel {
+                FILES_PANEL => {
+                    let action = match mouse_event.kind {
+                        MouseEventKind::ScrollUp if is_big_scroll => {
+                            Some(FilesTabEvent::ScrollUpHalf)
+                        }
+                        MouseEventKind::ScrollUp => Some(FilesTabEvent::ScrollUp),
+                        MouseEventKind::ScrollDown if is_big_scroll => {
+                            Some(FilesTabEvent::ScrollDownHalf)
+                        }
+                        MouseEventKind::ScrollDown => Some(FilesTabEvent::ScrollDown),
+                        _ => None,
+                    };
+                    if let Some(action) = action {
+                        self.handle_event(commander, action)?;
+                    }
                 }
-                KeyCode::Char('K') => {
-                    self.scroll_files(
-                        commander,
-                        (self.files_height as isize / 2).saturating_neg(),
-                    )?;
+                DETAILS_PANEL => {
+                    if let Some(action) = self
+                        .diff_panel
+                        .match_mouse_event(mouse_event, is_big_scroll)
+                    {
+                        self.diff_panel.handle_event(action);
+                    }
                 }
-                KeyCode::Char('w') => {
-                    self.diff_format = self.diff_format.get_next(self.config.diff_tool());
-                    self.refresh_diff(commander)?;
-                }
-                KeyCode::Char('R') | KeyCode::F(5) => {
-                    self.head = commander.get_head_latest(&self.head)?;
-                    self.refresh_files(commander)?;
-                    self.refresh_diff(commander)?;
-                }
-                KeyCode::Char('@') => {
-                    let head = &commander.get_current_head()?;
-                    self.set_head(commander, head)?;
-                }
-                KeyCode::Char('?') => {
-                    return Ok(ComponentInputResult::HandledAction(
-                        ComponentAction::SetPopup(Some(Box::new(HelpPopup::new(
-                            vec![
-                                ("j/k".to_owned(), "scroll down/up".to_owned()),
-                                ("J/K".to_owned(), "scroll down by ½ page".to_owned()),
-                                ("@".to_owned(), "view current change files".to_owned()),
-                            ],
-                            vec![
-                                ("Ctrl+e/Ctrl+y".to_owned(), "scroll down/up".to_owned()),
-                                (
-                                    "Ctrl+d/Ctrl+u".to_owned(),
-                                    "scroll down/up by ½ page".to_owned(),
-                                ),
-                                (
-                                    "Ctrl+f/Ctrl+b".to_owned(),
-                                    "scroll down/up by page".to_owned(),
-                                ),
-                                ("w".to_owned(), "toggle diff format".to_owned()),
-                                ("W".to_owned(), "toggle wrapping".to_owned()),
-                            ],
-                        )))),
-                    ))
-                }
-                _ => return Ok(ComponentInputResult::NotHandled),
-            };
+                _ => {}
+            }
         }
 
         Ok(ComponentInputResult::Handled)
