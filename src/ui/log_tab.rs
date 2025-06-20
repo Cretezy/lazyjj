@@ -761,6 +761,7 @@ impl Component for LogTab<'_> {
                             self.head.commit_id.as_str(),
                             &describe_textarea.lines().join("\n"),
                         )?;
+                        self.head = commander.get_current_head()?;
                         self.refresh_log_output(commander);
                         self.refresh_head_output(commander);
                         self.describe_textarea = None;
