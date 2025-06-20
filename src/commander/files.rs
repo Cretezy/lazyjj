@@ -100,7 +100,7 @@ impl Commander {
 
         match output {
             Ok(output) => {
-                return Ok(output
+                Ok(output
                     .lines()
                     .filter_map(|line| {
                         let captured = CONFLICTS_REGEX.captures(line);
