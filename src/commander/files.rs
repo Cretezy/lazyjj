@@ -105,20 +105,18 @@ impl Commander {
         );
 
         match output {
-            Ok(output) => {
-                return Ok(output
-                    .lines()
-                    .filter_map(|line| {
-                        let captured = CONFLICTS_REGEX.captures(line);
-                        captured
-                            .as_ref()
-                            .and_then(|captured| captured.get(1))
-                            .map(|inner_text| Conflict {
-                                path: inner_text.as_str().to_owned(),
-                            })
-                    })
-                    .collect())
-            }
+            Ok(output) => Ok(output
+                .lines()
+                .filter_map(|line| {
+                    let captured = CONFLICTS_REGEX.captures(line);
+                    captured
+                        .as_ref()
+                        .and_then(|captured| captured.get(1))
+                        .map(|inner_text| Conflict {
+                            path: inner_text.as_str().to_owned(),
+                        })
+                })
+                .collect()),
             Err(CommandError::Status(_, Some(2))) => {
                 // No conflicts
                 Ok(vec![])
