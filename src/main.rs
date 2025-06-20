@@ -14,9 +14,8 @@ use ratatui::{
     backend::{Backend, CrosstermBackend},
     crossterm::{
         event::{
-            self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
-            Event, KeyboardEnhancementFlags, MouseEvent, MouseEventKind,
-            PushKeyboardEnhancementFlags,
+            DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
+            KeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
         },
         execute,
         terminal::{
@@ -35,6 +34,7 @@ use tracing_subscriber::layer::SubscriberExt;
 mod app;
 mod commander;
 mod env;
+mod event;
 mod keybinds;
 mod ui;
 
@@ -45,7 +45,7 @@ use crate::{
     ui::{ui, ComponentAction},
 };
 
-/// Simple program to greet a person
+/// Command line arguments
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -135,6 +135,8 @@ fn main() -> Result<()> {
 
     // Run app
     let res = run_app(&mut terminal, &mut app, &mut commander);
+
+    // restore terminal before possible panic from run_app
     restore_terminal()?;
     res?;
 
@@ -146,74 +148,83 @@ fn run_app<B: Backend>(
     app: &mut App,
     commander: &mut Commander,
 ) -> Result<()> {
+    app.launch_input_channel();
+
     let mut start_time = Instant::now();
     loop {
         // Draw
-        let mut terminal_draw_res = Ok(());
-        terminal.draw(|f| {
-            // Update current tab
-            let update_span = trace_span!("update");
-            terminal_draw_res = update_span.in_scope(|| -> Result<()> {
-                if let Some(component_action) =
-                    app.get_or_init_current_tab(commander)?.update(commander)?
-                {
-                    app.handle_action(component_action, commander)?;
-                }
-
-                Ok(())
-            });
-            if terminal_draw_res.is_err() {
-                return;
-            }
-
-            let draw_span = trace_span!("draw");
-            terminal_draw_res = draw_span.in_scope(|| -> Result<()> {
-                ui(f, app)?;
-
-                {
-                    let paragraph =
-                        Paragraph::new(format!("{}ms", start_time.elapsed().as_millis()))
-                            .alignment(Alignment::Right);
-                    let position = Rect {
-                        x: 0,
-                        y: 1,
-                        height: 1,
-                        width: f.area().width - 1,
-                    };
-                    f.render_widget(paragraph, position);
-                }
-                Ok(())
-            });
-        })?;
-        terminal_draw_res?;
+        draw_app(app, terminal, commander, &start_time)?;
 
         // Input
-        let input_spawn = trace_span!("input");
-        let event = loop {
-            match event::read()? {
-                event::Event::FocusLost => continue,
-                Event::Mouse(MouseEvent {
-                    kind: MouseEventKind::Moved,
-                    ..
-                }) => continue,
-                event => break event,
-            }
-        };
-
         start_time = Instant::now();
 
-        let should_stop = input_spawn.in_scope(|| -> Result<bool> {
-            if app.input(event, commander)? {
-                return Ok(true);
-            }
-
-            Ok(false)
-        })?;
+        let should_stop = input_to_app(app, commander)?;
 
         if should_stop {
-            return Ok(());
+            break;
         }
     }
+    Ok(())
+}
+
+fn draw_app<B: Backend>(
+    app: &mut App,
+    terminal: &mut Terminal<B>,
+    commander: &mut Commander,
+    start_time: &Instant,
+) -> Result<()> {
+    let mut terminal_draw_res = Ok(());
+    terminal.draw(|f| {
+        // Update current tab
+        let update_span = trace_span!("update");
+        terminal_draw_res = update_span.in_scope(|| -> Result<()> {
+            if let Some(component_action) =
+                app.get_or_init_current_tab(commander)?.update(commander)?
+            {
+                app.handle_action(component_action, commander)?;
+            }
+
+            Ok(())
+        });
+        if terminal_draw_res.is_err() {
+            return;
+        }
+
+        let draw_span = trace_span!("draw");
+        terminal_draw_res = draw_span.in_scope(|| -> Result<()> {
+            ui(f, app)?;
+
+            {
+                let paragraph = Paragraph::new(format!("{}ms", start_time.elapsed().as_millis()))
+                    .alignment(Alignment::Right);
+                let position = Rect {
+                    x: 0,
+                    y: 1,
+                    height: 1,
+                    width: f.area().width - 1,
+                };
+                f.render_widget(paragraph, position);
+            }
+            Ok(())
+        });
+    })?;
+    terminal_draw_res
+}
+
+/// Wait for next event, then process it.
+/// Let app process all input events in queue before returning
+/// Return true if application should stop
+fn input_to_app(app: &mut App, commander: &mut Commander) -> Result<bool> {
+    let input_span = trace_span!("input");
+    let mut stop_app: bool = false;
+    while !stop_app {
+        let Some(event) = app.try_recv_app_event() else {
+            break;
+        };
+
+        stop_app = input_span.in_scope(|| app.input(event, commander))?;
+    }
+    Ok(stop_app)
 }
 
 fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {

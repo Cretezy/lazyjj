@@ -100,6 +100,8 @@ pub struct Commander {
     pub env: Env,
     pub command_history: Arc<Mutex<Vec<CommandLogItem>>>,
 
+    /// If set, jj will not auto-update
+    pub jj_ignore_working_copy: bool,
     // Used for testing
     pub jj_config_toml: Option<String>,
     pub force_no_color: bool,
@@ -110,6 +112,7 @@ impl Commander {
         Self {
             env: env.clone(),
             command_history: Arc::new(Mutex::new(Vec::new())),
+            jj_ignore_working_copy: false,
             jj_config_toml: None,
             force_no_color: false,
         }
@@ -173,6 +176,14 @@ impl Commander {
         let mut command = Command::new(&self.env.jj_bin);
         command.args(args);
         command.args(get_output_args(!self.force_no_color && color, quiet));
+
+        if self.jj_ignore_working_copy {
+            const IWC: &str = "--ignore-working-copy";
+            let missing = command.get_args().find(|&a| a == IWC).is_none();
+            if missing {
+                command.arg(IWC);
+            }
+        }
 
         if let Some(jj_config_toml) = &self.jj_config_toml {
             command.args(vec!["--config-toml", jj_config_toml]);
