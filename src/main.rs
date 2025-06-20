@@ -124,7 +124,7 @@ fn main() -> Result<()> {
     let env = Env::new(path, args.revisions, jj_bin)?;
     let mut commander = Commander::new(&env);
 
-    // Check that `jj status` works
+    // Check that jj exists and its version is recent enough
     commander.init()?;
 
     // Setup app
