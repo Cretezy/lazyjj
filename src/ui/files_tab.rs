@@ -139,7 +139,7 @@ impl FilesTab {
             .map_or(Ok(None), |r| {
                 r.map(|diff| diff.map(|diff| tabs_to_spaces(&diff)))
             });
-        self.diff_panel.scroll = 0;
+        self.diff_panel.scroll_to(0);
         Ok(())
     }
 
@@ -265,26 +265,40 @@ impl Component for FilesTab {
                 )
                 .scroll_padding(3);
             *self.files_list_state.selected_mut() = current_file_index;
-            f.render_stateful_widget(files, chunks[0], &mut self.files_list_state);
+            f.render_stateful_widget(&files, chunks[0], &mut self.files_list_state);
             self.files_height = chunks[0].height - 2;
+
+            if let Some(index) = current_file_index {
+                if files.len() > self.files_height as usize {
+                    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
+                    let mut scrollbar_state = ScrollbarState::default()
+                        .content_length(files.len())
+                        .position(index);
+
+                    f.render_stateful_widget(
+                        scrollbar,
+                        chunks[0].inner(Margin {
+                            vertical: 1,
+                            horizontal: 0,
+                        }),
+                        &mut scrollbar_state,
+                    );
+                }
+            }
         }
 
         // Draw diff
         {
-            let diff_block = Block::bordered()
-                .title(" Diff ")
-                .border_type(BorderType::Rounded)
-                .padding(Padding::horizontal(1));
             let diff_content = match self.diff_output.as_ref() {
                 Ok(Some(diff_content)) => diff_content.into_text()?,
                 Ok(None) => Text::default(),
                 Err(err) => err.into_text("Error getting diff")?,
             };
-            let diff = self
-                .diff_panel
-                .render(diff_content, diff_block.inner(chunks[1]))
-                .block(diff_block);
-            f.render_widget(diff, chunks[1]);
+            self.diff_panel
+                .render_context()
+                .title(" Diff ")
+                .content(diff_content)
+                .draw(f, chunks[1]);
         }
 
         Ok(())

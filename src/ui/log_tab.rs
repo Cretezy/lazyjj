@@ -8,7 +8,7 @@ use ratatui::{
     prelude::*,
     widgets::*,
 };
-use tracing::instrument;
+use tracing::{instrument, trace};
 use tui_confirm_dialog::{ButtonLabel, ConfirmDialog, ConfirmDialogState, Listener};
 use tui_textarea::{CursorMove, TextArea};
 
@@ -178,7 +178,7 @@ impl LogTab<'_> {
         self.head_output = commander
             .get_commit_show(&self.head.commit_id, &self.diff_format, true)
             .map(|text| tabs_to_spaces(&text));
-        self.head_panel.scroll = 0;
+        self.head_panel.scroll_to(0);
     }
 
     fn scroll_log(&mut self, commander: &mut Commander, scroll: isize) {
@@ -204,6 +204,7 @@ impl LogTab<'_> {
     }
 
     pub fn set_head(&mut self, commander: &mut Commander, head: Head) {
+        trace!("INSIDE SIDS HEAD!! .. i mean sed_head..");
         head.clone_into(&mut self.head);
         self.refresh_head_output(commander);
     }
@@ -642,12 +643,31 @@ impl Component for LogTab<'_> {
                 None => " Log ",
             };
 
+            let log_length: usize = log_lines.len();
             let log_block = Block::bordered()
                 .title(title)
                 .border_type(BorderType::Rounded);
             self.log_height = log_block.inner(chunks[0]).height;
             let log = List::new(log_lines).block(log_block).scroll_padding(7);
             f.render_stateful_widget(log, chunks[0], &mut self.log_list_state);
+
+            // Show scrollbar if lines don't fit the screen height
+            if log_length > self.log_height.into() {
+                let index = self.log_list_state.selected().unwrap_or(0);
+                let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
+                let mut scrollbar_state = ScrollbarState::default()
+                    .content_length(log_length)
+                    .position(index);
+
+                f.render_stateful_widget(
+                    scrollbar,
+                    chunks[0].inner(Margin {
+                        vertical: 1,
+                        horizontal: 0,
+                    }),
+                    &mut scrollbar_state,
+                );
+            }
         }
 
         // Draw change details
@@ -656,16 +676,11 @@ impl Component for LogTab<'_> {
                 Ok(head_output) => head_output.into_text()?.lines,
                 Err(err) => err.into_text("Error getting head details")?.lines,
             };
-            let head_block = Block::bordered()
+            self.head_panel
+                .render_context()
                 .title(format!(" Details for {} ", self.head.change_id))
-                .border_type(BorderType::Rounded)
-                .padding(Padding::horizontal(1));
-            let head = self
-                .head_panel
-                .render(head_content, head_block.inner(chunks[1]))
-                .block(head_block);
-
-            f.render_widget(head, chunks[1]);
+                .content(head_content)
+                .draw(f, chunks[1])
         }
 
         // Draw popup
