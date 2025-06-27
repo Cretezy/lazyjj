@@ -148,6 +148,11 @@ impl FilesTab {
         Ok(())
     }
 
+    pub fn untrack_file_and_ignore(&mut self, commander: &mut Commander) -> Result<()> {
+        self.file.as_ref().map(|current_file| {commander.untrack_file_and_ignore(&current_file)});
+        Ok(())
+    }
+
     fn scroll_files(&mut self, commander: &mut Commander, scroll: isize) -> Result<()> {
         if let Ok(files) = self.files_output.as_ref() {
             let current_file_index = self.get_current_file_index();
@@ -326,6 +331,11 @@ impl Component for FilesTab {
                     let head = &commander.get_current_head()?;
                     self.set_head(commander, head)?;
                 }
+                KeyCode::Char('X') => {
+                    self.untrack_file_and_ignore(commander)?;
+                    let head = &commander.get_current_head()?;
+                    self.set_head(commander, head)?;
+                }
                 KeyCode::Char('R') | KeyCode::F(5) => {
                     self.head = commander.get_head_latest(&self.head)?;
                     self.refresh_files(commander)?;
@@ -342,6 +352,7 @@ impl Component for FilesTab {
                                 ("j/k".to_owned(), "scroll down/up".to_owned()),
                                 ("J/K".to_owned(), "scroll down by ½ page".to_owned()),
                                 ("x".to_owned(), "unstage file".to_owned()),
+                                ("X".to_owned(), "unstage file and add it to .git/info/exclude".to_owned()),
                                 ("@".to_owned(), "view current change files".to_owned()),
                             ],
                             vec![
