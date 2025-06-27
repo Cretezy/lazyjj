@@ -4,7 +4,7 @@
 This module has features to parse the diff output.
 It is mostly used in the [files_tab][crate::ui::files_tab] module.
 */
-use std::sync::LazyLock;
+use std::{sync::LazyLock, fs::OpenOptions, io::Write};
 
 use crate::{
     commander::{ids::CommitId, log::Head, CommandError, Commander},
@@ -160,6 +160,36 @@ impl Commander {
         }
 
         self.execute_jj_command(args, true, true).map(Some)
+    }
+
+
+    #[instrument(level = "trace", skip(self))]
+    pub fn untrack_file(
+        &self,
+        current_file: &File,
+    ) -> Result<Option<String>, CommandError> {
+
+        let Some(path) = current_file.path.as_ref() else {
+            return Ok(None);
+        };
+
+        let path = if let (true, Some(captures)) = (
+            current_file.diff_type == Some(DiffType::Renamed),
+            RENAME_REGEX.captures(path),
+        ) {
+            match captures.get(2) {
+                Some(path) => path.as_str(),
+                None => return Ok(None),
+            }
+        } else {
+            path
+        };
+        
+        self.execute_jj_command(
+            vec!["file", "untrack", path],
+            false,
+            true,
+        ).map(Some)
     }
 }
 
