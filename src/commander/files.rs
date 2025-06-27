@@ -162,6 +162,44 @@ impl Commander {
         self.execute_jj_command(args, true, true).map(Some)
     }
 
+    #[instrument(level = "trace", skip(self))]
+    pub fn untrack_file_and_ignore(
+        &self,
+        current_file: &File,
+    ) -> Result<Option<String>, CommandError> {
+
+        let Some(path) = current_file.path.as_ref() else {
+            return Ok(None);
+        };
+
+        let path = if let (true, Some(captures)) = (
+            current_file.diff_type == Some(DiffType::Renamed),
+            RENAME_REGEX.captures(path),
+        ) {
+            match captures.get(2) {
+                Some(path) => path.as_str(),
+                None => return Ok(None),
+            }
+        } else {
+            path
+        };
+
+        let mut file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(".git/info/exclude")
+            .unwrap();
+
+        if let Err(e) = file.write_all((path.to_owned()+"\n").as_bytes()) {
+            eprintln!("Couldn't write to file: {}", e);
+        }
+        
+        self.execute_jj_command(
+            vec!["file", "untrack", path],
+            false,
+            true,
+        ).map(Some)
+    }
 
     #[instrument(level = "trace", skip(self))]
     pub fn untrack_file(
