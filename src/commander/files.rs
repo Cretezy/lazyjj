@@ -15,6 +15,7 @@ use anyhow::{Context, Result};
 use ratatui::style::Color;
 use regex::Regex;
 use tracing::instrument;
+use tracing_log::log::error;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct File {
@@ -184,10 +185,16 @@ impl Commander {
             path
         };
 
+        let repository_root = self.execute_jj_command(
+            vec!["root"],
+            false,
+            true,
+        ).unwrap();
+
         let mut file = OpenOptions::new()
             .write(true)
             .append(true)
-            .open(".git/info/exclude")
+            .open(format!("{}/.git/info/exclude", repository_root.trim()))
             .unwrap();
 
         if let Err(e) = file.write_all((path.to_owned()+"\n").as_bytes()) {
