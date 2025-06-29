@@ -4,7 +4,7 @@
 This module has features to parse the diff output.
 It is mostly used in the [files_tab][crate::ui::files_tab] module.
 */
-use std::{sync::LazyLock, fs::OpenOptions, io::Write};
+use std::sync::LazyLock;
 
 use crate::{
     commander::{ids::CommitId, log::Head, CommandError, Commander},
@@ -15,7 +15,6 @@ use anyhow::{Context, Result};
 use ratatui::style::Color;
 use regex::Regex;
 use tracing::instrument;
-use tracing_log::log::error;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct File {
@@ -164,11 +163,7 @@ impl Commander {
     }
 
     #[instrument(level = "trace", skip(self))]
-    pub fn untrack_file_and_ignore(
-        &self,
-        current_file: &File,
-    ) -> Result<Option<String>, CommandError> {
-
+    pub fn untrack_file(&self, current_file: &File) -> Result<Option<String>, CommandError> {
         let Some(path) = current_file.path.as_ref() else {
             return Ok(None);
         };
@@ -185,56 +180,11 @@ impl Commander {
             path
         };
 
-        let repository_root = self.execute_jj_command(
-            vec!["root"],
-            false,
-            true,
-        ).unwrap();
-
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(format!("{}/.git/info/exclude", repository_root.trim()))
-            .unwrap();
-
-        if let Err(e) = file.write_all((path.to_owned()+"\n").as_bytes()) {
-            eprintln!("Couldn't write to file: {}", e);
-        }
-        
-        self.execute_jj_command(
+        Ok(Some(self.execute_jj_command(
             vec!["file", "untrack", path],
             false,
             true,
-        ).map(Some)
-    }
-
-    #[instrument(level = "trace", skip(self))]
-    pub fn untrack_file(
-        &self,
-        current_file: &File,
-    ) -> Result<Option<String>, CommandError> {
-
-        let Some(path) = current_file.path.as_ref() else {
-            return Ok(None);
-        };
-
-        let path = if let (true, Some(captures)) = (
-            current_file.diff_type == Some(DiffType::Renamed),
-            RENAME_REGEX.captures(path),
-        ) {
-            match captures.get(2) {
-                Some(path) => path.as_str(),
-                None => return Ok(None),
-            }
-        } else {
-            path
-        };
-        
-        self.execute_jj_command(
-            vec!["file", "untrack", path],
-            false,
-            true,
-        ).map(Some)
+        )?))
     }
 }
 

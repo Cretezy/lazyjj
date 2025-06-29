@@ -1,3 +1,5 @@
+use std::vec;
+
 use anyhow::Result;
 use tracing::instrument;
 
@@ -9,8 +11,8 @@ use crate::{
     },
     env::{Config, DiffFormat},
     ui::{
-        details_panel::DetailsPanel, help_popup::HelpPopup, utils::tabs_to_spaces, Component,
-        ComponentAction,
+        details_panel::DetailsPanel, help_popup::HelpPopup, message_popup::MessagePopup,
+        utils::tabs_to_spaces, Component, ComponentAction,
     },
     ComponentInputResult,
 };
@@ -144,12 +146,9 @@ impl FilesTab {
     }
 
     pub fn untrack_file(&mut self, commander: &mut Commander) -> Result<()> {
-        self.file.as_ref().map(|current_file| {commander.untrack_file(&current_file)});
-        Ok(())
-    }
-
-    pub fn untrack_file_and_ignore(&mut self, commander: &mut Commander) -> Result<()> {
-        self.file.as_ref().map(|current_file| {commander.untrack_file_and_ignore(&current_file)});
+        self.file
+            .as_ref()
+            .map(|current_file| commander.untrack_file(&current_file));
         Ok(())
     }
 
@@ -327,14 +326,22 @@ impl Component for FilesTab {
                     self.refresh_diff(commander)?;
                 }
                 KeyCode::Char('x') => {
+                    let prev_files = commander.get_files(&self.head)?;
                     self.untrack_file(commander)?;
                     let head = &commander.get_current_head()?;
                     self.set_head(commander, head)?;
-                }
-                KeyCode::Char('X') => {
-                    self.untrack_file_and_ignore(commander)?;
-                    let head = &commander.get_current_head()?;
-                    self.set_head(commander, head)?;
+
+                    let next_files = commander.get_files(&self.head)?;
+
+                    if prev_files == next_files {
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                title: "untrack file".into(),
+                                messages: "make shure to ignore the file before untracking it. Otherwise it gets auto tracked again".into(),
+                                text_align: None,
+                            }))),
+                        ));
+                    }
                 }
                 KeyCode::Char('R') | KeyCode::F(5) => {
                     self.head = commander.get_head_latest(&self.head)?;
@@ -351,8 +358,7 @@ impl Component for FilesTab {
                             vec![
                                 ("j/k".to_owned(), "scroll down/up".to_owned()),
                                 ("J/K".to_owned(), "scroll down by ½ page".to_owned()),
-                                ("x".to_owned(), "unstage file".to_owned()),
-                                ("X".to_owned(), "unstage file and add it to .git/info/exclude".to_owned()),
+                                ("x".to_owned(), "untrack file".to_owned()),
                                 ("@".to_owned(), "view current change files".to_owned()),
                             ],
                             vec![
