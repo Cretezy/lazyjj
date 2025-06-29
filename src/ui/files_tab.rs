@@ -5,7 +5,7 @@ use tracing::instrument;
 
 use crate::{
     commander::{
-        files::{Conflict, File},
+        files::{Conflict, DiffType, File},
         log::Head,
         CommandError, Commander,
     },
@@ -326,21 +326,30 @@ impl Component for FilesTab {
                     self.refresh_diff(commander)?;
                 }
                 KeyCode::Char('x') => {
-                    let prev_files = commander.get_files(&self.head)?;
-                    self.untrack_file(commander)?;
-                    let head = &commander.get_current_head()?;
-                    self.set_head(commander, head)?;
+                    let status = self
+                        .file
+                        .as_ref()
+                        .map(|current_file| current_file.diff_type.clone());
 
-                    let next_files = commander.get_files(&self.head)?;
+                    if (status != Some(Some(DiffType::Deleted))
+                        && status != Some(Some(DiffType::Renamed)))
+                    {
+                        let prev_files = commander.get_files(&self.head)?;
+                        self.untrack_file(commander)?;
+                        let head = &commander.get_current_head()?;
+                        self.set_head(commander, head)?;
 
-                    if prev_files == next_files {
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                title: "untrack file".into(),
-                                messages: "make shure to ignore the file before untracking it. Otherwise it gets auto tracked again".into(),
-                                text_align: None,
-                            }))),
-                        ));
+                        let next_files = commander.get_files(&self.head)?;
+
+                        if prev_files == next_files {
+                            return Ok(ComponentInputResult::HandledAction(
+                                ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                    title: "untrack file".into(),
+                                    messages: "make shure to ignore the file before untracking it. Otherwise it gets auto tracked again".into(),
+                                    text_align: None,
+                                }))),
+                            ));
+                        }
                     }
                 }
                 KeyCode::Char('R') | KeyCode::F(5) => {
