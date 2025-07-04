@@ -331,9 +331,7 @@ impl Component for FilesTab {
                         .as_ref()
                         .map(|current_file| current_file.diff_type.clone());
 
-                    if (status != Some(Some(DiffType::Deleted))
-                        && status != Some(Some(DiffType::Renamed)))
-                    {
+                    if (status != Some(Some(DiffType::Deleted))) {
                         let prev_files = commander.get_files(&self.head)?;
                         self.untrack_file(commander)?;
                         let head = &commander.get_current_head()?;
