@@ -33,7 +33,7 @@ impl Display for Bookmark {
             text.push('@');
             text.push_str(remote);
         }
-        write!(f, "{}", text)
+        write!(f, "{text}")
     }
 }
 
@@ -124,7 +124,7 @@ impl Commander {
                         "bookmark",
                         "list",
                         "-T",
-                        &format!(r#"{} ++ "\n""#, BRANCH_TEMPLATE),
+                        &format!(r#"{BRANCH_TEMPLATE} ++ "\n""#),
                     ],
                     args,
                 ]

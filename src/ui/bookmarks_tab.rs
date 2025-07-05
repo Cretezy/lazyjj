@@ -400,7 +400,7 @@ impl Component for BookmarksTab<'_> {
         {
             let title = if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref()
             {
-                format!(" Bookmark {} ", bookmark)
+                format!(" Bookmark {bookmark} ")
             } else {
                 " Bookmark ".to_owned()
             };
@@ -862,7 +862,7 @@ impl Component for BookmarksTab<'_> {
                                 Span::styled(" New ", Style::new().bold().cyan()),
                                 Text::from(vec![
                                     Line::from("Are you sure you want to create a new change?"),
-                                    Line::from(format!("Bookmark: {}", bookmark)),
+                                    Line::from(format!("Bookmark: {bookmark}")),
                                 ]),
                             );
                             self.popup
@@ -900,7 +900,7 @@ impl Component for BookmarksTab<'_> {
                                 Span::styled(" Edit ", Style::new().bold().cyan()),
                                 Text::from(vec![
                                     Line::from("Are you sure you want to edit an existing change?"),
-                                    Line::from(format!("Bookmark: {}", bookmark)),
+                                    Line::from(format!("Bookmark: {bookmark}")),
                                 ]),
                             );
                             self.popup
