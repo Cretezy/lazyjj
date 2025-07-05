@@ -638,7 +638,7 @@ impl Component for LogTab<'_> {
             };
 
             let title = match &self.log_revset {
-                Some(log_revset) => &format!(" Log for: {} ", log_revset),
+                Some(log_revset) => &format!(" Log for: {log_revset} "),
                 None => " Log ",
             };
 

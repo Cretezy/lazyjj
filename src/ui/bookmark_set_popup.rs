@@ -201,7 +201,7 @@ impl Component for BookmarkSetPopup<'_> {
                     Text::raw("(C)reate bookmark").fg(Color::Yellow)
                 }
                 BookmarkSetOption::GeneratedName(generated_name, exists) => {
-                    let mut text = format!("(G)enerate bookmark: {}", generated_name);
+                    let mut text = format!("(G)enerate bookmark: {generated_name}");
                     if *exists {
                         text.push_str(" (exists)");
                     }
