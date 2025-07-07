@@ -1,16 +1,16 @@
 #![expect(clippy::borrow_interior_mutable_const)]
 
 use crate::{
-    commander::{bookmarks::BookmarkLine, ids::ChangeId, CommandError, Commander},
+    ComponentInputResult,
+    commander::{CommandError, Commander, bookmarks::BookmarkLine, ids::ChangeId},
     env::{Config, DiffFormat},
     ui::{
+        Component, ComponentAction,
         details_panel::DetailsPanel,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
-        Component, ComponentAction,
     },
-    ComponentInputResult,
 };
 use ansi_to_tui::IntoText;
 use anyhow::Result;
@@ -951,7 +951,7 @@ impl Component for BookmarksTab<'_> {
                                 ("W".to_owned(), "toggle wrapping".to_owned()),
                             ],
                         )))),
-                    ))
+                    ));
                 }
                 _ => return Ok(ComponentInputResult::NotHandled),
             };

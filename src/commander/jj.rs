@@ -5,7 +5,7 @@ The module implementes a number of jj commands.
 Surprisingly, this module also contains jj bookmark commands.
 These functions are used everywhere (bookmark tab, log tab).
 */
-use crate::commander::{bookmarks::Bookmark, ids::CommitId, CommandError, Commander};
+use crate::commander::{CommandError, Commander, bookmarks::Bookmark, ids::CommitId};
 
 use anyhow::{Context, Result};
 use tracing::instrument;

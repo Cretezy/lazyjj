@@ -10,11 +10,11 @@ use shell_words::split;
 use tui_textarea::TextArea;
 
 use crate::{
+    ComponentInputResult,
     commander::Commander,
     ui::{
-        message_popup::MessagePopup, utils::centered_rect_line_height, Component, ComponentAction,
+        Component, ComponentAction, message_popup::MessagePopup, utils::centered_rect_line_height,
     },
-    ComponentInputResult,
 };
 
 pub struct CommandPopup<'a> {

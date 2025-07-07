@@ -11,13 +11,13 @@ use ratatui::{
 use tracing::instrument;
 
 use crate::{
+    ComponentInputResult,
     commander::{CommandLogItem, Commander},
     env::Config,
     ui::{
-        details_panel::DetailsPanel, help_popup::HelpPopup, utils::tabs_to_spaces, Component,
-        ComponentAction,
+        Component, ComponentAction, details_panel::DetailsPanel, help_popup::HelpPopup,
+        utils::tabs_to_spaces,
     },
-    ComponentInputResult,
 };
 
 /// Command log tab. Shows list of commands exectured by lazyjj in main panel and selected command
@@ -282,7 +282,7 @@ impl Component for CommandLogTab {
                                 ("W".to_owned(), "toggle wrapping".to_owned()),
                             ],
                         )))),
-                    ))
+                    ));
                 }
                 _ => return Ok(ComponentInputResult::NotHandled),
             };

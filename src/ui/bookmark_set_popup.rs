@@ -1,6 +1,6 @@
 use ansi_to_tui::IntoText;
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use ratatui::{
     crossterm::event::{Event, KeyCode, KeyModifiers},
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -11,18 +11,18 @@ use ratatui::{
 use tui_textarea::TextArea;
 
 use crate::{
+    ComponentInputResult,
     commander::{
+        Commander,
         bookmarks::Bookmark,
         ids::{ChangeId, CommitId},
-        Commander,
     },
     env::Config,
     ui::{
+        Component, ComponentAction,
         styles::create_popup_block,
         utils::{centered_rect, centered_rect_line_height},
-        Component, ComponentAction,
     },
-    ComponentInputResult,
 };
 
 enum BookmarkSetOption {
