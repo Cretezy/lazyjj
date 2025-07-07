@@ -342,8 +342,8 @@ impl Component for FilesTab {
                         if prev_files == next_files {
                             return Ok(ComponentInputResult::HandledAction(
                                 ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                    title: "untrack file".into(),
-                                    messages: "make shure to ignore the file before untracking it. Otherwise it gets auto tracked again".into(),
+                                    title: "Can't untrack file".into(),
+                                    messages: "Please ignore the file before untracking it".into(),
                                     text_align: None,
                                 }))),
                             ));
