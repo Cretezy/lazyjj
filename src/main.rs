@@ -28,7 +28,7 @@ use ratatui::{
     layout::{Alignment, Rect},
     widgets::Paragraph,
 };
-use tracing::{info, trace_span};
+use tracing::{error, info, trace_span, warn};
 use tracing_chrome::ChromeLayerBuilder;
 use tracing_subscriber::layer::SubscriberExt;
 
@@ -60,6 +60,10 @@ struct Args {
     /// Path to jj binary
     #[arg(long, env = "JJ_BIN")]
     jj_bin: Option<String>,
+
+    /// Do not exit if jj version check fails
+    #[arg(long)]
+    ignore_jj_version: bool,
 }
 
 fn main() -> Result<()> {
@@ -127,7 +131,19 @@ fn main() -> Result<()> {
     let mut commander = Commander::new(&env);
 
     // Check that jj version is recent enough
-    commander.init()?;
+    if let Err(msg) = commander.init() {
+        if args.ignore_jj_version {
+            let msg = msg.context("Ignoring error due to --ignore-jj-version");
+            warn!("{:?}", msg);
+        } else {
+            let msg = msg.context(
+                "You should upgrade jj to a newer version to use all of lazyjj features.\n\
+                If you want to continue anyway, use --ignore-jj-version",
+            );
+            error!("{:?}", msg);
+            return Err(msg);
+        }
+    }
 
     // Setup app
     let mut app = App::new(env.clone())?;
