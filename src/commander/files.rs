@@ -168,10 +168,9 @@ impl Commander {
             return Ok(None);
         };
 
-        let path = if let (true, Some(captures)) = (
-            current_file.diff_type == Some(DiffType::Renamed),
-            RENAME_REGEX.captures(path),
-        ) {
+        let path = if let Some(DiffType::Renamed) = current_file.diff_type
+            && let Some(captures) = RENAME_REGEX.captures(path)
+        {
             match captures.get(2) {
                 Some(path) => path.as_str(),
                 None => return Ok(None),
