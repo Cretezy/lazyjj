@@ -7,14 +7,14 @@ It is mostly used in the [log_tab][crate::ui::log_tab] module.
 
 use crate::{
     commander::{
+        CommandError, Commander, RemoveEndLine,
         bookmarks::Bookmark,
         ids::{ChangeId, CommitId},
-        CommandError, Commander, RemoveEndLine,
     },
     env::DiffFormat,
 };
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use itertools::Itertools;
 use regex::Regex;
 use std::{fmt::Display, sync::LazyLock};
@@ -358,9 +358,11 @@ mod tests {
 
         assert_debug_snapshot!(log.graph);
 
-        assert!(log.graph_heads.iter().all(|graph_head| graph_head
-            .as_ref()
-            .is_none_or(|graph_head| log.heads.contains(graph_head))));
+        assert!(log.graph_heads.iter().all(|graph_head| {
+            graph_head
+                .as_ref()
+                .is_none_or(|graph_head| log.heads.contains(graph_head))
+        }));
 
         Ok(())
     }

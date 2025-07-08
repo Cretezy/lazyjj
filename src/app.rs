@@ -1,13 +1,13 @@
 use crate::{
+    ComponentInputResult,
     commander::Commander,
     env::Env,
     ui::{
-        bookmarks_tab::BookmarksTab, command_log_tab::CommandLogTab, command_popup::CommandPopup,
-        files_tab::FilesTab, log_tab::LogTab, Component, ComponentAction,
+        Component, ComponentAction, bookmarks_tab::BookmarksTab, command_log_tab::CommandLogTab,
+        command_popup::CommandPopup, files_tab::FilesTab, log_tab::LogTab,
     },
-    ComponentInputResult,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use core::fmt;
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use tracing::{info, info_span};

@@ -1,15 +1,15 @@
 use anyhow::Result;
 use ratatui::{
+    Frame,
     crossterm::event::Event,
     layout::{Alignment, Rect},
     style::{Color, Style, Stylize},
     text::{Span, Text},
-    widgets::{block::Title, BorderType, Borders},
-    Frame,
+    widgets::{BorderType, Borders, block::Title},
 };
 use tui_confirm_dialog::PopupMessage;
 
-use crate::{commander::Commander, ui::Component, ComponentInputResult};
+use crate::{ComponentInputResult, commander::Commander, ui::Component};
 
 pub struct MessagePopup<'a> {
     pub title: Title<'a>,
