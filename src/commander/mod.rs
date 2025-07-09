@@ -51,6 +51,7 @@ use version_compare::{Cmp, compare};
 /// The oldest version of jj that is known to work with lazyjj.
 /// 0.22.0 introduced the bookmark command.
 const JJ_MIN_VERSION: &str = "0.22.0";
+const JJ_VERSION_IGNORE_HELP: &str = "If you want to continue anyway, use --ignore-jj-version";
 
 impl DiffFormat {
     pub fn get_args(&self) -> Vec<&str> {
@@ -199,7 +200,7 @@ impl Commander {
     }
 
     #[instrument(level = "trace", skip(self))]
-    pub fn init(&self) -> Result<()> {
+    pub fn check_jj_version(&self) -> Result<()> {
         // Ask jj about its version
         let (color, quiet) = (false, false);
         let found_version = self
@@ -209,28 +210,23 @@ impl Commander {
         // Extract version number
         if found_version[0..3] != *"jj " {
             trace!("jj version output \"{}\"", found_version);
-            bail!("Jujutsu version string was not recognized");
+            bail!("jj version string was not recognized");
         }
         let found_version = &found_version[3..].trim();
-        let min_version = JJ_MIN_VERSION;
 
         trace!(
             found_version = found_version,
-            min_version = min_version,
-            "Check jj version",
+            min_version = JJ_MIN_VERSION,
+            "Checking jj version",
         );
 
         // Verify that jj is not too old
-        match compare(found_version, min_version) {
+        match compare(found_version, JJ_MIN_VERSION) {
             Err(_) => bail!(
-                "Unable to compare version '{}' to '{}'",
-                found_version,
-                min_version
+                "Unable to compare version '{found_version}' to '{JJ_MIN_VERSION}'\n{JJ_VERSION_IGNORE_HELP}"
             ),
             Ok(Cmp::Lt) => bail!(
-                "jujutsu version {} is too old. Must be at least {}",
-                found_version,
-                min_version
+                "jj version is too old ({found_version}). Must be at least {JJ_MIN_VERSION}\n{JJ_VERSION_IGNORE_HELP}"
             ),
             Ok(_) => Ok(()), // found >= min, so jj is recent enough
         }
