@@ -148,7 +148,7 @@ impl FilesTab {
     pub fn untrack_file(&mut self, commander: &mut Commander) -> Result<()> {
         self.file
             .as_ref()
-            .map(|current_file| commander.untrack_file(&current_file))
+            .map(|current_file| commander.untrack_file(current_file))
             .transpose()?;
         Ok(())
     }
