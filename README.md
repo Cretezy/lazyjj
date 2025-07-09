@@ -22,6 +22,7 @@ https://github.com/Cretezy/lazyjj/assets/2672503/b5e6b4f1-ebdb-448f-af9e-361e86f
   - See a change's files from the log tab with `Enter`
   - View conflicts list in current change
   - Toggle between color words and git diff with `w`
+  - Untrack file with `x`
 - Bookmarks
   - View list of bookmarks, including from all remotes with `a`
   - Create with `c`, rename with `r`, delete with `d`, forget with `f`

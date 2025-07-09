@@ -1,3 +1,5 @@
+use std::vec;
+
 use anyhow::Result;
 use tracing::instrument;
 
@@ -11,7 +13,7 @@ use crate::{
     env::{Config, DiffFormat},
     ui::{
         Component, ComponentAction, details_panel::DetailsPanel, help_popup::HelpPopup,
-        utils::tabs_to_spaces,
+        message_popup::MessagePopup, utils::tabs_to_spaces,
     },
 };
 
@@ -140,6 +142,14 @@ impl FilesTab {
                 r.map(|diff| diff.map(|diff| tabs_to_spaces(&diff)))
             });
         self.diff_panel.scroll = 0;
+        Ok(())
+    }
+
+    pub fn untrack_file(&mut self, commander: &mut Commander) -> Result<()> {
+        self.file
+            .as_ref()
+            .map(|current_file| commander.untrack_file(current_file))
+            .transpose()?;
         Ok(())
     }
 
@@ -318,6 +328,19 @@ impl Component for FilesTab {
                     self.diff_format = self.diff_format.get_next(self.config.diff_tool());
                     self.refresh_diff(commander)?;
                 }
+                KeyCode::Char('x') => {
+                    // this works even for deleted files because jj doesn't return error in that case
+                    if self.untrack_file(commander).is_err() {
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                title: "Can't untrack file".into(),
+                                messages: "Make sure that file is ignored".into(),
+                                text_align: None,
+                            }))),
+                        ));
+                    }
+                    self.set_head(commander, &commander.get_current_head()?)?;
+                }
                 KeyCode::Char('R') | KeyCode::F(5) => {
                     self.head = commander.get_head_latest(&self.head)?;
                     self.refresh_files(commander)?;
@@ -333,6 +356,7 @@ impl Component for FilesTab {
                             vec![
                                 ("j/k".to_owned(), "scroll down/up".to_owned()),
                                 ("J/K".to_owned(), "scroll down by ½ page".to_owned()),
+                                ("x".to_owned(), "untrack file".to_owned()),
                                 ("@".to_owned(), "view current change files".to_owned()),
                             ],
                             vec![

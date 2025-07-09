@@ -159,6 +159,30 @@ impl Commander {
 
         self.execute_jj_command(args, true, true).map(Some)
     }
+
+    #[instrument(level = "trace", skip(self))]
+    pub fn untrack_file(&self, current_file: &File) -> Result<Option<String>, CommandError> {
+        let Some(path) = current_file.path.as_ref() else {
+            return Ok(None);
+        };
+
+        let path = if let Some(DiffType::Renamed) = current_file.diff_type
+            && let Some(captures) = RENAME_REGEX.captures(path)
+        {
+            match captures.get(2) {
+                Some(path) => path.as_str(),
+                None => return Ok(None),
+            }
+        } else {
+            path
+        };
+
+        Ok(Some(self.execute_jj_command(
+            vec!["file", "untrack", path],
+            false,
+            true,
+        )?))
+    }
 }
 
 #[cfg(test)]
