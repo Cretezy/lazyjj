@@ -4,17 +4,17 @@ use anyhow::Result;
 use tracing::instrument;
 
 use crate::{
+    ComponentInputResult,
     commander::{
+        CommandError, Commander,
         files::{Conflict, DiffType, File},
         log::Head,
-        CommandError, Commander,
     },
     env::{Config, DiffFormat},
     ui::{
-        details_panel::DetailsPanel, help_popup::HelpPopup, message_popup::MessagePopup,
-        utils::tabs_to_spaces, Component, ComponentAction,
+        Component, ComponentAction, details_panel::DetailsPanel, help_popup::HelpPopup,
+        message_popup::MessagePopup, utils::tabs_to_spaces,
     },
-    ComponentInputResult,
 };
 
 use ansi_to_tui::IntoText;
@@ -243,9 +243,11 @@ impl Component for FilesTab {
                         .collect::<Vec<Line>>();
 
                     if files_lines.is_empty() {
-                        vec![Line::from(" No changed files in change")
-                            .fg(Color::DarkGray)
-                            .italic()]
+                        vec![
+                            Line::from(" No changed files in change")
+                                .fg(Color::DarkGray)
+                                .italic(),
+                        ]
                     } else {
                         files_lines
                     }
@@ -383,7 +385,7 @@ impl Component for FilesTab {
                                 ("W".to_owned(), "toggle wrapping".to_owned()),
                             ],
                         )))),
-                    ))
+                    ));
                 }
                 _ => return Ok(ComponentInputResult::NotHandled),
             };

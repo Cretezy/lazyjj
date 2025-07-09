@@ -7,8 +7,8 @@ use ratatui::{
 };
 
 use crate::{
-    ui::{styles::create_popup_block, utils::centered_rect, Component},
     ComponentInputResult,
+    ui::{Component, styles::create_popup_block, utils::centered_rect},
 };
 
 pub struct HelpPopup {

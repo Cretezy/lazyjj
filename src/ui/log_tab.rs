@@ -13,22 +13,22 @@ use tui_confirm_dialog::{ButtonLabel, ConfirmDialog, ConfirmDialogState, Listene
 use tui_textarea::{CursorMove, TextArea};
 
 use crate::{
+    ComponentInputResult,
     commander::{
-        log::{Head, LogOutput},
         CommandError, Commander,
+        log::{Head, LogOutput},
     },
     env::{Config, DiffFormat},
     keybinds::{LogTabEvent, LogTabKeybinds},
     ui::{
+        Component, ComponentAction,
         bookmark_set_popup::BookmarkSetPopup,
         details_panel::DetailsPanel,
         details_panel::DetailsPanelEvent,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
-        Component, ComponentAction,
     },
-    ComponentInputResult,
 };
 
 const NEW_POPUP_ID: u16 = 1;
@@ -303,7 +303,7 @@ impl LogTab<'_> {
                         ComponentAction::SetPopup(Some(Box::new(MessagePopup {
                             title: " Edit ".into(),
                             messages: vec![
-                                "The change cannot be edited because it is immutable.".into()
+                                "The change cannot be edited because it is immutable.".into(),
                             ]
                             .into(),
                             text_align: None,
@@ -486,7 +486,7 @@ impl LogTab<'_> {
                             ("W".to_owned(), "toggle wrapping".to_owned()),
                         ],
                     )))),
-                ))
+                ));
             }
             LogTabEvent::Save
             | LogTabEvent::Cancel
@@ -638,7 +638,7 @@ impl Component for LogTab<'_> {
             };
 
             let title = match &self.log_revset {
-                Some(log_revset) => &format!(" Log for: {} ", log_revset),
+                Some(log_revset) => &format!(" Log for: {log_revset} "),
                 None => " Log ",
             };
 
@@ -761,7 +761,7 @@ impl Component for LogTab<'_> {
                             self.head.commit_id.as_str(),
                             &describe_textarea.lines().join("\n"),
                         )?;
-                        self.head = commander.get_current_head()?;
+                        self.head = commander.get_head_latest(&self.head)?;
                         self.refresh_log_output(commander);
                         self.refresh_head_output(commander);
                         self.describe_textarea = None;

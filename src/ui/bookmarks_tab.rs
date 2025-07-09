@@ -1,16 +1,16 @@
 #![expect(clippy::borrow_interior_mutable_const)]
 
 use crate::{
-    commander::{bookmarks::BookmarkLine, ids::ChangeId, CommandError, Commander},
+    ComponentInputResult,
+    commander::{CommandError, Commander, bookmarks::BookmarkLine, ids::ChangeId},
     env::{Config, DiffFormat},
     ui::{
+        Component, ComponentAction,
         details_panel::DetailsPanel,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
-        Component, ComponentAction,
     },
-    ComponentInputResult,
 };
 use ansi_to_tui::IntoText;
 use anyhow::Result;
@@ -400,7 +400,7 @@ impl Component for BookmarksTab<'_> {
         {
             let title = if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref()
             {
-                format!(" Bookmark {} ", bookmark)
+                format!(" Bookmark {bookmark} ")
             } else {
                 " Bookmark ".to_owned()
             };
@@ -862,7 +862,7 @@ impl Component for BookmarksTab<'_> {
                                 Span::styled(" New ", Style::new().bold().cyan()),
                                 Text::from(vec![
                                     Line::from("Are you sure you want to create a new change?"),
-                                    Line::from(format!("Bookmark: {}", bookmark)),
+                                    Line::from(format!("Bookmark: {bookmark}")),
                                 ]),
                             );
                             self.popup
@@ -900,7 +900,7 @@ impl Component for BookmarksTab<'_> {
                                 Span::styled(" Edit ", Style::new().bold().cyan()),
                                 Text::from(vec![
                                     Line::from("Are you sure you want to edit an existing change?"),
-                                    Line::from(format!("Bookmark: {}", bookmark)),
+                                    Line::from(format!("Bookmark: {bookmark}")),
                                 ]),
                             );
                             self.popup
@@ -951,7 +951,7 @@ impl Component for BookmarksTab<'_> {
                                 ("W".to_owned(), "toggle wrapping".to_owned()),
                             ],
                         )))),
-                    ))
+                    ));
                 }
                 _ => return Ok(ComponentInputResult::NotHandled),
             };

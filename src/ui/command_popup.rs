@@ -10,11 +10,11 @@ use shell_words::split;
 use tui_textarea::TextArea;
 
 use crate::{
+    ComponentInputResult,
     commander::Commander,
     ui::{
-        message_popup::MessagePopup, utils::centered_rect_line_height, Component, ComponentAction,
+        Component, ComponentAction, message_popup::MessagePopup, utils::centered_rect_line_height,
     },
-    ComponentInputResult,
 };
 
 pub struct CommandPopup<'a> {
@@ -96,7 +96,7 @@ impl Component for CommandPopup<'_> {
                     let message = match res {
                         Ok(str) => str,
                         Err(err) => [
-                            format!("Failed to execute jj command: jj {}", command_input),
+                            format!("Failed to execute jj command: jj {command_input}"),
                             String::new(),
                             err.to_string(),
                         ]
@@ -115,7 +115,7 @@ impl Component for CommandPopup<'_> {
                     return Ok(ComponentInputResult::HandledAction(
                         ComponentAction::Multiple(vec![
                             ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                title: format!("jj {}", command_input).into(),
+                                title: format!("jj {command_input}").into(),
                                 messages: message.into(),
                                 text_align: Alignment::Left.into(),
                             }))),

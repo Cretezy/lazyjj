@@ -13,16 +13,17 @@ pub mod utils;
 use std::time::Instant;
 
 use crate::{
-    app::{App, Tab},
-    commander::{log::Head, Commander},
     ComponentInputResult,
+    app::{App, Tab},
+    commander::{Commander, log::Head},
 };
 use anyhow::Result;
 use ratatui::{
+    Frame,
     crossterm::event::Event,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
-    symbols, Frame,
+    symbols,
 };
 use ratatui::{prelude::*, widgets::*};
 

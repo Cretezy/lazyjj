@@ -1,11 +1,11 @@
 use std::{path::PathBuf, process::Command};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use ratatui::style::Color;
 use serde::Deserialize;
 
 use crate::{
-    commander::{get_output_args, RemoveEndLine},
+    commander::{RemoveEndLine, get_output_args},
     keybinds::KeybindsConfig,
 };
 

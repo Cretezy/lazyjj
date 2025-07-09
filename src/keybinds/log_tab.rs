@@ -4,7 +4,7 @@ use ratatui::crossterm::event::KeyEvent;
 
 use crate::{make_keybinds_help, set_keybinds, update_keybinds};
 
-use super::{config::LogTabKeybindsConfig, keybinds_store::KeybindsStore, Shortcut};
+use super::{Shortcut, config::LogTabKeybindsConfig, keybinds_store::KeybindsStore};
 
 #[derive(Debug)]
 pub struct LogTabKeybinds {

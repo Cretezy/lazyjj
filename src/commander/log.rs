@@ -7,14 +7,14 @@ It is mostly used in the [log_tab][crate::ui::log_tab] module.
 
 use crate::{
     commander::{
+        CommandError, Commander, RemoveEndLine,
         bookmarks::Bookmark,
         ids::{ChangeId, CommitId},
-        CommandError, Commander, RemoveEndLine,
     },
     env::DiffFormat,
 };
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use itertools::Itertools;
 use regex::Regex;
 use std::{fmt::Display, sync::LazyLock};
@@ -108,7 +108,9 @@ impl Commander {
                         "log",
                         "--template",
                         // Match builtin_log_compact with 2 lines per change
-                        &format!(r#"{0} ++ " " ++ bookmarks ++"\n" ++ {0}"#, HEAD_TEMPLATE),
+                        &format!(
+                            r#"{HEAD_TEMPLATE} ++ " " ++ bookmarks ++"\n" ++ {HEAD_TEMPLATE}"#
+                        ),
                     ],
                     args,
                 ]
@@ -158,7 +160,7 @@ impl Commander {
                         "log",
                         "--no-graph",
                         "--template",
-                        &format!(r#"{} ++ "\n""#, HEAD_TEMPLATE),
+                        &format!(r#"{HEAD_TEMPLATE} ++ "\n""#),
                         "-r",
                         "@",
                         "--limit",
@@ -181,7 +183,7 @@ impl Commander {
                 "log",
                 "--no-graph",
                 "--template",
-                &format!(r#"{} ++ "\n""#, HEAD_TEMPLATE),
+                &format!(r#"{HEAD_TEMPLATE} ++ "\n""#),
                 "-r",
                 head.change_id.as_str(),
             ],
@@ -249,9 +251,9 @@ impl Commander {
                         "log",
                         "--no-graph",
                         "--template",
-                        &format!(r#"{} ++ "\n""#, HEAD_TEMPLATE),
+                        &format!(r#"{HEAD_TEMPLATE} ++ "\n""#),
                         "-r",
-                        &format!("{}-", commit_id),
+                        &format!("{commit_id}-"),
                         "--limit",
                         "1",
                     ],
@@ -321,7 +323,7 @@ impl Commander {
                         "log",
                         "--no-graph",
                         "--template",
-                        &format!(r#"{} ++ "\n""#, HEAD_TEMPLATE),
+                        &format!(r#"{HEAD_TEMPLATE} ++ "\n""#),
                         "-r",
                         &bookmark.to_string(),
                         "--limit",
@@ -356,9 +358,11 @@ mod tests {
 
         assert_debug_snapshot!(log.graph);
 
-        assert!(log.graph_heads.iter().all(|graph_head| graph_head
-            .as_ref()
-            .is_none_or(|graph_head| log.heads.contains(graph_head))));
+        assert!(log.graph_heads.iter().all(|graph_head| {
+            graph_head
+                .as_ref()
+                .is_none_or(|graph_head| log.heads.contains(graph_head))
+        }));
 
         Ok(())
     }

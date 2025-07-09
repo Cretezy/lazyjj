@@ -2,15 +2,16 @@ extern crate thiserror;
 
 use std::{
     env::current_dir,
-    fs::{canonicalize, OpenOptions},
+    fs::{OpenOptions, canonicalize},
     io::{self, ErrorKind},
     process::Command,
     time::Instant,
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::Parser;
 use ratatui::{
+    Terminal,
     backend::{Backend, CrosstermBackend},
     crossterm::{
         event::{
@@ -20,13 +21,12 @@ use ratatui::{
         },
         execute,
         terminal::{
-            disable_raw_mode, enable_raw_mode, supports_keyboard_enhancement, EnterAlternateScreen,
-            LeaveAlternateScreen,
+            EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
+            supports_keyboard_enhancement,
         },
     },
     layout::{Alignment, Rect},
     widgets::Paragraph,
-    Terminal,
 };
 use tracing::{info, trace_span};
 use tracing_chrome::ChromeLayerBuilder;
@@ -42,7 +42,7 @@ use crate::{
     app::App,
     commander::Commander,
     env::Env,
-    ui::{ui, ComponentAction},
+    ui::{ComponentAction, ui},
 };
 
 /// Simple program to greet a person
@@ -116,7 +116,9 @@ fn main() -> Result<()> {
     // Check that jj exists
     if let Err(err) = Command::new(&jj_bin).arg("help").output() {
         if err.kind() == ErrorKind::NotFound {
-            bail!("jj command not found. Please make sure it is installed: https://martinvonz.github.io/jj/latest/install-and-setup");
+            bail!(
+                "jj command not found. Please make sure it is installed: https://martinvonz.github.io/jj/latest/install-and-setup"
+            );
         }
     }
 

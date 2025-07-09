@@ -7,7 +7,7 @@ It is mostly used in the [files_tab][crate::ui::files_tab] module.
 use std::sync::LazyLock;
 
 use crate::{
-    commander::{ids::CommitId, log::Head, CommandError, Commander},
+    commander::{CommandError, Commander, ids::CommitId, log::Head},
     env::DiffFormat,
 };
 
@@ -105,20 +105,18 @@ impl Commander {
         );
 
         match output {
-            Ok(output) => {
-                return Ok(output
-                    .lines()
-                    .filter_map(|line| {
-                        let captured = CONFLICTS_REGEX.captures(line);
-                        captured
-                            .as_ref()
-                            .and_then(|captured| captured.get(1))
-                            .map(|inner_text| Conflict {
-                                path: inner_text.as_str().to_owned(),
-                            })
-                    })
-                    .collect())
-            }
+            Ok(output) => Ok(output
+                .lines()
+                .filter_map(|line| {
+                    let captured = CONFLICTS_REGEX.captures(line);
+                    captured
+                        .as_ref()
+                        .and_then(|captured| captured.get(1))
+                        .map(|inner_text| Conflict {
+                            path: inner_text.as_str().to_owned(),
+                        })
+                })
+                .collect()),
             Err(CommandError::Status(_, Some(2))) => {
                 // No conflicts
                 Ok(vec![])
