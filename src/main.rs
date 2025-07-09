@@ -60,6 +60,10 @@ struct Args {
     /// Path to jj binary
     #[arg(long, env = "JJ_BIN")]
     jj_bin: Option<String>,
+
+    /// Do not exit if jj version check fails
+    #[arg(long)]
+    ignore_jj_version: bool,
 }
 
 fn main() -> Result<()> {
@@ -126,8 +130,9 @@ fn main() -> Result<()> {
     let env = Env::new(path, args.revisions, jj_bin)?;
     let mut commander = Commander::new(&env);
 
-    // Check that `jj status` works
-    commander.init()?;
+    if !args.ignore_jj_version {
+        commander.check_jj_version()?;
+    }
 
     // Setup app
     let mut app = App::new(env.clone())?;
