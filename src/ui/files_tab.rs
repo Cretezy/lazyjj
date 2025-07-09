@@ -7,7 +7,7 @@ use crate::{
     ComponentInputResult,
     commander::{
         CommandError, Commander,
-        files::{Conflict, DiffType, File},
+        files::{Conflict, File},
         log::Head,
     },
     env::{Config, DiffFormat},
@@ -329,29 +329,17 @@ impl Component for FilesTab {
                     self.refresh_diff(commander)?;
                 }
                 KeyCode::Char('x') => {
-                    let status = self
-                        .file
-                        .as_ref()
-                        .map(|current_file| current_file.diff_type.clone());
-
-                    if status != Some(Some(DiffType::Deleted)) {
-                        let prev_files = commander.get_files(&self.head)?;
-                        self.untrack_file(commander)?;
-                        let head = &commander.get_current_head()?;
-                        self.set_head(commander, head)?;
-
-                        let next_files = commander.get_files(&self.head)?;
-
-                        if prev_files == next_files {
-                            return Ok(ComponentInputResult::HandledAction(
-                                ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                    title: "Can't untrack file".into(),
-                                    messages: "Please ignore the file before untracking it".into(),
-                                    text_align: None,
-                                }))),
-                            ));
-                        }
+                    // this works even for deleted files because jj doesn't return error in that case
+                    if self.untrack_file(commander).is_err() {
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                title: "Can't untrack file".into(),
+                                messages: "Make sure that file is ignored".into(),
+                                text_align: None,
+                            }))),
+                        ));
                     }
+                    self.set_head(commander, &commander.get_current_head()?)?;
                 }
                 KeyCode::Char('R') | KeyCode::F(5) => {
                     self.head = commander.get_head_latest(&self.head)?;
