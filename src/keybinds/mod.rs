@@ -8,6 +8,7 @@ pub use log_tab::{LogTabEvent, LogTabKeybinds};
 mod config;
 mod keybinds_store;
 mod log_tab;
+pub mod rebase_popup;
 
 /*#[derive(Debug)]
 pub struct Keybinds {
