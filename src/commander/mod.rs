@@ -13,7 +13,7 @@ This module implements the low level functions used by the
 command implementation functions:
 
 * [Commander::new] - Create a new instance
-* [Commander::init] - Prepare for commands. This will panic if jj does not work
+* [Commander::check_jj_version] - Check jj works with lazyjj
 * [Commander::execute_command] - Execute any command and log the result
 * [Commander::execute_jj_command] - Execute a jj command.
 * [Commander::execute_void_jj_command] - Execute a jj command and discard the output.
@@ -201,6 +201,9 @@ impl Commander {
         Ok(())
     }
 
+    /// Check that the version of jj is recent enough to work with lazyjj
+    ///
+    /// See also [JJ_MIN_VERSION]
     #[instrument(level = "trace", skip(self))]
     pub fn check_jj_version(&self) -> Result<()> {
         // Ask jj about its version
