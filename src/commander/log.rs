@@ -212,7 +212,7 @@ impl Commander {
                         "obslog",
                         "--no-graph",
                         "--template",
-                        r#"change_id ++ "\n""#,
+                        r#"commit.change_id() ++ "\n""#,
                         "-r",
                         latest_head.commit_id.as_str(),
                     ],
