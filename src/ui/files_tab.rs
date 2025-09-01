@@ -46,12 +46,12 @@ fn get_current_file_index(
     current_file: Option<&File>,
     files_output: Result<&Vec<File>, &CommandError>,
 ) -> Option<usize> {
-    if let (Some(current_file), Ok(files_output)) = (current_file, files_output) {
-        if let Some(path) = current_file.path.as_ref() {
-            return files_output
-                .iter()
-                .position(|file| file.path.as_ref() == Some(path));
-        }
+    if let (Some(current_file), Ok(files_output)) = (current_file, files_output)
+        && let Some(path) = current_file.path.as_ref()
+    {
+        return files_output
+            .iter()
+            .position(|file| file.path.as_ref() == Some(path));
     }
 
     None

@@ -510,55 +510,52 @@ impl Component for LogTab<'_> {
 
     fn update(&mut self, commander: &mut Commander) -> Result<Option<ComponentAction>> {
         // Check for popup action
-        if let Ok(res) = self.popup_rx.try_recv() {
-            if res.1.unwrap_or(false) {
-                match res.0 {
-                    NEW_POPUP_ID => {
-                        commander.run_new(self.head.commit_id.as_str())?;
-                        self.head = commander.get_current_head()?;
-                        self.refresh_log_output(commander);
-                        self.refresh_head_output(commander);
-                        if self.describe_after_new {
-                            self.describe_after_new = false;
-                            let textarea = TextArea::default();
-                            self.describe_textarea = Some(textarea);
-                        }
-                        return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
+        if let Ok(res) = self.popup_rx.try_recv()
+            && res.1.unwrap_or(false)
+        {
+            match res.0 {
+                NEW_POPUP_ID => {
+                    commander.run_new(self.head.commit_id.as_str())?;
+                    self.head = commander.get_current_head()?;
+                    self.refresh_log_output(commander);
+                    self.refresh_head_output(commander);
+                    if self.describe_after_new {
+                        self.describe_after_new = false;
+                        let textarea = TextArea::default();
+                        self.describe_textarea = Some(textarea);
                     }
-                    EDIT_POPUP_ID => {
-                        commander
-                            .run_edit(self.head.commit_id.as_str(), self.edit_ignore_immutable)?;
-                        self.refresh_log_output(commander);
-                        self.refresh_head_output(commander);
-                        return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
-                    }
-                    ABANDON_POPUP_ID => {
-                        if self.head == commander.get_current_head()? {
-                            commander.run_abandon(&self.head.commit_id)?;
-                            self.refresh_log_output(commander);
-                            self.head = commander.get_current_head()?;
-                            self.refresh_head_output(commander);
-                            return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
-                        } else {
-                            let head_parent = commander.get_commit_parent(&self.head.commit_id)?;
-                            commander.run_abandon(&self.head.commit_id)?;
-                            self.refresh_log_output(commander);
-                            self.head = head_parent;
-                            self.refresh_head_output(commander);
-                        }
-                    }
-                    SQUASH_POPUP_ID => {
-                        commander.run_squash(
-                            self.head.commit_id.as_str(),
-                            self.squash_ignore_immutable,
-                        )?;
-                        self.head = commander.get_current_head()?;
-                        self.refresh_log_output(commander);
-                        self.refresh_head_output(commander);
-                        return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
-                    }
-                    _ => {}
+                    return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
                 }
+                EDIT_POPUP_ID => {
+                    commander.run_edit(self.head.commit_id.as_str(), self.edit_ignore_immutable)?;
+                    self.refresh_log_output(commander);
+                    self.refresh_head_output(commander);
+                    return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
+                }
+                ABANDON_POPUP_ID => {
+                    if self.head == commander.get_current_head()? {
+                        commander.run_abandon(&self.head.commit_id)?;
+                        self.refresh_log_output(commander);
+                        self.head = commander.get_current_head()?;
+                        self.refresh_head_output(commander);
+                        return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
+                    } else {
+                        let head_parent = commander.get_commit_parent(&self.head.commit_id)?;
+                        commander.run_abandon(&self.head.commit_id)?;
+                        self.refresh_log_output(commander);
+                        self.head = head_parent;
+                        self.refresh_head_output(commander);
+                    }
+                }
+                SQUASH_POPUP_ID => {
+                    commander
+                        .run_squash(self.head.commit_id.as_str(), self.squash_ignore_immutable)?;
+                    self.head = commander.get_current_head()?;
+                    self.refresh_log_output(commander);
+                    self.refresh_head_output(commander);
+                    return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
+                }
+                _ => {}
             }
         }
 

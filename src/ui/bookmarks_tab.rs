@@ -223,84 +223,81 @@ impl Component for BookmarksTab<'_> {
 
     fn update(&mut self, commander: &mut Commander) -> Result<Option<ComponentAction>> {
         // Check for popup action
-        if let Ok(res) = self.popup_rx.try_recv() {
-            if res.1.unwrap_or(false) {
-                match res.0 {
-                    DELETE_BRANCH_POPUP_ID => {
-                        if let Some(delete) = self.delete.as_ref() {
-                            match commander.delete_bookmark(&delete.name) {
-                                Ok(_) => {
-                                    self.refresh_bookmarks(commander);
-                                    let bookmarks = Vec::new();
-                                    let bookmarks =
-                                        self.bookmarks_output.as_ref().unwrap_or(&bookmarks);
-                                    self.bookmark =
-                                        bookmarks.first().map(|bookmark| bookmark.to_owned());
-                                    self.refresh_bookmark(commander);
-                                }
-                                Err(err) => {
-                                    return Ok(Some(ComponentAction::SetPopup(Some(Box::new(
-                                        MessagePopup {
-                                            title: "Delete error".into(),
-                                            messages: err.to_string().into_text()?,
-                                            text_align: None,
-                                        },
-                                    )))));
-                                }
+        if let Ok(res) = self.popup_rx.try_recv()
+            && res.1.unwrap_or(false)
+        {
+            match res.0 {
+                DELETE_BRANCH_POPUP_ID => {
+                    if let Some(delete) = self.delete.as_ref() {
+                        match commander.delete_bookmark(&delete.name) {
+                            Ok(_) => {
+                                self.refresh_bookmarks(commander);
+                                let bookmarks = Vec::new();
+                                let bookmarks =
+                                    self.bookmarks_output.as_ref().unwrap_or(&bookmarks);
+                                self.bookmark =
+                                    bookmarks.first().map(|bookmark| bookmark.to_owned());
+                                self.refresh_bookmark(commander);
+                            }
+                            Err(err) => {
+                                return Ok(Some(ComponentAction::SetPopup(Some(Box::new(
+                                    MessagePopup {
+                                        title: "Delete error".into(),
+                                        messages: err.to_string().into_text()?,
+                                        text_align: None,
+                                    },
+                                )))));
                             }
                         }
                     }
-                    FORGET_BRANCH_POPUP_ID => {
-                        if let Some(forget) = self.forget.as_ref() {
-                            match commander.forget_bookmark(&forget.name) {
-                                Ok(_) => {
-                                    self.refresh_bookmarks(commander);
-                                    let bookmarks = Vec::new();
-                                    let bookmarks =
-                                        self.bookmarks_output.as_ref().unwrap_or(&bookmarks);
-                                    self.bookmark =
-                                        bookmarks.first().map(|bookmark| bookmark.to_owned());
-                                    self.refresh_bookmark(commander);
-                                }
-                                Err(err) => {
-                                    return Ok(Some(ComponentAction::SetPopup(Some(Box::new(
-                                        MessagePopup {
-                                            title: "Forget error".into(),
-                                            messages: err.to_string().into_text()?,
-                                            text_align: None,
-                                        },
-                                    )))));
-                                }
+                }
+                FORGET_BRANCH_POPUP_ID => {
+                    if let Some(forget) = self.forget.as_ref() {
+                        match commander.forget_bookmark(&forget.name) {
+                            Ok(_) => {
+                                self.refresh_bookmarks(commander);
+                                let bookmarks = Vec::new();
+                                let bookmarks =
+                                    self.bookmarks_output.as_ref().unwrap_or(&bookmarks);
+                                self.bookmark =
+                                    bookmarks.first().map(|bookmark| bookmark.to_owned());
+                                self.refresh_bookmark(commander);
+                            }
+                            Err(err) => {
+                                return Ok(Some(ComponentAction::SetPopup(Some(Box::new(
+                                    MessagePopup {
+                                        title: "Forget error".into(),
+                                        messages: err.to_string().into_text()?,
+                                        text_align: None,
+                                    },
+                                )))));
                             }
                         }
                     }
-                    NEW_POPUP_ID => {
-                        if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref()
-                        {
-                            commander.run_new(&bookmark.to_string())?;
-                            let head = commander.get_current_head()?;
-                            if self.describe_after_new {
-                                self.describe_after_new_change = Some(head.change_id);
-                                self.describe_after_new = false;
-                                let textarea = TextArea::default();
-                                self.describe_textarea = Some(textarea);
-                                return Ok(None);
-                            } else {
-                                return Ok(Some(ComponentAction::ViewLog(head)));
-                            }
-                        }
-                    }
-                    EDIT_POPUP_ID => {
-                        if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref()
-                        {
-                            commander
-                                .run_edit(&bookmark.to_string(), self.edit_ignore_immutable)?;
-                            let head = commander.get_current_head()?;
+                }
+                NEW_POPUP_ID => {
+                    if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref() {
+                        commander.run_new(&bookmark.to_string())?;
+                        let head = commander.get_current_head()?;
+                        if self.describe_after_new {
+                            self.describe_after_new_change = Some(head.change_id);
+                            self.describe_after_new = false;
+                            let textarea = TextArea::default();
+                            self.describe_textarea = Some(textarea);
+                            return Ok(None);
+                        } else {
                             return Ok(Some(ComponentAction::ViewLog(head)));
                         }
                     }
-                    _ => {}
                 }
+                EDIT_POPUP_ID => {
+                    if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref() {
+                        commander.run_edit(&bookmark.to_string(), self.edit_ignore_immutable)?;
+                        let head = commander.get_current_head()?;
+                        return Ok(Some(ComponentAction::ViewLog(head)));
+                    }
+                }
+                _ => {}
             }
         }
 
@@ -837,42 +834,44 @@ impl Component for BookmarksTab<'_> {
                 }
                 // TODO: Ask for confirmation?
                 KeyCode::Char('t') => {
-                    if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref() {
-                        if bookmark.remote.is_some() && bookmark.present {
-                            commander.track_bookmark(bookmark)?;
-                            self.refresh_bookmarks(commander);
-                            self.refresh_bookmark(commander);
-                        }
+                    if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref()
+                        && bookmark.remote.is_some()
+                        && bookmark.present
+                    {
+                        commander.track_bookmark(bookmark)?;
+                        self.refresh_bookmarks(commander);
+                        self.refresh_bookmark(commander);
                     }
                 }
                 KeyCode::Char('T') => {
-                    if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref() {
-                        if bookmark.remote.is_some() && bookmark.present {
-                            commander.untrack_bookmark(bookmark)?;
-                            self.refresh_bookmarks(commander);
-                            self.refresh_bookmark(commander);
-                        }
+                    if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref()
+                        && bookmark.remote.is_some()
+                        && bookmark.present
+                    {
+                        commander.untrack_bookmark(bookmark)?;
+                        self.refresh_bookmarks(commander);
+                        self.refresh_bookmark(commander);
                     }
                 }
                 KeyCode::Char('n') | KeyCode::Char('N') => {
-                    if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref() {
-                        if bookmark.present {
-                            self.popup = ConfirmDialogState::new(
-                                NEW_POPUP_ID,
-                                Span::styled(" New ", Style::new().bold().cyan()),
-                                Text::from(vec![
-                                    Line::from("Are you sure you want to create a new change?"),
-                                    Line::from(format!("Bookmark: {bookmark}")),
-                                ]),
-                            );
-                            self.popup
-                                .with_yes_button(ButtonLabel::YES.clone())
-                                .with_no_button(ButtonLabel::NO.clone())
-                                .with_listener(Some(self.popup_tx.clone()))
-                                .open();
+                    if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref()
+                        && bookmark.present
+                    {
+                        self.popup = ConfirmDialogState::new(
+                            NEW_POPUP_ID,
+                            Span::styled(" New ", Style::new().bold().cyan()),
+                            Text::from(vec![
+                                Line::from("Are you sure you want to create a new change?"),
+                                Line::from(format!("Bookmark: {bookmark}")),
+                            ]),
+                        );
+                        self.popup
+                            .with_yes_button(ButtonLabel::YES.clone())
+                            .with_no_button(ButtonLabel::NO.clone())
+                            .with_listener(Some(self.popup_tx.clone()))
+                            .open();
 
-                            self.describe_after_new = key.code == KeyCode::Char('N');
-                        }
+                        self.describe_after_new = key.code == KeyCode::Char('N');
                     }
                 }
                 KeyCode::Char('e') | KeyCode::Char('E') => {
@@ -913,12 +912,12 @@ impl Component for BookmarksTab<'_> {
                     }
                 }
                 KeyCode::Enter => {
-                    if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref() {
-                        if bookmark.present {
-                            return Ok(ComponentInputResult::HandledAction(
-                                ComponentAction::ViewLog(commander.get_bookmark_head(bookmark)?),
-                            ));
-                        }
+                    if let Some(BookmarkLine::Parsed { bookmark, .. }) = self.bookmark.as_ref()
+                        && bookmark.present
+                    {
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::ViewLog(commander.get_bookmark_head(bookmark)?),
+                        ));
                     }
                 }
                 KeyCode::Char('?') => {
