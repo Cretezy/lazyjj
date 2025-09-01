@@ -77,7 +77,7 @@ pub enum BookmarkLine {
 }
 
 impl BookmarkLine {
-    pub fn to_text(&self) -> Result<Text, ansi_to_tui::Error> {
+    pub fn to_text(&self) -> Result<Text<'_>, ansi_to_tui::Error> {
         match self {
             BookmarkLine::Unparsable(text) => text.to_text(),
             BookmarkLine::Parsed { text, .. } => text.to_text(),

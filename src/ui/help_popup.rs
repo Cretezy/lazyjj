@@ -29,7 +29,7 @@ impl HelpPopup {
         }
     }
 
-    fn create_table(&self, items: &[(String, String)], title: String) -> Table {
+    fn create_table(&self, items: &[(String, String)], title: String) -> Table<'_> {
         let items: Vec<&(String, String)> = items.iter().skip(self.scroll).collect();
 
         let max_first_row_width = items.iter().map(|row| row.0.len()).max().unwrap_or(0);

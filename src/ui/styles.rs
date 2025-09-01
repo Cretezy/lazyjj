@@ -15,7 +15,7 @@ pub static POPUP_BLOCK: LazyLock<Block<'static>> = LazyLock::new(|| {
 });
 pub static POPUP_BLOCK_TITLE_STYLE: LazyLock<Style> = LazyLock::new(|| Style::new().bold().cyan());
 
-pub fn create_popup_block(title: &str) -> Block {
+pub fn create_popup_block(title: &str) -> Block<'_> {
     POPUP_BLOCK
         .clone()
         .title(Span::styled(format!(" {title} "), *POPUP_BLOCK_TITLE_STYLE))
