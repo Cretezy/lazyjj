@@ -235,10 +235,9 @@ impl<'a> LogTab<'a> {
 
                 // Highlight lines that correspond to self.head
                 let line_head = log_output.graph_heads.get(i).unwrap_or(&None);
-                if let Some(line_change) = line_head {
-                    if line_change == &self.head {
+                if let Some(line_change) = line_head
+                    && line_change == &self.head {
                         set_bg(&mut line, self.config.highlight_color());
-                    }
                 };
 
                 line
@@ -913,11 +912,10 @@ impl Component for LogTab<'_> {
                         self.log_rect,
                         &self.log_list_state,
                         &mouse_event,
-                    ) {
-                        if let Some(head) = self.head_at_log_line(inx) {
+                    )
+                        && let Some(head) = self.head_at_log_line(inx) {
                             self.set_head(commander, head);
                         }
-                    }
                 }
                 (DETAILS_PANEL, MouseEventKind::ScrollUp) => {
                     self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
