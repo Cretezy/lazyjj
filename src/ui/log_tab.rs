@@ -236,8 +236,9 @@ impl<'a> LogTab<'a> {
                 // Highlight lines that correspond to self.head
                 let line_head = log_output.graph_heads.get(i).unwrap_or(&None);
                 if let Some(line_change) = line_head
-                    && line_change == &self.head {
-                        set_bg(&mut line, self.config.highlight_color());
+                    && line_change == &self.head
+                {
+                    set_bg(&mut line, self.config.highlight_color());
                 };
 
                 line
@@ -671,9 +672,7 @@ impl Component for LogTab<'_> {
             self.log_rect = log_block.inner(chunks[0]);
             self.log_height = log_block.inner(chunks[0]).height;
             self.log_list_state.select(self.selected_log_line());
-            let log = List::new(log_lines)
-                .block(log_block)
-                .scroll_padding(7);
+            let log = List::new(log_lines).block(log_block).scroll_padding(7);
             f.render_stateful_widget(log, chunks[0], &mut self.log_list_state);
 
             // Show scrollbar if lines don't fit the screen height
@@ -912,10 +911,10 @@ impl Component for LogTab<'_> {
                         self.log_rect,
                         &self.log_list_state,
                         &mouse_event,
-                    )
-                        && let Some(head) = self.head_at_log_line(inx) {
-                            self.set_head(commander, head);
-                        }
+                    ) && let Some(head) = self.head_at_log_line(inx)
+                    {
+                        self.set_head(commander, head);
+                    }
                 }
                 (DETAILS_PANEL, MouseEventKind::ScrollUp) => {
                     self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
