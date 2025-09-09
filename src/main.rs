@@ -118,12 +118,12 @@ fn main() -> Result<()> {
     let jj_bin = args.jj_bin.unwrap_or("jj".to_string());
 
     // Check that jj exists
-    if let Err(err) = Command::new(&jj_bin).arg("help").output() {
-        if err.kind() == ErrorKind::NotFound {
-            bail!(
-                "jj command not found. Please make sure it is installed: https://martinvonz.github.io/jj/latest/install-and-setup"
-            );
-        }
+    if let Err(err) = Command::new(&jj_bin).arg("help").output()
+        && err.kind() == ErrorKind::NotFound
+    {
+        bail!(
+            "jj command not found. Please make sure it is installed: https://martinvonz.github.io/jj/latest/install-and-setup"
+        );
     }
 
     // Setup environment

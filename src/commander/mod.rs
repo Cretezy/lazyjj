@@ -49,8 +49,8 @@ use tracing::{instrument, trace};
 use version_compare::{Cmp, compare};
 
 /// The oldest version of jj that is known to work with lazyjj.
-/// 0.22.0 introduced the bookmark command.
-const JJ_MIN_VERSION: &str = "0.22.0";
+/// 0.33.0 changed the template language for evolog/obslog
+const JJ_MIN_VERSION: &str = "0.33.0";
 const JJ_VERSION_IGNORE_HELP: &str = "If you want to continue anyway, use --ignore-jj-version";
 
 impl DiffFormat {
@@ -108,7 +108,7 @@ pub struct Commander {
     pub command_history: Arc<Mutex<Vec<CommandLogItem>>>,
 
     // Used for testing
-    pub jj_config_toml: Option<String>,
+    pub jj_config_toml: Option<Vec<String>>,
     pub force_no_color: bool,
 }
 
@@ -182,7 +182,9 @@ impl Commander {
         command.args(get_output_args(!self.force_no_color && color, quiet));
 
         if let Some(jj_config_toml) = &self.jj_config_toml {
-            command.args(vec!["--config-toml", jj_config_toml]);
+            for cfg in jj_config_toml {
+                command.args(["--config", cfg]);
+            }
         }
 
         self.execute_command(&mut command)
@@ -287,22 +289,13 @@ pub mod tests {
         pub fn new() -> Result<Self> {
             let directory = TempDir::new("lazyjj")?;
 
-            let jj_config_toml = r#"
-                user.email = "lazyjj@example.com"
-                user.name = "lazyjj"
-                ui.color = "never"
-            "#;
+            let jj_config_toml = vec![
+                r#"user.email="lazyjj@example.com""#.to_owned(),
+                r#"user.name="lazyjj""#.to_owned(),
+                r#"ui.color="never""#.to_owned(),
+            ];
 
             let jj_bin = "jj".to_string();
-
-            Command::new(&jj_bin)
-                .arg("git")
-                .arg("init")
-                .arg("--colocate")
-                .arg("--config-toml")
-                .arg(jj_config_toml)
-                .current_dir(directory.path())
-                .output()?;
 
             let env = Env {
                 root: directory.path().to_string_lossy().to_string(),
@@ -312,9 +305,10 @@ pub mod tests {
             };
 
             let mut commander = Commander::new(&env);
-
-            commander.jj_config_toml = Some(jj_config_toml.to_owned());
+            commander.jj_config_toml = Some(jj_config_toml);
             commander.force_no_color = true;
+
+            commander.execute_void_jj_command(vec!["git", "init", "--colocate"])?;
 
             Ok(Self {
                 directory,

@@ -29,7 +29,7 @@ impl HelpPopup {
         }
     }
 
-    fn create_table(&self, items: &[(String, String)], title: String) -> Table {
+    fn create_table(&self, items: &[(String, String)], title: String) -> Table<'_> {
         let items: Vec<&(String, String)> = items.iter().skip(self.scroll).collect();
 
         let max_first_row_width = items.iter().map(|row| row.0.len()).max().unwrap_or(0);
@@ -86,20 +86,19 @@ impl Component for HelpPopup {
         _commander: &mut crate::commander::Commander,
         event: Event,
     ) -> anyhow::Result<crate::ComponentInputResult> {
-        if let Event::Key(key) = event {
-            if key.kind == event::KeyEventKind::Press {
-                match key.code {
-                    KeyCode::Char('j') => {
-                        let max = self.left_items.len().max(self.right_items.len());
-                        self.scroll =
-                            (self.scroll + 1).min(max.saturating_sub(self.height as usize));
-                    }
-                    KeyCode::Char('k') => self.scroll = self.scroll.saturating_sub(1),
-                    _ => return Ok(ComponentInputResult::NotHandled),
+        if let Event::Key(key) = event
+            && key.kind == event::KeyEventKind::Press
+        {
+            match key.code {
+                KeyCode::Char('j') => {
+                    let max = self.left_items.len().max(self.right_items.len());
+                    self.scroll = (self.scroll + 1).min(max.saturating_sub(self.height as usize));
                 }
-
-                return Ok(ComponentInputResult::Handled);
+                KeyCode::Char('k') => self.scroll = self.scroll.saturating_sub(1),
+                _ => return Ok(ComponentInputResult::NotHandled),
             }
+
+            return Ok(ComponentInputResult::Handled);
         }
 
         Ok(ComponentInputResult::NotHandled)

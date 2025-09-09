@@ -77,7 +77,7 @@ pub enum BookmarkLine {
 }
 
 impl BookmarkLine {
-    pub fn to_text(&self) -> Result<Text, ansi_to_tui::Error> {
+    pub fn to_text(&self) -> Result<Text<'_>, ansi_to_tui::Error> {
         match self {
             BookmarkLine::Unparsable(text) => text.to_text(),
             BookmarkLine::Parsed { text, .. } => text.to_text(),
@@ -99,16 +99,14 @@ impl Commander {
                 vec![
                     "bookmark",
                     "list",
-                    "--config-toml",
+                    "--config",
                     // Override format_ref_targets to not list conflicts
-                    r#"
-                            template-aliases.'format_ref_targets(ref)' = '''
-                                if(ref.conflict(),
-                                  " " ++ label("conflict", "(conflicted)"),
-                                  ": " ++ format_commit_summary_with_refs(ref.normal_target(), ""),
-                                )
-                            '''
-                        "#,
+                    r#"template-aliases.'format_ref_targets(ref)'='''
+                        if(ref.conflict(),
+                          " " ++ label("conflict", "(conflicted)"),
+                          ": " ++ format_commit_summary_with_refs(ref.normal_target(), ""),
+                        )
+                    '''"#,
                 ],
                 args.clone(),
             ]
