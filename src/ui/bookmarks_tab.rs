@@ -190,7 +190,7 @@ impl BookmarksTab<'_> {
             _ => None,
         });
 
-        self.bookmark_panel.scroll = 0;
+        self.bookmark_panel.scroll_to(0);
     }
 
     fn scroll_bookmarks(&mut self, commander: &mut Commander, scroll: isize) {
@@ -388,9 +388,28 @@ impl Component for BookmarksTab<'_> {
                 .title(" Bookmarks ")
                 .border_type(BorderType::Rounded);
             self.bookmarks_height = bookmarks_block.inner(chunks[0]).height;
+            let bookmark_count = lines.len();
             let bookmarks = List::new(lines).block(bookmarks_block).scroll_padding(3);
             *self.bookmarks_list_state.selected_mut() = current_bookmark_index;
             f.render_stateful_widget(bookmarks, chunks[0], &mut self.bookmarks_list_state);
+
+            // Draw scrollbar on left panel
+            if bookmark_count > self.bookmarks_height.into() {
+                let index = current_bookmark_index.unwrap_or(0);
+                let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
+                let mut scrollbar_state = ScrollbarState::default()
+                    .content_length(bookmark_count)
+                    .position(index);
+
+                f.render_stateful_widget(
+                    scrollbar,
+                    chunks[0].inner(Margin {
+                        vertical: 1,
+                        horizontal: 0,
+                    }),
+                    &mut scrollbar_state,
+                );
+            }
         }
 
         // Draw bookmark
@@ -401,21 +420,16 @@ impl Component for BookmarksTab<'_> {
             } else {
                 " Bookmark ".to_owned()
             };
-
-            let bookmark_block = Block::bordered()
-                .title(title)
-                .border_type(BorderType::Rounded)
-                .padding(Padding::horizontal(1));
             let bookmark_content: Vec<Line> = match self.bookmark_output.as_ref() {
                 Some(Ok(bookmark_output)) => bookmark_output.into_text()?.lines,
                 Some(Err(err)) => err.into_text("Error getting bookmark")?.lines,
                 None => vec![],
             };
-            let bookmark = self
-                .bookmark_panel
-                .render(bookmark_content, bookmark_block.inner(chunks[1]))
-                .block(bookmark_block);
-            f.render_widget(bookmark, chunks[1]);
+            self.bookmark_panel
+                .render_context()
+                .title(title)
+                .content(bookmark_content)
+                .draw(f, chunks[1]);
         }
 
         // Draw popup

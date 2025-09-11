@@ -144,7 +144,7 @@ impl CommandLogTab {
             .min(self.command_history.len() - 1)
             .max(0),
         );
-        self.output_panel.scroll = 0;
+        self.output_panel.scroll_to(0);
     }
 }
 
@@ -214,22 +214,36 @@ impl Component for CommandLogTab {
                 )
                 .scroll_padding(3);
 
+            let commands_len = commands.len();
             f.render_stateful_widget(commands, chunks[0], &mut self.commands_list_state);
             self.commands_height = chunks[0].height.saturating_sub(2);
+
+            if commands_len > self.commands_height as usize {
+                let index = self.commands_list_state.selected().unwrap_or(0);
+                let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
+                let mut scrollbar_state = ScrollbarState::default()
+                    .content_length(commands_len)
+                    .position(index);
+
+                f.render_stateful_widget(
+                    scrollbar,
+                    chunks[0].inner(Margin {
+                        vertical: 1,
+                        horizontal: 0,
+                    }),
+                    &mut scrollbar_state,
+                );
+            }
         }
 
         // Draw output
         {
-            let output_block = Block::bordered()
+            let output_lines = self.get_output_lines()?;
+            self.output_panel
+                .render_context()
                 .title(" Output ")
-                .border_type(BorderType::Rounded)
-                .padding(Padding::horizontal(1));
-            let output = self
-                .output_panel
-                .render(self.get_output_lines()?, output_block.inner(chunks[1]))
-                .block(output_block);
-
-            f.render_widget(output, chunks[1]);
+                .content(output_lines)
+                .draw(f, chunks[1]);
         }
 
         Ok(())
