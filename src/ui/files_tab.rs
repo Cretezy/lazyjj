@@ -12,8 +12,8 @@ use crate::{
     },
     env::{Config, DiffFormat},
     ui::{
-        Component, ComponentAction, details_panel::DetailsPanel, help_popup::HelpPopup,
-        message_popup::MessagePopup, utils::tabs_to_spaces,
+        Component, ComponentAction, help_popup::HelpPopup, message_popup::MessagePopup,
+        panel::DetailsPanel, utils::tabs_to_spaces,
     },
 };
 

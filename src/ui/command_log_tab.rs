@@ -15,7 +15,7 @@ use crate::{
     commander::{CommandLogItem, Commander},
     env::Config,
     ui::{
-        Component, ComponentAction, details_panel::DetailsPanel, help_popup::HelpPopup,
+        Component, ComponentAction, help_popup::HelpPopup, panel::DetailsPanel,
         utils::tabs_to_spaces,
     },
 };

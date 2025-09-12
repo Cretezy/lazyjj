@@ -6,9 +6,9 @@ use crate::{
     env::{Config, DiffFormat},
     ui::{
         Component, ComponentAction,
-        details_panel::DetailsPanel,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
+        panel::DetailsPanel,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
     },
 };
