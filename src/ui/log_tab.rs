@@ -24,10 +24,10 @@ use crate::{
     ui::{
         Component, ComponentAction,
         bookmark_set_popup::BookmarkSetPopup,
-        details_panel::DetailsPanel,
-        details_panel::DetailsPanelEvent,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
+        panel::DetailsPanel,
+        panel::DetailsPanelEvent,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
     },
 };
