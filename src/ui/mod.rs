@@ -6,6 +6,7 @@ pub mod files_tab;
 pub mod help_popup;
 pub mod log_tab;
 pub mod message_popup;
+pub mod panel;
 pub mod styles;
 pub mod utils;
 
