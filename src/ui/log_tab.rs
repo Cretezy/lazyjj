@@ -688,6 +688,11 @@ impl Component for LogTab<'_> {
         }
 
         if let Event::Mouse(mouse_event) = event {
+            let input_result = self.log_panel.input(commander, event.clone())?;
+            if input_result.is_handled() {
+                self.sync_head_output(commander);
+                return Ok(input_result);
+            }
             // Determine if mouse event is inside log-view or details-view
             fn contains(rect: &Rect, mouse_event: &MouseEvent) -> bool {
                 rect.x <= mouse_event.column
@@ -705,15 +710,19 @@ impl Component for LogTab<'_> {
             };
             let panel = find_panel();
             // Execute command dependent on panel and event kind
+            /*
             const LOG_PANEL: Option<usize> = Some(0);
+            */
             const DETAILS_PANEL: Option<usize> = Some(1);
             match (panel, mouse_event.kind) {
+                /*
                 (LOG_PANEL, MouseEventKind::ScrollUp) => {
                     self.handle_event(commander, LogTabEvent::ScrollUp)?;
                 }
                 (LOG_PANEL, MouseEventKind::ScrollDown) => {
                     self.handle_event(commander, LogTabEvent::ScrollDown)?;
                 }
+                */
                 (DETAILS_PANEL, MouseEventKind::ScrollUp) => {
                     self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
                     self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);

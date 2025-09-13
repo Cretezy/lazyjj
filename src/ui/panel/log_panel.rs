@@ -4,12 +4,7 @@ log tab. */
 use ansi_to_tui::IntoText;
 use anyhow::Result;
 use ratatui::{
-    crossterm::event::{
-        Event,
-        /*
-        KeyEventKind, MouseEvent, MouseEventKind
-        */
-    },
+    crossterm::event::{Event, MouseEventKind},
     layout::Rect,
     prelude::*,
     widgets::*,
@@ -202,6 +197,8 @@ impl Component for LogPanel<'_> {
     }
 
     fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
+        self.panel_rect = area;
+
         let mut scroll_offset = 0;
         let log_lines = match self.log_output.as_ref() {
             Ok(log_output) => {
@@ -287,7 +284,28 @@ impl Component for LogPanel<'_> {
         Ok(())
     }
 
-    fn input(&mut self, _commander: &mut Commander, _event: Event) -> Result<ComponentInputResult> {
+    fn input(&mut self, commander: &mut Commander, event: Event) -> Result<ComponentInputResult> {
+        if let Event::Mouse(mouse_event) = event {
+            // Determine if mouse event is inside log-view
+            let mouse_pos = Position::new(mouse_event.column, mouse_event.row);
+            if !self.panel_rect.contains(mouse_pos) {
+                return Ok(ComponentInputResult::NotHandled);
+            }
+
+            // Execute command dependent on panel and event kind
+            match mouse_event.kind {
+                MouseEventKind::ScrollUp => {
+                    self.handle_event(commander, LogTabEvent::ScrollUp)?;
+                    return Ok(ComponentInputResult::Handled);
+                }
+                MouseEventKind::ScrollDown => {
+                    self.handle_event(commander, LogTabEvent::ScrollDown)?;
+                    return Ok(ComponentInputResult::Handled);
+                }
+                _ => {} // Handle other mouse events if necessary
+            }
+        }
+
         Ok(ComponentInputResult::NotHandled)
     }
 }
