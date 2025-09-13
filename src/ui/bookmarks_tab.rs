@@ -970,6 +970,13 @@ impl Component for BookmarksTab<'_> {
             };
         }
 
+        if let Event::Mouse(mouse) = event {
+            if self.bookmark_panel.input_mouse(mouse) {
+                return Ok(ComponentInputResult::Handled);
+            }
+            return Ok(ComponentInputResult::NotHandled);
+        }
+
         Ok(ComponentInputResult::Handled)
     }
 }

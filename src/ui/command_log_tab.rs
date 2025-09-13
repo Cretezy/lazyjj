@@ -302,6 +302,13 @@ impl Component for CommandLogTab {
             };
         }
 
+        if let Event::Mouse(mouse) = event {
+            if self.output_panel.input_mouse(mouse) {
+                return Ok(ComponentInputResult::Handled);
+            }
+            return Ok(ComponentInputResult::NotHandled);
+        }
+
         Ok(ComponentInputResult::Handled)
     }
 }

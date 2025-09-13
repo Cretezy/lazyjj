@@ -393,6 +393,13 @@ impl Component for FilesTab {
             };
         }
 
+        if let Event::Mouse(mouse) = event {
+            if self.diff_panel.input_mouse(mouse) {
+                return Ok(ComponentInputResult::Handled);
+            }
+            return Ok(ComponentInputResult::NotHandled);
+        }
+
         Ok(ComponentInputResult::Handled)
     }
 }
