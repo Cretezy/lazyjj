@@ -1,16 +1,18 @@
 use ratatui::{
-    crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
-    layout::{Margin, Rect},
+    crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind},
+    layout::{Margin, Position, Rect},
     text::{Line, Text},
     widgets::{
         Block, BorderType, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
         Wrap,
     },
 };
+use tracing::trace;
 
 /// Details panel used for the right side of each tab.
 /// This handles scrolling and wrapping.
 pub struct DetailsPanel {
+    panel_rect: Rect,
     scroll: u16,
     height: u16,
     lines: u16,
@@ -61,6 +63,9 @@ impl<'a> DetailsPanelRenderContext<'a> {
     }
 
     pub fn draw(&mut self, f: &mut ratatui::prelude::Frame<'_>, area: ratatui::prelude::Rect) {
+        // Remember last rendered rect for mouse event handling
+        self.panel.panel_rect = area;
+
         // Define border block
         let mut border = Block::bordered()
             .border_type(BorderType::Rounded)
@@ -107,6 +112,7 @@ impl<'a> DetailsPanelRenderContext<'a> {
 impl DetailsPanel {
     pub fn new() -> Self {
         Self {
+            panel_rect: Rect::ZERO,
             scroll: 0,
             height: 0,
             lines: 0,
@@ -184,6 +190,32 @@ impl DetailsPanel {
             _ => return false,
         };
 
+        true
+    }
+
+    /// Handle input. Returns bool of if event was handled
+    pub fn input_mouse(&mut self, mouse: MouseEvent) -> bool {
+        if !self.panel_rect.contains(Position {
+            y: mouse.row,
+            x: mouse.column,
+        }) {
+            trace!("mouse {:?} not in rect {:?}", &mouse, &self.panel_rect);
+            return false;
+        }
+        trace!("mouse {:?} inside  rect {:?}", &mouse, &self.panel_rect);
+        match mouse.kind {
+            MouseEventKind::ScrollUp => {
+                self.handle_event(DetailsPanelEvent::ScrollUp);
+                self.handle_event(DetailsPanelEvent::ScrollUp);
+                self.handle_event(DetailsPanelEvent::ScrollUp);
+            }
+            MouseEventKind::ScrollDown => {
+                self.handle_event(DetailsPanelEvent::ScrollDown);
+                self.handle_event(DetailsPanelEvent::ScrollDown);
+                self.handle_event(DetailsPanelEvent::ScrollDown);
+            }
+            _ => return false,
+        }
         true
     }
 }
