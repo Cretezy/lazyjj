@@ -277,3 +277,13 @@ enum ComponentInputResult {
     HandledAction(ComponentAction),
     NotHandled,
 }
+
+impl ComponentInputResult {
+    pub fn is_handled(&self) -> bool {
+        match self {
+            ComponentInputResult::Handled => true,
+            ComponentInputResult::HandledAction(_) => true,
+            ComponentInputResult::NotHandled => false,
+        }
+    }
+}
