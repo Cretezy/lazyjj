@@ -248,9 +248,7 @@ impl<'a> LogTab<'a> {
 
     /// Find the line in self.log_output that match self.head
     fn selected_log_line(&self) -> Option<usize> {
-        let Ok(log_output) = self.log_output.as_ref() else {
-            return None;
-        };
+        let log_output = self.log_output.as_ref().ok()?;
 
         log_output
             .graph_heads
@@ -260,9 +258,7 @@ impl<'a> LogTab<'a> {
 
     /// Find head of the provided log_output line
     fn head_at_log_line(&mut self, log_line: usize) -> Option<Head> {
-        let Ok(log_output) = self.log_output.as_ref() else {
-            return None;
-        };
+        let log_output = self.log_output.as_ref().ok()?;
 
         let graph_head = log_output.graph_heads.get(log_line)?;
 
@@ -941,14 +937,8 @@ fn list_item_from_mouse_event(
     list_state: &ListState,
     mouse_event: &MouseEvent,
 ) -> Option<usize> {
-    fn contains(rect: &Rect, mouse_event: &MouseEvent) -> bool {
-        rect.x <= mouse_event.column
-            && mouse_event.column < rect.x + rect.width
-            && rect.y <= mouse_event.row
-            && mouse_event.row < rect.y + rect.height
-    }
-
-    if !contains(&list_rect, mouse_event) {
+    let mouse_pos = Position::new(mouse_event.column, mouse_event.row);
+    if !list_rect.contains(mouse_pos) {
         return None;
     }
 
