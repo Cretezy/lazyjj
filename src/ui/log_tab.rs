@@ -6,6 +6,7 @@ use ratatui::{
     crossterm::event::{Event, KeyEventKind, MouseEvent, MouseEventKind},
     layout::Rect,
     prelude::*,
+    text::ToText,
     widgets::*,
 };
 use tracing::instrument;
@@ -41,6 +42,7 @@ pub struct LogTab<'a> {
     log_output: Result<LogOutput, CommandError>,
     log_output_text: Text<'a>,
     log_list_state: ListState,
+    log_rect: Rect,
     log_height: u16,
 
     log_revset: Option<String>,
@@ -89,7 +91,7 @@ fn get_head_index(head: &Head, log_output: &Result<LogOutput, CommandError>) -> 
     }
 }
 
-impl LogTab<'_> {
+impl<'a> LogTab<'a> {
     #[instrument(level = "trace", skip(commander))]
     pub fn new(commander: &mut Commander) -> Result<Self> {
         let diff_format = commander.env.config.diff_format();
@@ -128,6 +130,7 @@ impl LogTab<'_> {
             log_output,
             log_list_state,
             log_height: 0,
+            log_rect: Rect::ZERO,
 
             log_revset,
             log_revset_textarea: None,
@@ -208,6 +211,75 @@ impl LogTab<'_> {
         self.refresh_head_output(commander);
     }
 
+    /// Convert log output to a list of formatted lines
+    fn output_to_lines(&self, log_output: &LogOutput) -> Vec<Line<'a>> {
+        // Set the background color of the line
+        fn set_bg(line: &mut Line, bg_color: Color) {
+            // Set background to use when no Span is present
+            // This makes the highlight continue beyond the last Span
+            line.style = line.style.patch(Style::default().bg(bg_color));
+
+            for span in line.spans.iter_mut() {
+                span.style = span.style.bg(bg_color)
+            }
+        }
+
+        self.log_output_text
+            .iter()
+            .enumerate()
+            .map(|(i, line)| {
+                let mut line = line.to_owned();
+
+                // Add padding at start
+                line.spans.insert(0, Span::from(" "));
+
+                // Highlight lines that correspond to self.head
+                let line_head = log_output.graph_heads.get(i).unwrap_or(&None);
+                if let Some(line_change) = line_head
+                    && line_change == &self.head
+                {
+                    set_bg(&mut line, self.config.highlight_color());
+                };
+
+                line
+            })
+            .collect()
+    }
+
+    /// Find the line in self.log_output that match self.head
+    fn selected_log_line(&self) -> Option<usize> {
+        let log_output = self.log_output.as_ref().ok()?;
+
+        log_output
+            .graph_heads
+            .iter()
+            .position(|opt_h| opt_h.as_ref().is_some_and(|h| h == &self.head))
+    }
+
+    /// Find head of the provided log_output line
+    fn head_at_log_line(&mut self, log_line: usize) -> Option<Head> {
+        let log_output = self.log_output.as_ref().ok()?;
+
+        let graph_head = log_output.graph_heads.get(log_line)?;
+
+        graph_head.clone()
+    }
+
+    /// Get lines to show in log list
+    fn log_lines(&self) -> Vec<Line<'a>> {
+        match self.log_output.as_ref() {
+            Ok(log_output) => self.output_to_lines(log_output),
+            Err(err) => err.into_text("Error getting log").unwrap().lines,
+        }
+    }
+
+    /// Number of log list items that fit on screen
+    fn log_visible_items(&self) -> u16 {
+        // Every item in the log list is 2 lines high, so divide screen rows
+        // by 2 to get the number of log items that fit in it.
+        self.log_height / 2
+    }
+
     fn handle_event(
         &mut self,
         commander: &mut Commander,
@@ -221,12 +293,12 @@ impl LogTab<'_> {
                 self.scroll_log(commander, -1);
             }
             LogTabEvent::ScrollDownHalf => {
-                self.scroll_log(commander, self.log_height as isize / 2 / 2);
+                self.scroll_log(commander, self.log_visible_items() as isize / 2);
             }
             LogTabEvent::ScrollUpHalf => {
                 self.scroll_log(
                     commander,
-                    (self.log_height as isize / 2 / 2).saturating_neg(),
+                    (self.log_visible_items() as isize / 2).saturating_neg(),
                 );
             }
             LogTabEvent::FocusCurrent => {
@@ -583,67 +655,19 @@ impl Component for LogTab<'_> {
 
         // Draw log
         {
-            let mut scroll_offset = 0;
-            let log_lines = match self.log_output.as_ref() {
-                Ok(log_output) => {
-                    let log_lines: Vec<Line> = self
-                        .log_output_text
-                        .iter()
-                        .enumerate()
-                        .map(|(i, line)| {
-                            let mut line = line.to_owned();
-
-                            // Add padding at start
-                            line.spans.insert(0, Span::from(" "));
-
-                            let line_head = log_output.graph_heads.get(i).unwrap_or(&None);
-
-                            match line_head {
-                                Some(line_change) => {
-                                    if line_change == &self.head {
-                                        line = line.bg(self.config.highlight_color());
-
-                                        line.spans = line
-                                            .spans
-                                            .iter_mut()
-                                            .map(|span| {
-                                                span.to_owned().bg(self.config.highlight_color())
-                                            })
-                                            .collect();
-                                    }
-                                }
-                                _ => scroll_offset += 1,
-                            };
-
-                            line
-                        })
-                        .collect();
-
-                    self.log_list_state
-                        .select(log_lines.iter().enumerate().position(|(i, _)| {
-                            log_output
-                                .graph_heads
-                                .get(i)
-                                .unwrap_or(&None)
-                                .as_ref()
-                                .is_some_and(|h| h == &self.head)
-                        }));
-
-                    log_lines
-                }
-                Err(err) => err.into_text("Error getting log")?.lines,
-            };
-
             let title = match &self.log_revset {
                 Some(log_revset) => &format!(" Log for: {log_revset} "),
                 None => " Log ",
             };
 
+            let log_lines = self.log_lines();
             let log_length: usize = log_lines.len();
             let log_block = Block::bordered()
                 .title(title)
                 .border_type(BorderType::Rounded);
+            self.log_rect = log_block.inner(chunks[0]);
             self.log_height = log_block.inner(chunks[0]).height;
+            self.log_list_state.select(self.selected_log_line());
             let log = List::new(log_lines).block(log_block).scroll_padding(7);
             f.render_stateful_widget(log, chunks[0], &mut self.log_list_state);
 
@@ -867,6 +891,27 @@ impl Component for LogTab<'_> {
                 (LOG_PANEL, MouseEventKind::ScrollDown) => {
                     self.handle_event(commander, LogTabEvent::ScrollDown)?;
                 }
+                (LOG_PANEL, MouseEventKind::Up(_)) => {
+                    // Check all items in list
+
+                    // TODO make a function that constructs the log list
+                    let log_lines = self.log_lines();
+                    let log_items: Vec<ListItem> = log_lines
+                        .iter()
+                        .map(|line| ListItem::from(line.to_text()))
+                        .collect();
+
+                    // Select the clicked change
+                    if let Some(inx) = list_item_from_mouse_event(
+                        &log_items,
+                        self.log_rect,
+                        &self.log_list_state,
+                        &mouse_event,
+                    ) && let Some(head) = self.head_at_log_line(inx)
+                    {
+                        self.set_head(commander, head);
+                    }
+                }
                 (DETAILS_PANEL, MouseEventKind::ScrollUp) => {
                     self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
                     self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
@@ -883,4 +928,26 @@ impl Component for LogTab<'_> {
 
         Ok(ComponentInputResult::Handled)
     }
+}
+
+// Determine which list item a mouse event is related to
+fn list_item_from_mouse_event(
+    list: &[ListItem],
+    list_rect: Rect,
+    list_state: &ListState,
+    mouse_event: &MouseEvent,
+) -> Option<usize> {
+    let mouse_pos = Position::new(mouse_event.column, mouse_event.row);
+    if !list_rect.contains(mouse_pos) {
+        return None;
+    }
+
+    // Assume that each item is exactly one line.
+    // This is not true in the general case, but it is in this module.
+    let mouse_offset = mouse_pos.y - list_rect.y;
+    let item_index = list_state.offset() + mouse_offset as usize;
+    if item_index >= list.len() {
+        return None;
+    }
+    Some(item_index)
 }
