@@ -942,23 +942,12 @@ fn list_item_from_mouse_event(
         return None;
     }
 
-    // for each item on screen check if it contains the mouse cursor
-
-    let mut item_row = list_rect.y;
-    let mut item_inx = list_state.offset();
-    while item_row <= mouse_event.row {
-        let next_row = item_row + list[item_inx].height() as u16;
-        if mouse_event.row < next_row {
-            return Some(item_inx);
-        }
-        item_row = next_row;
-        item_inx += 1;
-        if item_row >= list_rect.bottom() {
-            return None;
-        }
-        if item_inx >= list.len() {
-            return None;
-        }
+    // Assume that each item is exactly one line.
+    // This is not true in the general case, but it is in this module.
+    let mouse_offset = mouse_pos.y - list_rect.y;
+    let item_index = list_state.offset() + mouse_offset as usize;
+    if item_index >= list.len() {
+        return None;
     }
-    None
+    Some(item_index)
 }
