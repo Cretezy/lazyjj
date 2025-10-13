@@ -17,7 +17,7 @@ use ratatui::{
         event::{
             self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
             Event, KeyboardEnhancementFlags, MouseEvent, MouseEventKind,
-            PushKeyboardEnhancementFlags,
+            PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
         },
         execute,
         terminal::{
@@ -247,12 +247,18 @@ fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
 
 fn restore_terminal() -> Result<()> {
     disable_raw_mode()?;
+    let mut stdout = io::stdout();
     execute!(
-        io::stdout(),
+        stdout,
         LeaveAlternateScreen,
         DisableMouseCapture,
         DisableFocusChange
     )?;
+
+    if supports_keyboard_enhancement()? {
+        execute!(stdout, PopKeyboardEnhancementFlags)?;
+    }
+
     Ok(())
 }
 
