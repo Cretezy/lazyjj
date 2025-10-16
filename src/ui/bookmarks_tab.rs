@@ -181,6 +181,8 @@ impl BookmarksTab<'_> {
     }
 
     pub fn refresh_bookmark(&mut self, commander: &mut Commander) {
+        let inner_width = self.bookmark_panel.columns() as usize;
+        commander.limit_width(inner_width);
         self.bookmark_output = self.bookmark.as_ref().and_then(|bookmark| match bookmark {
             BookmarkLine::Parsed { bookmark, .. } => Some(
                 commander
