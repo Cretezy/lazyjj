@@ -10,7 +10,7 @@ https://github.com/Cretezy/lazyjj/assets/2672503/b5e6b4f1-ebdb-448f-af9e-361e86f
   - Scroll through the jj log and view change details in side panel
   - Create new changes from selected change with `n`
   - Edit changes with `e`/`E`
-  - Desribe changes with `d`
+  - Describe changes with `d`
   - Abandon changes with `a`
   - Toggle between color words and git diff with `p`
   - See different revset with `r`
