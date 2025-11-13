@@ -183,6 +183,31 @@ impl Commander {
             true,
         )?))
     }
+
+    #[instrument(level = "trace", skip(self))]
+    pub fn restore_file(&self, current_file: &File) -> Result<Option<String>, CommandError> {
+        let Some(path) = current_file.path.as_ref() else {
+            return Ok(None);
+        };
+
+        let path = if let Some(DiffType::Renamed) = current_file.diff_type
+            && let Some(captures) = RENAME_REGEX.captures(path)
+        {
+            match captures.get(2) {
+                Some(path) => path.as_str(),
+                None => return Ok(None),
+            }
+        } else {
+            path
+        };
+
+        let fileset = format!("file:\"{}\"", path.replace('"', "\\\""));
+        Ok(Some(self.execute_jj_command(
+            vec!["restore", &fileset],
+            false,
+            true,
+        )?))
+    }
 }
 
 #[cfg(test)]
