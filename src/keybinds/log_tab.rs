@@ -133,6 +133,7 @@ impl LogTabKeybinds {
             LogTabEvent::EditRevset => config.edit_revset,
             LogTabEvent::SetBookmark => config.set_bookmark,
             LogTabEvent::OpenFiles => config.open_files,
+            LogTabEvent::Rebase => config.rebase,
             event_push(false, false) => config.push,
             event_push(false, true) => config.push_new,
             event_push(true, false) => config.push_all,
