@@ -31,6 +31,7 @@ serde_with = "3.12.0"
 shell-words = "1.1.0"
 tempdir = "0.3.7"
 thiserror = "2.0.11"
+throbber-widgets-tui = "0.9.0"
 toml = "0.8.19"
 tracing = { version = "0.1.41", features = ["attributes"] }
 tracing-chrome = "0.7.2"
