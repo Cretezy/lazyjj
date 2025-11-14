@@ -154,6 +154,7 @@ fn run_app<B: Backend>(
     commander: &mut Commander,
 ) -> Result<()> {
     let mut start_time = Instant::now();
+    let mut drawing_popup = false;
     loop {
         // Draw
         let mut terminal_draw_res = Ok(());
@@ -161,6 +162,17 @@ fn run_app<B: Backend>(
             // Update current tab
             let update_span = trace_span!("update");
             terminal_draw_res = update_span.in_scope(|| -> Result<()> {
+                // Update popup if present
+                if let Some(popup) = app.popup.as_mut() {
+                    if let Some(component_action) = popup.update(commander)? {
+                        app.handle_action(component_action, commander)?;
+                    }
+                    drawing_popup = true;
+                } else {
+                    drawing_popup = false;
+                }
+
+                // Update current tab
                 if let Some(component_action) =
                     app.get_or_init_current_tab(commander)?.update(commander)?
                 {
@@ -196,29 +208,33 @@ fn run_app<B: Backend>(
 
         // Input
         let input_spawn = trace_span!("input");
-        let event = loop {
-            match event::read()? {
-                event::Event::FocusLost => continue,
-                Event::Mouse(MouseEvent {
-                    kind: MouseEventKind::Moved,
-                    ..
-                }) => continue,
-                event => break event,
+
+        // Poll for events with a timeout to enable animations
+        if !drawing_popup || event::poll(std::time::Duration::from_millis(100))? {
+            let event = loop {
+                match event::read()? {
+                    event::Event::FocusLost => continue,
+                    Event::Mouse(MouseEvent {
+                        kind: MouseEventKind::Moved,
+                        ..
+                    }) => continue,
+                    event => break event,
+                }
+            };
+
+            start_time = Instant::now();
+
+            let should_stop = input_spawn.in_scope(|| -> Result<bool> {
+                if app.input(event, commander)? {
+                    return Ok(true);
+                }
+
+                Ok(false)
+            })?;
+
+            if should_stop {
+                return Ok(());
             }
-        };
-
-        start_time = Instant::now();
-
-        let should_stop = input_spawn.in_scope(|| -> Result<bool> {
-            if app.input(event, commander)? {
-                return Ok(true);
-            }
-
-            Ok(false)
-        })?;
-
-        if should_stop {
-            return Ok(());
         }
     }
 }
