@@ -6,9 +6,9 @@ use crate::{
     env::{Config, DiffFormat},
     ui::{
         Component, ComponentAction,
-        details_panel::DetailsPanel,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
+        panel::DetailsPanel,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
     },
 };
@@ -968,6 +968,13 @@ impl Component for BookmarksTab<'_> {
                 }
                 _ => return Ok(ComponentInputResult::NotHandled),
             };
+        }
+
+        if let Event::Mouse(mouse) = event {
+            if self.bookmark_panel.input_mouse(mouse) {
+                return Ok(ComponentInputResult::Handled);
+            }
+            return Ok(ComponentInputResult::NotHandled);
         }
 
         Ok(ComponentInputResult::Handled)

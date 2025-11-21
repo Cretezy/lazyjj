@@ -2,11 +2,11 @@ pub mod bookmark_set_popup;
 pub mod bookmarks_tab;
 pub mod command_log_tab;
 pub mod command_popup;
-pub mod details_panel;
 pub mod files_tab;
 pub mod help_popup;
 pub mod log_tab;
 pub mod message_popup;
+pub mod panel;
 pub mod styles;
 pub mod utils;
 

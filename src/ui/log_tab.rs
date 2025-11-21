@@ -3,10 +3,9 @@
 use ansi_to_tui::IntoText;
 use anyhow::Result;
 use ratatui::{
-    crossterm::event::{Event, KeyEventKind, MouseEvent, MouseEventKind},
+    crossterm::event::{Event, KeyEventKind},
     layout::Rect,
     prelude::*,
-    text::ToText,
     widgets::*,
 };
 use tracing::instrument;
@@ -15,19 +14,16 @@ use tui_textarea::{CursorMove, TextArea};
 
 use crate::{
     ComponentInputResult,
-    commander::{
-        CommandError, Commander,
-        log::{Head, LogOutput},
-    },
+    commander::{CommandError, Commander, log::Head},
     env::{Config, DiffFormat},
     keybinds::{LogTabEvent, LogTabKeybinds},
     ui::{
         Component, ComponentAction,
         bookmark_set_popup::BookmarkSetPopup,
-        details_panel::DetailsPanel,
-        details_panel::DetailsPanelEvent,
         help_popup::HelpPopup,
         message_popup::MessagePopup,
+        panel::DetailsPanel,
+        panel::LogPanel,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
     },
 };
@@ -39,20 +35,23 @@ const SQUASH_POPUP_ID: u16 = 4;
 
 /// Log tab. Shows `jj log` in main panel and shows selected change details of in details panel.
 pub struct LogTab<'a> {
-    log_output: Result<LogOutput, CommandError>,
-    log_output_text: Text<'a>,
-    log_list_state: ListState,
-    log_rect: Rect,
-    log_height: u16,
-
-    log_revset: Option<String>,
+    /// The revset filter to apply to jj log
     log_revset_textarea: Option<TextArea<'a>>,
 
+    /// The list of changes shown to the left
+    log_panel: LogPanel<'a>,
+
+    /// The change content shown to the right
     head_panel: DetailsPanel,
     head_output: Result<String, CommandError>,
+
+    /// The currently selected change. Indicates what to render
+    /// in head_output. It is a copy of self.log_panel.head,
+    /// so if these differ, we need to update self.head and
+    /// self.head_output
     head: Head,
 
-    // Rect of panels [0] = log, [1] = details
+    // Location of panels on screen. [0] = log, [1] = details
     panel_rect: [Rect; 2],
 
     diff_format: DiffFormat,
@@ -75,32 +74,12 @@ pub struct LogTab<'a> {
     keybinds: LogTabKeybinds,
 }
 
-fn get_head_index(head: &Head, log_output: &Result<LogOutput, CommandError>) -> Option<usize> {
-    match log_output {
-        Ok(log_output) => log_output
-            .heads
-            .iter()
-            .position(|heads| heads == head)
-            .or_else(|| {
-                log_output
-                    .heads
-                    .iter()
-                    .position(|commit| commit.change_id == head.change_id)
-            }),
-        Err(_) => None,
-    }
-}
-
 impl<'a> LogTab<'a> {
     #[instrument(level = "trace", skip(commander))]
     pub fn new(commander: &mut Commander) -> Result<Self> {
         let diff_format = commander.env.config.diff_format();
 
-        let log_revset = commander.env.default_revset.clone();
-        let log_output = commander.get_log(&log_revset);
         let head = commander.get_current_head()?;
-
-        let log_list_state = ListState::default().with_selected(get_head_index(&head, &log_output));
 
         let head_output = commander
             .get_commit_show(&head.commit_id, &diff_format, true)
@@ -120,20 +99,9 @@ impl<'a> LogTab<'a> {
         }
 
         Ok(Self {
-            log_output_text: match log_output.as_ref() {
-                Ok(log_output) => log_output
-                    .graph
-                    .into_text()
-                    .unwrap_or(Text::from("Could not turn text into TUI text (coloring)")),
-                Err(_) => Text::default(),
-            },
-            log_output,
-            log_list_state,
-            log_height: 0,
-            log_rect: Rect::ZERO,
-
-            log_revset,
             log_revset_textarea: None,
+
+            log_panel: LogPanel::new(commander)?,
 
             head,
             head_panel: DetailsPanel::new(),
@@ -162,19 +130,15 @@ impl<'a> LogTab<'a> {
         })
     }
 
-    fn get_current_head_index(&self) -> Option<usize> {
-        get_head_index(&self.head, &self.log_output)
-    }
-
-    fn refresh_log_output(&mut self, commander: &mut Commander) {
-        self.log_output = commander.get_log(&self.log_revset);
-        self.log_output_text = match self.log_output.as_ref() {
-            Ok(log_output) => log_output
-                .graph
-                .into_text()
-                .unwrap_or(Text::from("Could not turn text into TUI text (coloring)")),
-            Err(_) => Text::default(),
-        };
+    /// Update change details panel if the selection has changed
+    fn sync_head_output(&mut self, commander: &mut Commander) {
+        if self.head == self.log_panel.head {
+            // log panel and head panel agree on head
+            return;
+        }
+        // Update head panel to show new head
+        self.head = self.log_panel.head.clone();
+        self.refresh_head_output(commander);
     }
 
     fn refresh_head_output(&mut self, commander: &mut Commander) {
@@ -184,100 +148,10 @@ impl<'a> LogTab<'a> {
         self.head_panel.scroll_to(0);
     }
 
-    fn scroll_log(&mut self, commander: &mut Commander, scroll: isize) {
-        let log_output = match self.log_output.as_ref() {
-            Ok(log_output) => log_output,
-            Err(_) => return,
-        };
-
-        let heads: &Vec<Head> = log_output.heads.as_ref();
-
-        let current_head_index = self.get_current_head_index();
-        let next_head = match current_head_index {
-            Some(current_head_index) => heads.get(
-                current_head_index
-                    .saturating_add_signed(scroll)
-                    .min(heads.len() - 1),
-            ),
-            None => heads.first(),
-        };
-        if let Some(next_head) = next_head {
-            self.set_head(commander, next_head.clone());
-        }
-    }
-
     pub fn set_head(&mut self, commander: &mut Commander, head: Head) {
-        head.clone_into(&mut self.head);
-        self.refresh_head_output(commander);
-    }
-
-    /// Convert log output to a list of formatted lines
-    fn output_to_lines(&self, log_output: &LogOutput) -> Vec<Line<'a>> {
-        // Set the background color of the line
-        fn set_bg(line: &mut Line, bg_color: Color) {
-            // Set background to use when no Span is present
-            // This makes the highlight continue beyond the last Span
-            line.style = line.style.patch(Style::default().bg(bg_color));
-
-            for span in line.spans.iter_mut() {
-                span.style = span.style.bg(bg_color)
-            }
-        }
-
-        self.log_output_text
-            .iter()
-            .enumerate()
-            .map(|(i, line)| {
-                let mut line = line.to_owned();
-
-                // Add padding at start
-                line.spans.insert(0, Span::from(" "));
-
-                // Highlight lines that correspond to self.head
-                let line_head = log_output.graph_heads.get(i).unwrap_or(&None);
-                if let Some(line_change) = line_head
-                    && line_change == &self.head
-                {
-                    set_bg(&mut line, self.config.highlight_color());
-                };
-
-                line
-            })
-            .collect()
-    }
-
-    /// Find the line in self.log_output that match self.head
-    fn selected_log_line(&self) -> Option<usize> {
-        let log_output = self.log_output.as_ref().ok()?;
-
-        log_output
-            .graph_heads
-            .iter()
-            .position(|opt_h| opt_h.as_ref().is_some_and(|h| h == &self.head))
-    }
-
-    /// Find head of the provided log_output line
-    fn head_at_log_line(&mut self, log_line: usize) -> Option<Head> {
-        let log_output = self.log_output.as_ref().ok()?;
-
-        let graph_head = log_output.graph_heads.get(log_line)?;
-
-        graph_head.clone()
-    }
-
-    /// Get lines to show in log list
-    fn log_lines(&self) -> Vec<Line<'a>> {
-        match self.log_output.as_ref() {
-            Ok(log_output) => self.output_to_lines(log_output),
-            Err(err) => err.into_text("Error getting log").unwrap().lines,
-        }
-    }
-
-    /// Number of log list items that fit on screen
-    fn log_visible_items(&self) -> u16 {
-        // Every item in the log list is 2 lines high, so divide screen rows
-        // by 2 to get the number of log items that fit in it.
-        self.log_height / 2
+        self.log_panel.set_head(head);
+        self.log_panel.refresh_log_output(commander);
+        self.sync_head_output(commander);
     }
 
     fn handle_event(
@@ -286,31 +160,22 @@ impl<'a> LogTab<'a> {
         log_tab_event: LogTabEvent,
     ) -> Result<ComponentInputResult> {
         match log_tab_event {
-            LogTabEvent::ScrollDown => {
-                self.scroll_log(commander, 1);
-            }
-            LogTabEvent::ScrollUp => {
-                self.scroll_log(commander, -1);
-            }
-            LogTabEvent::ScrollDownHalf => {
-                self.scroll_log(commander, self.log_visible_items() as isize / 2);
-            }
-            LogTabEvent::ScrollUpHalf => {
-                self.scroll_log(
-                    commander,
-                    (self.log_visible_items() as isize / 2).saturating_neg(),
-                );
+            LogTabEvent::ScrollDown
+            | LogTabEvent::ScrollUp
+            | LogTabEvent::ScrollDownHalf
+            | LogTabEvent::ScrollUpHalf => {
+                self.log_panel.handle_event(commander, log_tab_event)?;
+                self.sync_head_output(commander);
             }
             LogTabEvent::FocusCurrent => {
-                self.head = commander.get_current_head()?;
-                self.refresh_head_output(commander);
+                self.set_head(commander, commander.get_current_head()?);
             }
             LogTabEvent::ToggleDiffFormat => {
                 self.diff_format = self.diff_format.get_next(self.config.diff_tool());
                 self.refresh_head_output(commander);
             }
             LogTabEvent::Refresh => {
-                self.refresh_log_output(commander);
+                self.log_panel.refresh_log_output(commander);
                 self.refresh_head_output(commander);
             }
             LogTabEvent::CreateNew { describe } => {
@@ -458,7 +323,8 @@ impl<'a> LogTab<'a> {
             }
             LogTabEvent::EditRevset => {
                 let mut textarea = TextArea::new(
-                    self.log_revset
+                    self.log_panel
+                        .log_revset
                         .as_ref()
                         .unwrap_or(&"".to_owned())
                         .lines()
@@ -511,7 +377,7 @@ impl<'a> LogTab<'a> {
                     _ => (),
                 }
 
-                self.refresh_log_output(commander);
+                self.log_panel.refresh_log_output(commander);
                 self.refresh_head_output(commander);
             }
             LogTabEvent::Fetch { all_remotes } => {
@@ -537,7 +403,7 @@ impl<'a> LogTab<'a> {
                     _ => (),
                 }
 
-                self.refresh_log_output(commander);
+                self.log_panel.refresh_log_output(commander);
                 self.refresh_head_output(commander);
             }
             LogTabEvent::OpenHelp => {
@@ -572,11 +438,7 @@ impl<'a> LogTab<'a> {
 impl Component for LogTab<'_> {
     fn focus(&mut self, commander: &mut Commander) -> Result<()> {
         let latest_head = commander.get_head_latest(&self.head)?;
-        if latest_head != self.head {
-            self.head = latest_head;
-        }
-        self.refresh_log_output(commander);
-        self.refresh_head_output(commander);
+        self.log_panel.set_head(latest_head);
         Ok(())
     }
 
@@ -588,9 +450,7 @@ impl Component for LogTab<'_> {
             match res.0 {
                 NEW_POPUP_ID => {
                     commander.run_new(self.head.commit_id.as_str())?;
-                    self.head = commander.get_current_head()?;
-                    self.refresh_log_output(commander);
-                    self.refresh_head_output(commander);
+                    self.set_head(commander, commander.get_current_head()?);
                     if self.describe_after_new {
                         self.describe_after_new = false;
                         let textarea = TextArea::default();
@@ -600,31 +460,25 @@ impl Component for LogTab<'_> {
                 }
                 EDIT_POPUP_ID => {
                     commander.run_edit(self.head.commit_id.as_str(), self.edit_ignore_immutable)?;
-                    self.refresh_log_output(commander);
+                    self.log_panel.refresh_log_output(commander);
                     self.refresh_head_output(commander);
                     return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
                 }
                 ABANDON_POPUP_ID => {
                     if self.head == commander.get_current_head()? {
                         commander.run_abandon(&self.head.commit_id)?;
-                        self.refresh_log_output(commander);
-                        self.head = commander.get_current_head()?;
-                        self.refresh_head_output(commander);
+                        self.set_head(commander, commander.get_current_head()?);
                         return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
                     } else {
                         let head_parent = commander.get_commit_parent(&self.head.commit_id)?;
                         commander.run_abandon(&self.head.commit_id)?;
-                        self.refresh_log_output(commander);
-                        self.head = head_parent;
-                        self.refresh_head_output(commander);
+                        self.set_head(commander, head_parent);
                     }
                 }
                 SQUASH_POPUP_ID => {
                     commander
                         .run_squash(self.head.commit_id.as_str(), self.squash_ignore_immutable)?;
-                    self.head = commander.get_current_head()?;
-                    self.refresh_log_output(commander);
-                    self.refresh_head_output(commander);
+                    self.set_head(commander, commander.get_current_head()?);
                     return Ok(Some(ComponentAction::ChangeHead(self.head.clone())));
                 }
                 _ => {}
@@ -632,7 +486,7 @@ impl Component for LogTab<'_> {
         }
 
         if let Ok(true) = self.bookmark_set_popup_rx.try_recv() {
-            self.refresh_log_output(commander);
+            self.log_panel.refresh_log_output(commander);
             self.refresh_head_output(commander)
         }
 
@@ -654,41 +508,7 @@ impl Component for LogTab<'_> {
         self.panel_rect = [chunks[0], chunks[1]];
 
         // Draw log
-        {
-            let title = match &self.log_revset {
-                Some(log_revset) => &format!(" Log for: {log_revset} "),
-                None => " Log ",
-            };
-
-            let log_lines = self.log_lines();
-            let log_length: usize = log_lines.len();
-            let log_block = Block::bordered()
-                .title(title)
-                .border_type(BorderType::Rounded);
-            self.log_rect = log_block.inner(chunks[0]);
-            self.log_height = log_block.inner(chunks[0]).height;
-            self.log_list_state.select(self.selected_log_line());
-            let log = List::new(log_lines).block(log_block).scroll_padding(7);
-            f.render_stateful_widget(log, chunks[0], &mut self.log_list_state);
-
-            // Show scrollbar if lines don't fit the screen height
-            if log_length > self.log_height.into() {
-                let index = self.log_list_state.selected().unwrap_or(0);
-                let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
-                let mut scrollbar_state = ScrollbarState::default()
-                    .content_length(log_length)
-                    .position(index);
-
-                f.render_stateful_widget(
-                    scrollbar,
-                    chunks[0].inner(Margin {
-                        vertical: 1,
-                        horizontal: 0,
-                    }),
-                    &mut scrollbar_state,
-                );
-            }
-        }
+        self.log_panel.draw(f, chunks[0])?;
 
         // Draw change details
         {
@@ -796,9 +616,7 @@ impl Component for LogTab<'_> {
                             self.head.commit_id.as_str(),
                             &describe_textarea.lines().join("\n"),
                         )?;
-                        self.head = commander.get_head_latest(&self.head)?;
-                        self.refresh_log_output(commander);
-                        self.refresh_head_output(commander);
+                        self.set_head(commander, commander.get_head_latest(&self.head)?);
                         self.describe_textarea = None;
                         return Ok(ComponentInputResult::Handled);
                     }
@@ -818,12 +636,12 @@ impl Component for LogTab<'_> {
                 match self.keybinds.match_event(key) {
                     LogTabEvent::Save => {
                         let log_revset = log_revset_textarea.lines().join("\n");
-                        self.log_revset = if log_revset.trim().is_empty() {
+                        self.log_panel.log_revset = if log_revset.trim().is_empty() {
                             None
                         } else {
                             Some(log_revset)
                         };
-                        self.refresh_log_output(commander);
+                        self.log_panel.refresh_log_output(commander);
                         self.log_revset_textarea = None;
                         return Ok(ComponentInputResult::Handled);
                     }
@@ -860,94 +678,28 @@ impl Component for LogTab<'_> {
                 return Ok(ComponentInputResult::Handled);
             }
 
+            let input_result = self.log_panel.input(commander, event)?;
+            if input_result.is_handled() {
+                self.sync_head_output(commander);
+                return Ok(input_result);
+            }
+
             let log_tab_event = self.keybinds.match_event(key);
             return self.handle_event(commander, log_tab_event);
         }
 
         if let Event::Mouse(mouse_event) = event {
-            // Determine if mouse event is inside log-view or details-view
-            fn contains(rect: &Rect, mouse_event: &MouseEvent) -> bool {
-                rect.x <= mouse_event.column
-                    && mouse_event.column < rect.x + rect.width
-                    && rect.y <= mouse_event.row
-                    && mouse_event.row < rect.y + rect.height
+            let input_result = self.log_panel.input(commander, event.clone())?;
+            if input_result.is_handled() {
+                self.sync_head_output(commander);
+                return Ok(input_result);
             }
-            let find_panel = || -> Option<usize> {
-                for (i, rect) in self.panel_rect.iter().enumerate() {
-                    if contains(rect, &mouse_event) {
-                        return Some(i);
-                    }
-                }
-                None
-            };
-            let panel = find_panel();
-            // Execute command dependent on panel and event kind
-            const LOG_PANEL: Option<usize> = Some(0);
-            const DETAILS_PANEL: Option<usize> = Some(1);
-            match (panel, mouse_event.kind) {
-                (LOG_PANEL, MouseEventKind::ScrollUp) => {
-                    self.handle_event(commander, LogTabEvent::ScrollUp)?;
-                }
-                (LOG_PANEL, MouseEventKind::ScrollDown) => {
-                    self.handle_event(commander, LogTabEvent::ScrollDown)?;
-                }
-                (LOG_PANEL, MouseEventKind::Up(_)) => {
-                    // Check all items in list
-
-                    // TODO make a function that constructs the log list
-                    let log_lines = self.log_lines();
-                    let log_items: Vec<ListItem> = log_lines
-                        .iter()
-                        .map(|line| ListItem::from(line.to_text()))
-                        .collect();
-
-                    // Select the clicked change
-                    if let Some(inx) = list_item_from_mouse_event(
-                        &log_items,
-                        self.log_rect,
-                        &self.log_list_state,
-                        &mouse_event,
-                    ) && let Some(head) = self.head_at_log_line(inx)
-                    {
-                        self.set_head(commander, head);
-                    }
-                }
-                (DETAILS_PANEL, MouseEventKind::ScrollUp) => {
-                    self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
-                    self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
-                    self.head_panel.handle_event(DetailsPanelEvent::ScrollUp);
-                }
-                (DETAILS_PANEL, MouseEventKind::ScrollDown) => {
-                    self.head_panel.handle_event(DetailsPanelEvent::ScrollDown);
-                    self.head_panel.handle_event(DetailsPanelEvent::ScrollDown);
-                    self.head_panel.handle_event(DetailsPanelEvent::ScrollDown);
-                }
-                _ => {} // Handle other mouse events if necessary
+            if self.head_panel.input_mouse(mouse_event) {
+                return Ok(ComponentInputResult::Handled);
             }
+            return Ok(ComponentInputResult::NotHandled);
         }
 
         Ok(ComponentInputResult::Handled)
     }
-}
-
-// Determine which list item a mouse event is related to
-fn list_item_from_mouse_event(
-    list: &[ListItem],
-    list_rect: Rect,
-    list_state: &ListState,
-    mouse_event: &MouseEvent,
-) -> Option<usize> {
-    let mouse_pos = Position::new(mouse_event.column, mouse_event.row);
-    if !list_rect.contains(mouse_pos) {
-        return None;
-    }
-
-    // Assume that each item is exactly one line.
-    // This is not true in the general case, but it is in this module.
-    let mouse_offset = mouse_pos.y - list_rect.y;
-    let item_index = list_state.offset() + mouse_offset as usize;
-    if item_index >= list.len() {
-        return None;
-    }
-    Some(item_index)
 }
