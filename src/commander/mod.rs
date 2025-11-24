@@ -105,6 +105,8 @@ pub struct CommandLogItem {
 #[derive(Debug)]
 pub struct Commander {
     pub env: Env,
+    /// Environment variables.
+    env_var: Arc<Mutex<Vec<(String, String)>>>,
     pub command_history: Arc<Mutex<Vec<CommandLogItem>>>,
 
     // Used for testing
@@ -116,16 +118,43 @@ impl Commander {
     pub fn new(env: &Env) -> Self {
         Self {
             env: env.clone(),
+            env_var: Arc::new(Mutex::new(Vec::new())),
             command_history: Arc::new(Mutex::new(Vec::new())),
             jj_config_toml: None,
             force_no_color: false,
         }
     }
 
+    /// Tell jj to limit the with of output of secondary programs, like diff tools
+    /// Will ignore too narrow width requests.
+    /// You should call this before calling a jj command.
+    pub fn limit_width(&mut self, columns: usize) {
+        // A request for too few columns is ignored.
+        // It will produce garbage output.
+        const MIN_SETTABLE_WIDTH: usize = 20;
+        if columns >= MIN_SETTABLE_WIDTH {
+            self.set_env("COLUMNS", &format!("{columns}"));
+        }
+    }
+
+    /// Set an environment variable for the next execute_command.
+    pub fn set_env(&mut self, var: &str, value: &str) {
+        self.env_var
+            .lock()
+            .unwrap()
+            .push((var.into(), value.into()))
+    }
+
     /// Execute a command and record to history.
+    /// Environment variables can be set with set_env.
+    /// They are cleared after execution.
     fn execute_command(&self, command: &mut Command) -> Result<String, CommandError> {
         // Set current directory to root
         command.current_dir(&self.env.root);
+
+        // Set environment variables and clear them for the next command
+        command.envs(self.env_var.lock().unwrap().iter().cloned());
+        self.env_var.lock().unwrap().clear();
 
         let program = command.get_program().to_str().unwrap_or("").to_owned();
         let args: Vec<String> = command
