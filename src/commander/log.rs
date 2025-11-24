@@ -187,10 +187,10 @@ impl Commander {
             vec![
                 "log",
                 "--no-graph",
+                "-r",
+                &format!(r#"change_id({})"#, head.change_id.as_str()),
                 "--template",
                 &format!(r#"{HEAD_TEMPLATE} ++ "\n""#),
-                "-r",
-                head.change_id.as_str(),
             ],
             false,
             true,
