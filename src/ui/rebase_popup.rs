@@ -86,7 +86,7 @@ impl RebasePopup {
     }
 
     /// Run the command that the popup is currently configured to do
-    fn run_command(&self, commander: &mut Commander) {
+    fn run_command(&self, commander: &mut Commander) -> Result<()> {
         let src_rev = self.source_change.as_str();
         let tgt_rev = self.target_change.as_str();
         let src_mode = match self.source_mode {
@@ -99,26 +99,28 @@ impl RebasePopup {
             PasteOption::InsertAfter => "-A",
             PasteOption::InsertBefore => "-B",
         };
-        commander
-            .run_rebase(src_mode, src_rev, tgt_mode, tgt_rev)
-            .expect("jj rebase  should run without errors");
+        commander.run_rebase(src_mode, src_rev, tgt_mode, tgt_rev)?;
+        Ok(())
     }
 
-    /// Process the input event. If this function returns true,
+    /// Process the input event. If this function returns Ok(true),
     /// then the popup should be closed. Either a rebase was executed
     /// or the operation was cancelled.
-    pub fn handle_input(&mut self, commander: &mut Commander, event: Event) -> bool {
+    /// If the result is Ok(false) the function did handle
+    /// the input, but the popup should not be closed yet.
+    /// Err(_) will be returned if the jj command failed.
+    pub fn handle_input(&mut self, commander: &mut Commander, event: Event) -> Result<bool> {
         match self.match_event(event) {
             PopupAction::Ok => {
-                self.run_command(commander);
-                return true;
+                self.run_command(commander)?;
+                return Ok(true);
             }
-            PopupAction::Cancel => return true,
+            PopupAction::Cancel => return Ok(true),
             PopupAction::SetSourceMode(m) => self.source_mode = m,
             PopupAction::SetTargetMode(m) => self.target_mode = m,
             PopupAction::None => (),
         }
-        false
+        Ok(false)
     }
 }
 

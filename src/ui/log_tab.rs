@@ -678,14 +678,28 @@ impl Component for LogTab<'_> {
         }
 
         if let Some(rebase_popup) = &mut self.rebase_popup {
-            if rebase_popup.handle_input(commander, event.clone()) {
+            let handled = rebase_popup.handle_input(commander, event.clone());
+            if handled.is_err() {
+                // Close popup and show error message
+                self.rebase_popup = None;
+                let msg = handled.err().unwrap();
+                let error_message = msg.to_string().into_text()?;
+                return Ok(ComponentInputResult::HandledAction(
+                    ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                        title: "Error".into(),
+                        messages: error_message,
+                        text_align: None,
+                    }))),
+                ));
+            }
+            if handled.ok() == Some(true) {
                 // when handle_input returns true,
                 // the popup should be closed
                 self.rebase_popup = None;
                 return Ok(ComponentInputResult::HandledAction(
                     ComponentAction::RefreshTab(),
                 ));
-            };
+            }
             return Ok(ComponentInputResult::Handled);
         }
 
