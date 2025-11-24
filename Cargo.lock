@@ -560,6 +560,7 @@ dependencies = [
  "shell-words",
  "tempdir",
  "thiserror 2.0.12",
+ "throbber-widgets-tui",
  "toml",
  "tracing",
  "tracing-chrome",
@@ -1222,6 +1223,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f60246a4944f24f6e018aa17cdeffb7818b76356965d03b07d6a9886e8962185"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "throbber-widgets-tui"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "45e58887883fb0a259717b16d68d251983e40850b4b2f45c2da410f46d4333dc"
+dependencies = [
+ "ratatui",
 ]
 
 [[package]]
