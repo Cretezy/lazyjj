@@ -15,7 +15,7 @@ use anyhow::Result;
 use itertools::Itertools;
 use ratatui::text::Text;
 use regex::Regex;
-use std::{cmp::Ordering, fmt::Display, sync::LazyLock};
+use std::{fmt::Display, sync::LazyLock};
 use tracing::instrument;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -94,6 +94,8 @@ impl Commander {
         if show_all {
             args.push("--all-remotes");
         }
+        args.push("--sort");
+        args.push("committer-date-");
         let bookmarks_colored = self.execute_jj_command(
             [
                 vec![
@@ -138,20 +140,6 @@ impl Commander {
                     bookmark,
                 },
                 None => BookmarkLine::Unparsable(line_colored.to_owned()),
-            })
-            .sorted_by(|a, b| {
-                use BookmarkLine::*;
-
-                match (a, b) {
-                    (Parsed { bookmark: a, .. }, Parsed { bookmark: b, .. }) => {
-                        b.timestamp.cmp(&a.timestamp)
-                    }
-                    // Just move unparsable lines to the back, we don't care about the actual
-                    // order, but sorted_by() expects to be given a total order
-                    (Parsed { .. }, Unparsable(..)) => Ordering::Less,
-                    (Unparsable(..), Parsed { .. }) => Ordering::Greater,
-                    (Unparsable(..), Unparsable(..)) => Ordering::Equal,
-                }
             })
             .collect();
 
