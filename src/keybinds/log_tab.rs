@@ -31,6 +31,7 @@ pub enum LogTabEvent {
     CreateNew {
         describe: bool,
     },
+    Rebase,
     Squash {
         ignore_immutable: bool,
     },
@@ -77,6 +78,7 @@ impl Default for LogTabKeybinds {
             LogTabEvent::Refresh => "f5",
             LogTabEvent::CreateNew { describe: false } => "n",
             LogTabEvent::CreateNew { describe: true } => "shift+n",
+            LogTabEvent::Rebase => "ctrl+r",
             LogTabEvent::Squash { ignore_immutable: false } => "s",
             LogTabEvent::Squash { ignore_immutable: true } => "shift+s",
             LogTabEvent::EditChange { ignore_immutable: false } => "e",
@@ -156,6 +158,7 @@ impl LogTabKeybinds {
             LogTabEvent::CreateNew { describe: false } => "new change",
             LogTabEvent::CreateNew { describe: true } => "new with message",
             LogTabEvent::Abandon => "abandon change",
+            LogTabEvent::Rebase => "rebase @ to the selected change",
             LogTabEvent::Squash { ignore_immutable: false } => "squash @ into the selected change",
             LogTabEvent::Squash { ignore_immutable: true } => "squash @ into the selected change ignoring immutability",
             LogTabEvent::SetBookmark => "set bookmark",
