@@ -176,10 +176,16 @@ impl FilesTab {
 
 impl Component for FilesTab {
     fn focus(&mut self, commander: &mut Commander) -> Result<()> {
-        self.is_current_head = self.head == commander.get_current_head()?;
-        self.head = commander.get_head_latest(&self.head)?;
-        self.refresh_files(commander)?;
-        self.refresh_diff(commander)?;
+        match commander.get_head_latest(&self.head) {
+            Ok(latest_head) => {
+                self.head = latest_head;
+                self.is_current_head = self.head == commander.get_current_head()?;
+                self.refresh_files(commander)?;
+                self.refresh_diff(commander)?;
+            }
+            _ => self.set_head(commander, &commander.get_current_head()?)?,
+        }
+
         Ok(())
     }
 
