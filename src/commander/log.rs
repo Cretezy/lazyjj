@@ -198,6 +198,9 @@ impl Commander {
         let Ok(latest_heads_res) = latest_heads_res else {
             return self.get_head_latest(&self.get_current_head()?);
         };
+        if latest_heads_res.is_empty() {
+            return self.get_head_latest(&self.get_current_head()?);
+        }
         let latest_heads: Vec<Head> = latest_heads_res
             .lines()
             .map(parse_head)
