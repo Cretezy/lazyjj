@@ -44,6 +44,18 @@ impl Commander {
             .context("Failed executing jj describe")
     }
 
+    /// Rebase changes. Maps to `jj rebase -s <rev> -d <rev>` or similar
+    #[instrument(level = "trace", skip(self))]
+    pub fn run_rebase(
+        &mut self,
+        src_mode: &str,
+        src_rev: &str,
+        tgt_mode: &str,
+        tgt_rev: &str,
+    ) -> Result<()> {
+        Ok(self.execute_void_jj_command(vec!["rebase", src_mode, src_rev, tgt_mode, tgt_rev])?)
+    }
+
     /// Squash changes. Maps to `jj squash -u --into <revision>`
     #[instrument(level = "trace", skip(self))]
     pub fn run_squash(&mut self, revision: &str, ignore_immutable: bool) -> Result<()> {
