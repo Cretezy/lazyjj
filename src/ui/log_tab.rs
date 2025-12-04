@@ -201,8 +201,8 @@ impl<'a> LogTab<'a> {
                 self.describe_after_new = describe;
             }
             LogTabEvent::Rebase => {
-                let source_change = commander.get_current_head()?.commit_id;
-                let target_change = &self.head.commit_id;
+                let source_change = commander.get_current_head()?;
+                let target_change = &self.head;
                 self.rebase_popup = Some(RebasePopup::new(
                     source_change.clone(),
                     target_change.clone(),
