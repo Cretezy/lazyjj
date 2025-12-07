@@ -151,7 +151,8 @@ impl Commander {
             path
         };
 
-        let mut args = vec!["diff", "-r", head.commit_id.as_str(), path];
+        let fileset = format!("file:\"{}\"", path.replace('"', "\\\""));
+        let mut args = vec!["diff", "-r", head.commit_id.as_str(), &fileset];
         args.append(&mut diff_format.get_args());
         if ignore_working_copy {
             args.push("--ignore-working-copy");
@@ -177,8 +178,9 @@ impl Commander {
             path
         };
 
+        let fileset = format!("file:\"{}\"", path.replace('"', "\\\""));
         Ok(Some(self.execute_jj_command(
-            vec!["file", "untrack", path],
+            vec!["file", "untrack", &fileset],
             false,
             true,
         )?))
