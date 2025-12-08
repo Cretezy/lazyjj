@@ -213,7 +213,7 @@ impl Component for RebasePopup {
 }
 
 /****************************************************************/
-// TODO: Move this function to ui::utils
+// TODO(@peso): Move this function to ui::utils
 
 /// Find a rect of the given size at the center of an outside rect
 fn center_rect(outside: Rect, area: Size) -> Rect {
@@ -226,7 +226,7 @@ fn center_rect(outside: Rect, area: Size) -> Rect {
 }
 
 /****************************************************************/
-// TODO: Move this widget to a separate file
+// TODO(@peso): Move this widget to a separate file
 
 /** A widget for a group of radio buttons.
 
