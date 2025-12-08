@@ -24,6 +24,7 @@ use crate::{
         message_popup::MessagePopup,
         panel::DetailsPanel,
         panel::LogPanel,
+        rebase_popup::RebasePopup,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
     },
 };
@@ -65,6 +66,8 @@ pub struct LogTab<'a> {
 
     describe_textarea: Option<TextArea<'a>>,
     describe_after_new: bool,
+
+    rebase_popup: Option<RebasePopup>,
 
     squash_ignore_immutable: bool,
 
@@ -120,6 +123,8 @@ impl<'a> LogTab<'a> {
 
             describe_textarea: None,
             describe_after_new: false,
+
+            rebase_popup: None,
 
             squash_ignore_immutable: false,
 
@@ -194,6 +199,14 @@ impl<'a> LogTab<'a> {
                     .with_listener(Some(self.popup_tx.clone()))
                     .open();
                 self.describe_after_new = describe;
+            }
+            LogTabEvent::Rebase => {
+                let source_change = commander.get_current_head()?;
+                let target_change = &self.head;
+                self.rebase_popup = Some(RebasePopup::new(
+                    source_change.clone(),
+                    target_change.clone(),
+                ));
             }
             LogTabEvent::Squash { ignore_immutable } => {
                 if self.head.change_id == commander.get_current_head()?.change_id {
@@ -603,6 +616,13 @@ impl Component for LogTab<'_> {
             }
         }
 
+        // Draw rebase popup
+        {
+            if let Some(log_rebase_popup) = &mut self.rebase_popup {
+                log_rebase_popup.render_widget(f)
+            }
+        }
+
         Ok(())
     }
 
@@ -656,7 +676,34 @@ impl Component for LogTab<'_> {
             return Ok(ComponentInputResult::Handled);
         }
 
-        if let Event::Key(key) = event {
+        if let Some(rebase_popup) = &mut self.rebase_popup {
+            let handled = rebase_popup.handle_input(commander, event.clone());
+            if handled.is_err() {
+                // Close popup and show error message
+                self.rebase_popup = None;
+                let msg = handled.err().unwrap();
+                let error_message = msg.to_string().into_text()?;
+                return Ok(ComponentInputResult::HandledAction(
+                    ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                        title: "Error".into(),
+                        messages: error_message,
+                        text_align: None,
+                    }))),
+                ));
+            }
+            if handled.ok() == Some(true) {
+                // when handle_input returns true,
+                // the popup should be closed
+                self.rebase_popup = None;
+                return Ok(ComponentInputResult::HandledAction(
+                    ComponentAction::RefreshTab(),
+                ));
+            }
+            return Ok(ComponentInputResult::Handled);
+        }
+
+        if let Event::Key(key) = &event {
+            let key = *key;
             if key.kind != KeyEventKind::Press {
                 return Ok(ComponentInputResult::Handled);
             }
