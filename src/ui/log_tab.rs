@@ -147,6 +147,8 @@ impl<'a> LogTab<'a> {
     }
 
     fn refresh_head_output(&mut self, commander: &mut Commander) {
+        let inner_width = self.head_panel.columns() as usize;
+        commander.limit_width(inner_width);
         self.head_output = commander
             .get_commit_show(&self.head.commit_id, &self.diff_format, true)
             .map(|text| tabs_to_spaces(&text));

@@ -12,10 +12,15 @@ use tracing::trace;
 /// Details panel used for the right side of each tab.
 /// This handles scrolling and wrapping.
 pub struct DetailsPanel {
+    /// Area for rendering panel, including borders
     panel_rect: Rect,
+    /// Area used for rendering content of panel
+    content_rect: Rect,
+    /// First line of content that is visible
     scroll: u16,
-    height: u16,
+    /// Total number of lines in content, including extra lines for wrapped lines.
     lines: u16,
+    /// Wrap long lines of content into multiple lines
     wrap: bool,
 }
 
@@ -113,8 +118,8 @@ impl DetailsPanel {
     pub fn new() -> Self {
         Self {
             panel_rect: Rect::ZERO,
+            content_rect: Rect::ZERO,
             scroll: 0,
-            height: 0,
             lines: 0,
             wrap: true,
         }
@@ -124,7 +129,7 @@ impl DetailsPanel {
         DetailsPanelRenderContext::new(self)
     }
 
-    /// Render the parent into the area.
+    /// Render the content into the area.
     pub fn render<'a, T>(&mut self, content: T, area: Rect) -> Paragraph<'a>
     where
         T: Into<Text<'a>>,
@@ -135,12 +140,24 @@ impl DetailsPanel {
             paragraph = paragraph.wrap(Wrap { trim: false });
         }
 
-        self.height = area.height;
+        self.content_rect = area;
         self.lines = paragraph.line_count(area.width) as u16;
 
         paragraph = paragraph.scroll((self.scroll.min(self.lines.saturating_sub(1)), 0));
 
         paragraph
+    }
+
+    /// Return number of columns available for content at last call to render.
+    /// Will return 0 if render has not been called.
+    pub fn columns(&self) -> u16 {
+        self.content_rect.width
+    }
+
+    /// Return number of rows available for content at last call to render.
+    /// Will return 0 if render has not been called.
+    pub fn rows(&self) -> u16 {
+        self.content_rect.height
     }
 
     pub fn scroll_to(&mut self, line_no: u16) {
@@ -155,12 +172,12 @@ impl DetailsPanel {
         match details_panel_event {
             DetailsPanelEvent::ScrollDown => self.scroll(1),
             DetailsPanelEvent::ScrollUp => self.scroll(-1),
-            DetailsPanelEvent::ScrollDownHalfPage => self.scroll(self.height as isize / 2),
+            DetailsPanelEvent::ScrollDownHalfPage => self.scroll(self.rows() as isize / 2),
             DetailsPanelEvent::ScrollUpHalfPage => {
-                self.scroll((self.height as isize / 2).saturating_neg())
+                self.scroll((self.rows() as isize / 2).saturating_neg())
             }
-            DetailsPanelEvent::ScrollDownPage => self.scroll(self.height as isize),
-            DetailsPanelEvent::ScrollUpPage => self.scroll((self.height as isize).saturating_neg()),
+            DetailsPanelEvent::ScrollDownPage => self.scroll(self.rows() as isize),
+            DetailsPanelEvent::ScrollUpPage => self.scroll((self.rows() as isize).saturating_neg()),
             DetailsPanelEvent::ToggleWrap => self.wrap = !self.wrap,
         }
     }
