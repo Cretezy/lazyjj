@@ -153,6 +153,14 @@ impl FilesTab {
         Ok(())
     }
 
+    pub fn restore_file(&mut self, commander: &mut Commander) -> Result<()> {
+        self.file
+            .as_ref()
+            .map(|current_file| commander.restore_file(current_file))
+            .transpose()?;
+        Ok(())
+    }
+
     fn scroll_files(&mut self, commander: &mut Commander, scroll: isize) -> Result<()> {
         if let Ok(files) = self.files_output.as_ref() {
             let current_file_index = self.get_current_file_index();
@@ -355,6 +363,18 @@ impl Component for FilesTab {
                     }
                     self.set_head(commander, &commander.get_current_head()?)?;
                 }
+                KeyCode::Char('r') => {
+                    if let Err(err) = self.restore_file(commander) {
+                        return Ok(ComponentInputResult::HandledAction(
+                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
+                                title: "Can't restore file".into(),
+                                messages: err.to_string().into(),
+                                text_align: None,
+                            }))),
+                        ));
+                    }
+                    self.set_head(commander, &commander.get_current_head()?)?;
+                }
                 KeyCode::Char('R') | KeyCode::F(5) => {
                     self.head = commander.get_head_latest(&self.head)?;
                     self.refresh_files(commander)?;
@@ -371,6 +391,7 @@ impl Component for FilesTab {
                                 ("j/k".to_owned(), "scroll down/up".to_owned()),
                                 ("J/K".to_owned(), "scroll down by ½ page".to_owned()),
                                 ("x".to_owned(), "untrack file".to_owned()),
+                                ("r".to_owned(), "restore file".to_owned()),
                                 ("@".to_owned(), "view current change files".to_owned()),
                             ],
                             vec![
