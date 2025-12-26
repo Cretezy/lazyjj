@@ -132,6 +132,8 @@ impl FilesTab {
     }
 
     pub fn refresh_diff(&mut self, commander: &mut Commander) -> Result<()> {
+        let inner_width = self.diff_panel.columns() as usize;
+        commander.limit_width(inner_width);
         self.diff_output = self
             .file
             .as_ref()
