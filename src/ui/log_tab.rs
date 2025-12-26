@@ -21,6 +21,7 @@ use crate::{
         Component, ComponentAction,
         bookmark_set_popup::BookmarkSetPopup,
         help_popup::HelpPopup,
+        loader_popup::LoaderPopup,
         message_popup::MessagePopup,
         panel::DetailsPanel,
         panel::LogPanel,
@@ -370,56 +371,27 @@ impl<'a> LogTab<'a> {
                 all_bookmarks,
                 allow_new,
             } => {
-                match commander.git_push(all_bookmarks, allow_new, &self.head.commit_id) {
-                    Ok(result) if !result.is_empty() => {
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                title: "Push message".into(),
-                                messages: result.into_text()?,
-                                text_align: None,
-                            }))),
-                        ));
-                    }
-                    Err(err) => {
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                title: "Push error".into(),
-                                messages: err.into_text("")?,
-                                text_align: None,
-                            }))),
-                        ));
-                    }
-                    _ => (),
-                }
+                let commit_id = self.head.commit_id.clone();
+                let commander_clone = Commander::new(&commander.env);
 
-                self.log_panel.refresh_log_output(commander);
-                self.refresh_head_output(commander);
+                let loader = LoaderPopup::new("Pushing".to_string(), move || {
+                    commander_clone.git_push(all_bookmarks, allow_new, &commit_id)
+                });
+
+                return Ok(ComponentInputResult::HandledAction(
+                    ComponentAction::SetPopup(Some(Box::new(loader))),
+                ));
             }
             LogTabEvent::Fetch { all_remotes } => {
-                match commander.git_fetch(all_remotes) {
-                    Ok(result) if !result.is_empty() => {
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                title: "Fetch message".into(),
-                                messages: result.into_text()?,
-                                text_align: None,
-                            }))),
-                        ));
-                    }
-                    Err(err) => {
-                        return Ok(ComponentInputResult::HandledAction(
-                            ComponentAction::SetPopup(Some(Box::new(MessagePopup {
-                                title: "Fetch error".into(),
-                                messages: err.into_text("")?,
-                                text_align: None,
-                            }))),
-                        ));
-                    }
-                    _ => (),
-                }
+                let commander_clone = Commander::new(&commander.env);
 
-                self.log_panel.refresh_log_output(commander);
-                self.refresh_head_output(commander);
+                let loader = LoaderPopup::new("Fetching".to_string(), move || {
+                    commander_clone.git_fetch(all_remotes)
+                });
+
+                return Ok(ComponentInputResult::HandledAction(
+                    ComponentAction::SetPopup(Some(Box::new(loader))),
+                ));
             }
             LogTabEvent::OpenHelp => {
                 return Ok(ComponentInputResult::HandledAction(
