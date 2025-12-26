@@ -15,7 +15,7 @@ pkg-url = "{ repo }/releases/download/v{ version }/lazyjj-v{ version }-{ target 
 
 
 [dependencies]
-ansi-to-tui = { git = "https://github.com/Cretezy/ansi-to-tui.git", rev = "74bd97e" }
+ansi-to-tui = { git = "https://github.com/Cretezy/ansi-to-tui.git", rev = "cc6fe279f1a1b3d5e24ec46d219c32a16ceb7edb" }
 anyhow = "1.0.95"
 chrono = "0.4.39"
 clap = { version = "4.5.31", features = ["derive", "env"] }

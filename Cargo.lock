@@ -35,7 +35,7 @@ dependencies = [
 [[package]]
 name = "ansi-to-tui"
 version = "7.0.0"
-source = "git+https://github.com/Cretezy/ansi-to-tui.git?rev=74bd97e#74bd97e76066186cace33ea04cf497055db67e62"
+source = "git+https://github.com/Cretezy/ansi-to-tui.git?rev=cc6fe279f1a1b3d5e24ec46d219c32a16ceb7edb#cc6fe279f1a1b3d5e24ec46d219c32a16ceb7edb"
 dependencies = [
  "nom",
  "ratatui",
