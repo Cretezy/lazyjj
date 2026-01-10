@@ -15,7 +15,7 @@ use throbber_widgets_tui::{Throbber, ThrobberState};
 use crate::{
     ComponentInputResult,
     commander::{CommandError, Commander},
-    ui::{Component, ComponentAction, message_popup::MessagePopup},
+    ui::{Component, ComponentAction, message_popup::MessagePopup, utils::centered_rect_fixed},
 };
 
 type OperationResult = Result<String, CommandError>;
@@ -120,17 +120,5 @@ impl Component for LoaderPopup {
     fn input(&mut self, _commander: &mut Commander, _event: Event) -> Result<ComponentInputResult> {
         // Block all input while loading
         Ok(ComponentInputResult::Handled)
-    }
-}
-
-fn centered_rect_fixed(area: Rect, width: u16, height: u16) -> Rect {
-    let x = area.x + (area.width.saturating_sub(width)) / 2;
-    let y = area.y + (area.height.saturating_sub(height)) / 2;
-
-    Rect {
-        x,
-        y,
-        width: width.min(area.width),
-        height: height.min(area.height),
     }
 }

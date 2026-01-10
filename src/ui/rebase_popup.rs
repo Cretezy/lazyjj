@@ -25,7 +25,7 @@ use ratatui::{
     Frame,
     crossterm::event::Event,
     layout::{Alignment, Rect},
-    prelude::{Buffer, Constraint, Direction, Layout, Size},
+    prelude::{Buffer, Constraint, Direction, Layout},
     style::{Color, Style, Stylize},
     text::{Line, Span, Text},
     widgets::{Block, BorderType, Clear, Paragraph, StatefulWidget},
@@ -35,7 +35,7 @@ use crate::{
     ComponentInputResult,
     commander::{Commander, log::Head},
     keybinds::rebase_popup::{CutOption, PasteOption, PopupAction},
-    ui::Component,
+    ui::{Component, utils::centered_rect_fixed},
 };
 
 type Keybinds = crate::keybinds::rebase_popup::Keybinds;
@@ -65,13 +65,7 @@ impl RebasePopup {
     /// Collect all the rendering code that would have been in
     /// log_tab.rs/draw
     pub fn render_widget(&mut self, frame: &mut Frame) {
-        let area = center_rect(
-            frame.area(),
-            Size {
-                width: 32,
-                height: 12,
-            },
-        );
+        let area = centered_rect_fixed(frame.area(), 32, 12);
         self.draw(frame, area)
             .expect("Expected drawing without failues");
     }
@@ -209,19 +203,6 @@ impl Component for RebasePopup {
     fn input(&mut self, _commander: &mut Commander, _event: Event) -> Result<ComponentInputResult> {
         unreachable!();
         //return Ok(ComponentInputResult::Handled);
-    }
-}
-
-/****************************************************************/
-// TODO(@peso): Move this function to ui::utils
-
-/// Find a rect of the given size at the center of an outside rect
-fn center_rect(outside: Rect, area: Size) -> Rect {
-    Rect {
-        x: outside.x + (outside.width - area.width) / 2,
-        y: outside.y + (outside.height - area.height) / 2,
-        width: area.width,
-        height: area.height,
     }
 }
 

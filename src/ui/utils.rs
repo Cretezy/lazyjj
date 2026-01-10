@@ -40,6 +40,19 @@ pub fn centered_rect_line_height(r: Rect, percent_x: u16, lines_y: u16) -> Rect 
         .split(popup_layout[1])[1]
 }
 
+/// Center a rect of fixed width and height within an outside rect
+pub fn centered_rect_fixed(area: Rect, width: u16, height: u16) -> Rect {
+    let x = area.x + (area.width.saturating_sub(width)) / 2;
+    let y = area.y + (area.height.saturating_sub(height)) / 2;
+
+    Rect {
+        x,
+        y,
+        width: width.min(area.width),
+        height: height.min(area.height),
+    }
+}
+
 /// replaces tabs in a string by spaces
 ///
 /// ratatui doesn't work well displaying tabs, so any
