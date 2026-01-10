@@ -155,7 +155,7 @@ fn run_app<B: Backend>(
 ) -> Result<()> {
     let mut start_time = Instant::now();
     let mut drawing_popup = false;
-    loop {
+    'main: loop {
         // Draw
         let mut terminal_draw_res = Ok(());
         terminal.draw(|f| {
@@ -213,11 +213,11 @@ fn run_app<B: Backend>(
         if !drawing_popup || event::poll(std::time::Duration::from_millis(100))? {
             let event = loop {
                 match event::read()? {
-                    event::Event::FocusLost => continue,
+                    event::Event::FocusLost => continue 'main,
                     Event::Mouse(MouseEvent {
                         kind: MouseEventKind::Moved,
                         ..
-                    }) => continue,
+                    }) => continue 'main,
                     event => break event,
                 }
             };

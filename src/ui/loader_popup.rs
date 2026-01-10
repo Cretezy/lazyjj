@@ -9,6 +9,7 @@ use ratatui::{
 };
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
+use std::time::{Duration, Instant};
 use throbber_widgets_tui::{Throbber, ThrobberState};
 
 use crate::{
@@ -24,6 +25,7 @@ pub struct LoaderPopup {
     result_rx: Receiver<OperationResult>,
     throbber_state: ThrobberState,
     completed: bool,
+    last_animation_update: Instant,
 }
 
 impl LoaderPopup {
@@ -44,6 +46,7 @@ impl LoaderPopup {
             result_rx: rx,
             throbber_state: ThrobberState::default(),
             completed: false,
+            last_animation_update: Instant::now(),
         }
     }
 }
@@ -82,7 +85,10 @@ impl Component for LoaderPopup {
             }
         }
 
-        self.throbber_state.calc_next();
+        if self.last_animation_update.elapsed() >= Duration::from_millis(100) {
+            self.throbber_state.calc_next();
+            self.last_animation_update = Instant::now();
+        }
 
         Ok(None)
     }
