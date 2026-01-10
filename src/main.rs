@@ -155,7 +155,7 @@ fn run_app<B: Backend>(
 ) -> Result<()> {
     let mut start_time = Instant::now();
     let mut drawing_popup = false;
-    'main: loop {
+    loop {
         // Draw
         let mut terminal_draw_res = Ok(());
         terminal.draw(|f| {
@@ -209,31 +209,36 @@ fn run_app<B: Backend>(
         // Input
         let input_spawn = trace_span!("input");
 
-        // Poll for events with a timeout to enable animations
-        if !drawing_popup || event::poll(std::time::Duration::from_millis(100))? {
-            let event = loop {
-                match event::read()? {
-                    event::Event::FocusLost => continue 'main,
-                    Event::Mouse(MouseEvent {
-                        kind: MouseEventKind::Moved,
-                        ..
-                    }) => continue 'main,
-                    event => break event,
+        // if drawing a loader, wait for events for 100ms or redraw
+        // if not drawing a loader, block and wait for events
+        let should_read_event = if drawing_popup {
+            event::poll(std::time::Duration::from_millis(100))?
+        } else {
+            true
+        };
+
+        if should_read_event {
+            match event::read()? {
+                event::Event::FocusLost => continue,
+                Event::Mouse(MouseEvent {
+                    kind: MouseEventKind::Moved,
+                    ..
+                }) => continue,
+                event => {
+                    start_time = Instant::now();
+
+                    let should_stop = input_spawn.in_scope(|| -> Result<bool> {
+                        if app.input(event, commander)? {
+                            return Ok(true);
+                        }
+
+                        Ok(false)
+                    })?;
+
+                    if should_stop {
+                        return Ok(());
+                    }
                 }
-            };
-
-            start_time = Instant::now();
-
-            let should_stop = input_spawn.in_scope(|| -> Result<bool> {
-                if app.input(event, commander)? {
-                    return Ok(true);
-                }
-
-                Ok(false)
-            })?;
-
-            if should_stop {
-                return Ok(());
             }
         }
     }
