@@ -15,7 +15,7 @@ use ratatui::{
     backend::{Backend, CrosstermBackend},
     crossterm::{
         event::{
-            self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
+            DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
             Event, KeyboardEnhancementFlags, MouseEvent, MouseEventKind,
             PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
         },
@@ -35,6 +35,7 @@ use tracing_subscriber::layer::SubscriberExt;
 mod app;
 mod commander;
 mod env;
+mod event;
 mod keybinds;
 mod ui;
 
@@ -42,7 +43,8 @@ use crate::{
     app::App,
     commander::Commander,
     env::Env,
-    ui::{ComponentAction, ui},
+    event::{AppEvent, EventSource},
+    ui::{ui, ComponentAction},
 };
 
 /// Simple program to greet a person
@@ -153,8 +155,14 @@ fn run_app<B: Backend>(
     app: &mut App,
     commander: &mut Commander,
 ) -> Result<()> {
+    // Set up event source with input listener and repo watcher
+    let mut event_source = EventSource::new();
+    event_source.start_input_listener();
+    event_source.start_repo_watcher(std::path::PathBuf::from(&app.env.root));
+
     let mut start_time = Instant::now();
     let mut drawing_popup = false;
+
     loop {
         // Draw
         let mut terminal_draw_res = Ok(());
@@ -206,39 +214,55 @@ fn run_app<B: Backend>(
         })?;
         terminal_draw_res?;
 
-        // Input
-        let input_spawn = trace_span!("input");
+        // Input - get next event from unified event source
+        let input_span = trace_span!("input");
 
-        // if drawing a loader, wait for events for 100ms or redraw
-        // if not drawing a loader, block and wait for events
-        let should_read_event = if drawing_popup {
-            event::poll(std::time::Duration::from_millis(100))?
+        // Get event (blocks with idle timeout when no popup, polls when popup showing)
+        let event = if drawing_popup {
+            // Non-blocking check when drawing popup (for animation)
+            event_source.try_recv()
         } else {
-            true
+            // Blocking wait when no popup
+            event_source.try_recv()
         };
 
-        if should_read_event {
-            match event::read()? {
-                event::Event::FocusLost => continue,
-                Event::Mouse(MouseEvent {
-                    kind: MouseEventKind::Moved,
-                    ..
-                }) => continue,
-                event => {
-                    start_time = Instant::now();
+        let Some(app_event) = event else {
+            // Idle timeout - just redraw
+            continue;
+        };
 
-                    let should_stop = input_spawn.in_scope(|| -> Result<bool> {
-                        if app.input(event, commander)? {
-                            return Ok(true);
-                        }
-
-                        Ok(false)
-                    })?;
-
-                    if should_stop {
-                        return Ok(());
-                    }
+        match app_event {
+            AppEvent::Input(term_event) => {
+                // Filter out events we don't care about
+                match term_event {
+                    Event::FocusLost => continue,
+                    Event::Mouse(MouseEvent {
+                        kind: MouseEventKind::Moved,
+                        ..
+                    }) => continue,
+                    _ => {}
                 }
+
+                start_time = Instant::now();
+
+                let should_stop = input_span.in_scope(|| -> Result<bool> {
+                    if app.input(term_event, commander)? {
+                        return Ok(true);
+                    }
+                    Ok(false)
+                })?;
+
+                if should_stop {
+                    return Ok(());
+                }
+            }
+            AppEvent::RepoChanged => {
+                // Repository changed externally - refresh current tab
+                // Use --ignore-working-copy to avoid conflicts
+                commander.set_ignore_working_copy(true);
+                app.get_or_init_current_tab(commander)?.focus(commander)?;
+                commander.set_ignore_working_copy(false);
+                start_time = Instant::now();
             }
         }
     }

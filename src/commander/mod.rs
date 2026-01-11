@@ -109,6 +109,10 @@ pub struct Commander {
     env_var: Arc<Mutex<Vec<(String, String)>>>,
     pub command_history: Arc<Mutex<Vec<CommandLogItem>>>,
 
+    /// When true, add --ignore-working-copy to jj commands.
+    /// Used during auto-refresh to avoid conflicts with external operations.
+    ignore_working_copy: bool,
+
     // Used for testing
     pub jj_config_toml: Option<Vec<String>>,
     pub force_no_color: bool,
@@ -120,9 +124,16 @@ impl Commander {
             env: env.clone(),
             env_var: Arc::new(Mutex::new(Vec::new())),
             command_history: Arc::new(Mutex::new(Vec::new())),
+            ignore_working_copy: false,
             jj_config_toml: None,
             force_no_color: false,
         }
+    }
+
+    /// Set whether to use --ignore-working-copy for jj commands.
+    /// Used during auto-refresh to avoid conflicts with external operations.
+    pub fn set_ignore_working_copy(&mut self, ignore: bool) {
+        self.ignore_working_copy = ignore;
     }
 
     /// Tell jj to limit the with of output of secondary programs, like diff tools
@@ -209,6 +220,11 @@ impl Commander {
         let mut command = Command::new(&self.env.jj_bin);
         command.args(args);
         command.args(get_output_args(!self.force_no_color && color, quiet));
+
+        // Add --ignore-working-copy if set (used during auto-refresh)
+        if self.ignore_working_copy {
+            command.arg("--ignore-working-copy");
+        }
 
         if let Some(jj_config_toml) = &self.jj_config_toml {
             for cfg in jj_config_toml {
