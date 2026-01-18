@@ -152,6 +152,23 @@ impl Commander {
         };
 
         let fileset = format!("file:\"{}\"", path.replace('"', "\\\""));
+
+        // For external diff tools, pipe jj output through the tool
+        // This gives inline diff format instead of side-by-side
+        if let DiffFormat::DiffTool(Some(tool)) = diff_format {
+            let mut args = vec![
+                "diff".to_string(),
+                "-r".to_string(),
+                head.commit_id.to_string(),
+                fileset,
+                "--git".to_string(),
+            ];
+            if ignore_working_copy {
+                args.push("--ignore-working-copy".to_string());
+            }
+            return self.execute_jj_command_piped(args, tool).map(Some);
+        }
+
         let mut args = vec!["diff", "-r", head.commit_id.as_str(), &fileset];
         args.append(&mut diff_format.get_args());
         if ignore_working_copy {

@@ -177,8 +177,23 @@ impl Commander {
         diff_format: &DiffFormat,
         ignore_working_copy: bool,
     ) -> Result<String, CommandError> {
-        let bookmark_arg = &bookmark.to_string();
-        let mut args = vec!["show", bookmark_arg];
+        let bookmark_arg = bookmark.to_string();
+
+        // For external diff tools, pipe jj output through the tool
+        // This gives inline diff format instead of side-by-side
+        if let DiffFormat::DiffTool(Some(tool)) = diff_format {
+            let mut args = vec![
+                "show".to_string(),
+                bookmark_arg,
+                "--git".to_string(),
+            ];
+            if ignore_working_copy {
+                args.push("--ignore-working-copy".to_string());
+            }
+            return Ok(self.execute_jj_command_piped(args, tool)?.remove_end_line());
+        }
+
+        let mut args = vec!["show", &bookmark_arg];
         args.append(&mut diff_format.get_args());
         if ignore_working_copy {
             args.push("--ignore-working-copy");

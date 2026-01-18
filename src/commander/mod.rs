@@ -230,6 +230,83 @@ impl Commander {
         Ok(())
     }
 
+    /// Execute a jj command and pipe its output through an external tool.
+    /// Used for diff tools like delta that work as filters.
+    pub fn execute_jj_command_piped<I, S>(
+        &self,
+        args: I,
+        pipe_tool: &str,
+    ) -> Result<String, CommandError>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        use std::process::Stdio;
+
+        // Build jj command
+        let mut jj_command = Command::new(&self.env.jj_bin);
+        jj_command.args(args);
+        jj_command.args(get_output_args(true, true));
+        jj_command.current_dir(&self.env.root);
+        jj_command.stdout(Stdio::piped());
+
+        // Set environment variables
+        jj_command.envs(self.env_var.lock().unwrap().iter().cloned());
+        self.env_var.lock().unwrap().clear();
+
+        if let Some(jj_config_toml) = &self.jj_config_toml {
+            for cfg in jj_config_toml {
+                jj_command.args(["--config", cfg]);
+            }
+        }
+
+        // Spawn jj
+        let jj_child = jj_command.spawn()?;
+        let jj_stdout = jj_child.stdout.ok_or_else(|| {
+            io::Error::new(io::ErrorKind::Other, "Failed to capture jj stdout")
+        })?;
+
+        // Build pipe tool command (e.g., delta)
+        let mut pipe_command = Command::new(pipe_tool);
+        // Force inline mode for delta by using empty config (disables side-by-side from user config)
+        if pipe_tool == "delta" {
+            pipe_command.args(["--config", "/dev/null"]);
+        }
+        pipe_command.stdin(Stdio::from(jj_stdout));
+        pipe_command.stdout(Stdio::piped());
+        pipe_command.current_dir(&self.env.root);
+
+        let time = Local::now();
+        let output = pipe_command.output();
+        let duration = Local::now() - time;
+
+        // Log the piped command
+        self.command_history.lock().unwrap().push(CommandLogItem {
+            program: format!("jj | {}", pipe_tool),
+            args: vec![],
+            output: Arc::new(match output.as_ref() {
+                Ok(value) => Ok(value.clone()),
+                Err(err) => Err(anyhow::Error::new(io::Error::new(
+                    err.kind(),
+                    err.to_string(),
+                ))),
+            }),
+            time,
+            duration,
+        });
+
+        let output = output?;
+
+        if !output.status.success() {
+            return Err(CommandError::Status(
+                String::from_utf8_lossy(&output.stderr).to_string(),
+                output.status.code(),
+            ));
+        }
+
+        Ok(String::from_utf8(output.stdout)?)
+    }
+
     /// Check that the version of jj is recent enough to work with lazyjj
     ///
     /// See also [JJ_MIN_VERSION]

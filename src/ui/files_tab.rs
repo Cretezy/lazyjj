@@ -13,7 +13,7 @@ use crate::{
     env::{Config, DiffFormat},
     ui::{
         Component, ComponentAction, help_popup::HelpPopup, message_popup::MessagePopup,
-        panel::DetailsPanel, utils::tabs_to_spaces,
+        panel::DetailsPanel, utils::{strip_osc8_hyperlinks, tabs_to_spaces},
     },
 };
 
@@ -312,7 +312,10 @@ impl Component for FilesTab {
         // Draw diff
         {
             let diff_content = match self.diff_output.as_ref() {
-                Ok(Some(diff_content)) => diff_content.into_text()?,
+                Ok(Some(diff_content)) => {
+                    // Strip OSC 8 hyperlinks (e.g., from delta) for cleaner TUI rendering
+                    strip_osc8_hyperlinks(diff_content).into_text()?
+                }
                 Ok(None) => Text::default(),
                 Err(err) => err.into_text("Error getting diff")?,
             };

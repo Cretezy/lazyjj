@@ -26,7 +26,7 @@ use crate::{
         panel::DetailsPanel,
         panel::LogPanel,
         rebase_popup::RebasePopup,
-        utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
+        utils::{centered_rect, centered_rect_line_height, strip_osc8_hyperlinks, tabs_to_spaces},
     },
 };
 
@@ -506,7 +506,10 @@ impl Component for LogTab<'_> {
         // Draw change details
         {
             let head_content = match self.head_output.as_ref() {
-                Ok(head_output) => head_output.into_text()?.lines,
+                Ok(head_output) => {
+                    // Strip OSC 8 hyperlinks (e.g., from delta) for cleaner TUI rendering
+                    strip_osc8_hyperlinks(head_output).into_text()?.lines
+                }
                 Err(err) => err.into_text("Error getting head details")?.lines,
             };
             self.head_panel

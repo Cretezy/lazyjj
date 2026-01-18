@@ -9,7 +9,7 @@ use crate::{
         help_popup::HelpPopup,
         message_popup::MessagePopup,
         panel::DetailsPanel,
-        utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
+        utils::{centered_rect, centered_rect_line_height, strip_osc8_hyperlinks, tabs_to_spaces},
     },
 };
 use ansi_to_tui::IntoText;
@@ -423,7 +423,10 @@ impl Component for BookmarksTab<'_> {
                 " Bookmark ".to_owned()
             };
             let bookmark_content: Vec<Line> = match self.bookmark_output.as_ref() {
-                Some(Ok(bookmark_output)) => bookmark_output.into_text()?.lines,
+                Some(Ok(bookmark_output)) => {
+                    // Strip OSC 8 hyperlinks (e.g., from delta) for cleaner TUI rendering
+                    strip_osc8_hyperlinks(bookmark_output).into_text()?.lines
+                }
                 Some(Err(err)) => err.into_text("Error getting bookmark")?.lines,
                 None => vec![],
             };
