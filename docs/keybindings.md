@@ -31,6 +31,7 @@ toggle-diff-format = "w"
 refresh = ["shift+r", "f5"]
 create-new = "n"
 create-new-describe = "shift+n"
+duplicate = "shift+d"
 squash = "s"
 squash-ignore-immutable = "shift+s"
 edit-change = "e"

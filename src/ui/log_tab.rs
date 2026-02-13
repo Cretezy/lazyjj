@@ -192,6 +192,13 @@ impl<'a> LogTab<'a> {
                 self.log_panel.refresh_log_output(commander);
                 self.refresh_head_output(commander);
             }
+
+            LogTabEvent::Duplicate => {
+                let _ = commander.run_duplicate(&self.head.change_id.to_string());
+                self.log_panel.refresh_log_output(commander);
+                self.refresh_head_output(commander);
+            }
+
             LogTabEvent::CreateNew { describe } => {
                 self.popup = ConfirmDialogState::new(
                     NEW_POPUP_ID,

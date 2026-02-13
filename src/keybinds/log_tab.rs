@@ -31,6 +31,7 @@ pub enum LogTabEvent {
     CreateNew {
         describe: bool,
     },
+    Duplicate,
     Rebase,
     Squash {
         ignore_immutable: bool,
@@ -76,6 +77,7 @@ impl Default for LogTabKeybinds {
             LogTabEvent::ToggleDiffFormat => "w",
             LogTabEvent::Refresh => "shift+r",
             LogTabEvent::Refresh => "f5",
+            LogTabEvent::Duplicate => "shift+d",
             LogTabEvent::CreateNew { describe: false } => "n",
             LogTabEvent::CreateNew { describe: true } => "shift+n",
             LogTabEvent::Rebase => "ctrl+r",
@@ -122,6 +124,7 @@ impl LogTabKeybinds {
             LogTabEvent::FocusCurrent => config.focus_current,
             LogTabEvent::ToggleDiffFormat => config.toggle_diff_format,
             LogTabEvent::Refresh => config.refresh,
+            LogTabEvent::Duplicate => config.duplicate,
             LogTabEvent::CreateNew { describe: false } => config.create_new,
             LogTabEvent::CreateNew { describe: true } => config.create_new_describe,
             LogTabEvent::Squash { ignore_immutable: false } => config.squash,

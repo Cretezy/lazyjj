@@ -18,6 +18,12 @@ impl Commander {
             .context("Failed executing jj new")
     }
 
+    /// Duplicate a change. Maps to `jj duplicate`
+    pub fn run_duplicate(&self, revision: &str) -> Result<()> {
+        self.execute_void_jj_command(vec!["duplicate", revision])
+            .context("Failed executing jj duplicate")
+    }
+
     /// Edit change. Maps to `jj edit <commit>`
     #[instrument(level = "trace", skip(self))]
     pub fn run_edit(&self, revision: &str, ignore_immutable: bool) -> Result<()> {
