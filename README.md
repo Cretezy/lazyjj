@@ -17,6 +17,7 @@ https://github.com/Cretezy/lazyjj/assets/2672503/b5e6b4f1-ebdb-448f-af9e-361e86f
   - Set a bookmark to selected change with `b`
   - Fetch/push with `f`/`p`
   - Squash current changes to selected change with `s`/`S`
+  - Yank change ID/revision to the system clipboard with `y`/`Y`
 - Files
   - View files in current change and diff in side panel
   - See a change's files from the log tab with `Enter`

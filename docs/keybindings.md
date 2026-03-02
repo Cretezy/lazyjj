@@ -41,6 +41,8 @@ describe = "d"
 edit-revset = "r"
 set-bookmark = "b"
 open-files = "enter"
+copy-change-id = "y"
+copy-rev = "shift+y"
 
 push = "p"
 push-new = "ctrl+p"

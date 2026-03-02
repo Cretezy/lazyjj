@@ -2,6 +2,7 @@
 
 use ansi_to_tui::IntoText;
 use anyhow::Result;
+use crossterm::{clipboard::CopyToClipboard, execute};
 use ratatui::{
     crossterm::event::{Event, KeyEventKind},
     layout::Rect,
@@ -379,6 +380,16 @@ impl<'a> LogTab<'a> {
                 return Ok(ComponentInputResult::HandledAction(
                     ComponentAction::ViewFiles(self.head.clone()),
                 ));
+            }
+            LogTabEvent::CopyChangeId => {
+                // Copy change ID to clipboard using crossterm
+                let change_id = self.head.change_id.as_str();
+                let _ = execute!(std::io::stdout(), CopyToClipboard::to_clipboard_from(change_id));
+            }
+            LogTabEvent::CopyRev => {
+                // Copy revision (commit ID) to clipboard using crossterm
+                let commit_id = self.head.commit_id.as_str();
+                let _ = execute!(std::io::stdout(), CopyToClipboard::to_clipboard_from(commit_id));
             }
             LogTabEvent::Push {
                 all_bookmarks,
