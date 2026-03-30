@@ -39,6 +39,7 @@ tracing-log = "0.2.0"
 tracing-subscriber = "0.3.19"
 tui-textarea = "0.7.0"
 tui_confirm_dialog = "0.3.1"
+ureq = { version = "2", features = ["json"] }
 version-compare = "0.2.0"
 
 # Release build optimize size.

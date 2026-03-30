@@ -29,8 +29,86 @@ enum BookmarkSetOption {
     CreateBookmark,
     // Name, exists
     GeneratedName(String, bool),
+    AiGenerate,
     Bookmark(Bookmark),
     Error(String),
+}
+
+#[derive(serde::Serialize)]
+struct OllamaGenerateRequest {
+    model: String,
+    prompt: String,
+    stream: bool,
+}
+
+#[derive(serde::Deserialize)]
+struct OllamaGenerateResponse {
+    response: String,
+}
+
+#[derive(serde::Deserialize)]
+struct OllamaTagsResponse {
+    models: Vec<OllamaModel>,
+}
+
+#[derive(serde::Deserialize)]
+struct OllamaModel {
+    model: String,
+}
+
+fn call_ollama_for_name(description: &str) -> anyhow::Result<String> {
+    let tags: OllamaTagsResponse = ureq::get("http://localhost:11434/api/tags")
+        .call()
+        .map_err(|e| anyhow::anyhow!("Could not connect to Ollama: {e}"))?
+        .into_json()
+        .map_err(|e| anyhow::anyhow!("Failed to parse Ollama models: {e}"))?;
+
+    let model = tags
+        .models
+        .into_iter()
+        .next()
+        .map(|m| m.model)
+        .ok_or_else(|| anyhow::anyhow!("No Ollama models found"))?;
+
+    let prompt = format!(
+        "Generate a short git branch name slug for this commit description. \
+         Use lowercase letters and hyphens only, max 5 words, no prefix. \
+         Reply with ONLY the slug, nothing else.\n\nCommit description: {description}"
+    );
+
+    let resp: OllamaGenerateResponse =
+        ureq::post("http://localhost:11434/api/generate")
+            .send_json(&OllamaGenerateRequest {
+                model,
+                prompt,
+                stream: false,
+            })
+            .map_err(|e| anyhow::anyhow!("Ollama generate request failed: {e}"))?
+            .into_json()
+            .map_err(|e| anyhow::anyhow!("Failed to parse Ollama response: {e}"))?;
+
+    // Sanitize: keep only lowercase alphanumeric and hyphens
+    let sanitized: String = resp
+        .response
+        .trim()
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' {
+                c.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
+        .collect();
+
+    // Collapse consecutive hyphens and trim leading/trailing hyphens
+    let name = sanitized
+        .split('-')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("-");
+
+    Ok(name)
 }
 
 pub struct BookmarkSetPopup<'a> {
@@ -65,6 +143,8 @@ fn generate_options(
         });
         options.push(BookmarkSetOption::GeneratedName(generated_name, exists));
     }
+
+    options.push(BookmarkSetOption::AiGenerate);
 
     match bookmarks.as_ref() {
         Ok(bookmarks) => {
@@ -119,6 +199,20 @@ impl BookmarkSetPopup<'_> {
 
     fn on_creating(&mut self) {
         self.creating = Some(TextArea::default());
+    }
+
+    fn on_ai_generating(&mut self, commander: &mut Commander) {
+        let description = commander
+            .get_commit_description(&self.commit_id)
+            .unwrap_or_default();
+        let name = if description.trim().is_empty() {
+            String::new()
+        } else {
+            call_ollama_for_name(&description).unwrap_or_default()
+        };
+        let mut textarea = TextArea::default();
+        textarea.insert_str(&name);
+        self.creating = Some(textarea);
     }
 
     fn create_bookmark(&self, commander: &mut Commander, name: &str) -> Result<()> {
@@ -206,6 +300,9 @@ impl Component for BookmarkSetPopup<'_> {
                         text.push_str(" (exists)");
                     }
                     Text::raw(text).fg(Color::Yellow)
+                }
+                BookmarkSetOption::AiGenerate => {
+                    Text::raw("(A)I generate bookmark").fg(Color::Yellow)
                 }
                 BookmarkSetOption::Bookmark(bookmark) => {
                     Text::raw(bookmark.to_string()).fg(Color::Magenta)
@@ -297,6 +394,9 @@ impl Component for BookmarkSetPopup<'_> {
                 KeyCode::Char('c') => {
                     self.on_creating();
                 }
+                KeyCode::Char('a') | KeyCode::Char('A') => {
+                    self.on_ai_generating(commander);
+                }
                 KeyCode::Enter => {
                     if let Some(action) = self
                         .list_state
@@ -313,6 +413,9 @@ impl Component for BookmarkSetPopup<'_> {
                                 return Ok(ComponentInputResult::HandledAction(
                                     ComponentAction::SetPopup(None),
                                 ));
+                            }
+                            BookmarkSetOption::AiGenerate => {
+                                self.on_ai_generating(commander);
                             }
                             BookmarkSetOption::Bookmark(bookmark) => {
                                 commander.set_bookmark_commit(&bookmark.name, &self.commit_id)?;
