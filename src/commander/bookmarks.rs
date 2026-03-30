@@ -7,7 +7,7 @@ other jj bookmark commands are defined in module [jj][super::jj].
 It is mostly used in the [bookmarks_tab][crate::ui::bookmarks_tab] module.
 */
 use crate::{
-    commander::{CommandError, Commander, RemoveEndLine},
+    commander::{CommandError, Commander, RemoveEndLine, ids::CommitId},
     env::DiffFormat,
 };
 use ansi_to_tui::IntoText;
@@ -166,6 +166,29 @@ impl Commander {
             .collect();
 
         Ok(bookmarks)
+    }
+
+    /// Get local bookmark names pointing to a specific commit.
+    /// Maps to `jj bookmark list -r <commit_id>`
+    #[instrument(level = "trace", skip(self))]
+    pub fn get_commit_bookmarks(&self, commit_id: &CommitId) -> Result<Vec<String>, CommandError> {
+        let output = self.execute_jj_command(
+            vec![
+                "bookmark",
+                "list",
+                "-r",
+                commit_id.as_str(),
+                "-T",
+                r#"name ++ "\n""#,
+            ],
+            false,
+            true,
+        )?;
+        Ok(output
+            .lines()
+            .filter(|s| !s.is_empty())
+            .map(String::from)
+            .collect())
     }
 
     /// Get bookmark details.

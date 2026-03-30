@@ -13,12 +13,10 @@ use tui_confirm_dialog::{ButtonLabel, ConfirmDialog, ConfirmDialogState, Listene
 use tui_textarea::{CursorMove, TextArea};
 
 use crate::{
-    ComponentInputResult,
-    commander::{CommandError, Commander, log::Head},
+    commander::{log::Head, CommandError, Commander},
     env::{Config, DiffFormat},
     keybinds::{LogTabEvent, LogTabKeybinds},
     ui::{
-        Component, ComponentAction,
         bookmark_set_popup::BookmarkSetPopup,
         help_popup::HelpPopup,
         loader_popup::LoaderPopup,
@@ -27,13 +25,27 @@ use crate::{
         panel::LogPanel,
         rebase_popup::RebasePopup,
         utils::{centered_rect, centered_rect_line_height, tabs_to_spaces},
+        Component, ComponentAction,
     },
+    ComponentInputResult,
 };
 
 const NEW_POPUP_ID: u16 = 1;
 const EDIT_POPUP_ID: u16 = 2;
 const ABANDON_POPUP_ID: u16 = 3;
 const SQUASH_POPUP_ID: u16 = 4;
+
+fn build_github_pr_url(remote_url: &str, branch: &str) -> Option<String> {
+    // Normalize SSH and HTTPS remote URLs to a base GitHub HTTPS URL
+    let base = if let Some(path) = remote_url.strip_prefix("git@github.com:") {
+        format!("https://github.com/{}", path.trim_end_matches(".git"))
+    } else if let Some(path) = remote_url.strip_prefix("https://github.com/") {
+        format!("https://github.com/{}", path.trim_end_matches(".git"))
+    } else {
+        return None;
+    };
+    Some(format!("{base}/compare/{branch}?expand=1"))
+}
 
 /// Log tab. Shows `jj log` in main panel and shows selected change details of in details panel.
 pub struct LogTab<'a> {
@@ -269,7 +281,7 @@ impl<'a> LogTab<'a> {
                         ComponentAction::SetPopup(Some(Box::new(MessagePopup {
                             title: " Edit ".into(),
                             messages: vec![
-                                "The change cannot be edited because it is immutable.".into(),
+                                "The change cannot be edited because it is immutable.".into()
                             ]
                             .into(),
                             text_align: None,
@@ -374,6 +386,16 @@ impl<'a> LogTab<'a> {
                         self.bookmark_set_popup_tx.clone(),
                     )))),
                 ));
+            }
+            LogTabEvent::CreatePullRequest => {
+                let bookmarks = commander.get_commit_bookmarks(&self.head.commit_id)?;
+                if let Some(bookmark) = bookmarks.into_iter().next() {
+                    if let Ok(remote_url) = commander.get_git_remote_url("origin") {
+                        if let Some(pr_url) = build_github_pr_url(&remote_url, &bookmark) {
+                            let _ = std::process::Command::new("open").arg(&pr_url).spawn();
+                        }
+                    }
+                }
             }
             LogTabEvent::OpenFiles => {
                 return Ok(ComponentInputResult::HandledAction(

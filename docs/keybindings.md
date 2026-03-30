@@ -49,5 +49,7 @@ push-all-new = "ctrl+shift+p"
 fetch = "f"
 fetch-all = "shift+f"
 
+create-pull-request = "o"
+
 open-help = "?"
 ```

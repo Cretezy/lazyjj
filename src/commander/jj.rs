@@ -174,6 +174,23 @@ impl Commander {
         self.execute_jj_command(args, true, true)
     }
 
+    /// Get git remote URL. Maps to `jj git remote list`
+    #[instrument(level = "trace", skip(self))]
+    pub fn get_git_remote_url(&self, remote: &str) -> Result<String, CommandError> {
+        let output = self.execute_jj_command(vec!["git", "remote", "list"], false, true)?;
+        for line in output.lines() {
+            if let Some((name, url)) = line.split_once(' ') {
+                if name == remote {
+                    return Ok(url.trim().to_owned());
+                }
+            }
+        }
+        Err(CommandError::Status(
+            format!("Remote '{remote}' not found"),
+            None,
+        ))
+    }
+
     /// Git fetch. Maps to `jj git fetch`
     #[instrument(level = "trace", skip(self))]
     pub fn git_fetch(&self, all_remotes: bool) -> Result<String, CommandError> {
