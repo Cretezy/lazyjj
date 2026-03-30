@@ -30,6 +30,7 @@ enum BookmarkSetOption {
     // Name, exists
     GeneratedName(String, bool),
     AiGenerate,
+    RandomName,
     Bookmark(Bookmark),
     Error(String),
 }
@@ -54,6 +55,16 @@ struct OllamaTagsResponse {
 #[derive(serde::Deserialize)]
 struct OllamaModel {
     model: String,
+}
+
+fn fetch_random_name() -> anyhow::Result<String> {
+    let words: Vec<String> = ureq::get("https://random-word-api.herokuapp.com/word?number=2")
+        .call()
+        .map_err(|e| anyhow::anyhow!("Could not reach random word API: {e}"))?
+        .into_json()
+        .map_err(|e| anyhow::anyhow!("Failed to parse random word response: {e}"))?;
+
+    Ok(words.join("-"))
 }
 
 fn call_ollama_for_name(description: &str) -> anyhow::Result<String> {
@@ -145,6 +156,7 @@ fn generate_options(
     }
 
     options.push(BookmarkSetOption::AiGenerate);
+    options.push(BookmarkSetOption::RandomName);
 
     match bookmarks.as_ref() {
         Ok(bookmarks) => {
@@ -199,6 +211,13 @@ impl BookmarkSetPopup<'_> {
 
     fn on_creating(&mut self) {
         self.creating = Some(TextArea::default());
+    }
+
+    fn on_random_naming(&mut self) {
+        let name = fetch_random_name().unwrap_or_default();
+        let mut textarea = TextArea::default();
+        textarea.insert_str(&name);
+        self.creating = Some(textarea);
     }
 
     fn on_ai_generating(&mut self, commander: &mut Commander) {
@@ -304,6 +323,9 @@ impl Component for BookmarkSetPopup<'_> {
                 BookmarkSetOption::AiGenerate => {
                     Text::raw("(A)I generate bookmark").fg(Color::Yellow)
                 }
+                BookmarkSetOption::RandomName => {
+                    Text::raw("(R)andom name").fg(Color::Yellow)
+                }
                 BookmarkSetOption::Bookmark(bookmark) => {
                     Text::raw(bookmark.to_string()).fg(Color::Magenta)
                 }
@@ -397,6 +419,9 @@ impl Component for BookmarkSetPopup<'_> {
                 KeyCode::Char('a') | KeyCode::Char('A') => {
                     self.on_ai_generating(commander);
                 }
+                KeyCode::Char('r') | KeyCode::Char('R') => {
+                    self.on_random_naming();
+                }
                 KeyCode::Enter => {
                     if let Some(action) = self
                         .list_state
@@ -416,6 +441,9 @@ impl Component for BookmarkSetPopup<'_> {
                             }
                             BookmarkSetOption::AiGenerate => {
                                 self.on_ai_generating(commander);
+                            }
+                            BookmarkSetOption::RandomName => {
+                                self.on_random_naming();
                             }
                             BookmarkSetOption::Bookmark(bookmark) => {
                                 commander.set_bookmark_commit(&bookmark.name, &self.commit_id)?;
