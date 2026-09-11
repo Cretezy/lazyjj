@@ -121,27 +121,6 @@ impl BookmarkSetPopup<'_> {
         self.creating = Some(TextArea::default());
     }
 
-    fn on_random_naming(&mut self) {
-        let name = fetch_random_name().unwrap_or_default();
-        let mut textarea = TextArea::default();
-        textarea.insert_str(&name);
-        self.creating = Some(textarea);
-    }
-
-    fn on_ai_generating(&mut self, commander: &mut Commander) {
-        let description = commander
-            .get_commit_description(&self.commit_id)
-            .unwrap_or_default();
-        let name = if description.trim().is_empty() {
-            String::new()
-        } else {
-            call_ollama_for_name(&description).unwrap_or_default()
-        };
-        let mut textarea = TextArea::default();
-        textarea.insert_str(&name);
-        self.creating = Some(textarea);
-    }
-
     fn create_bookmark(&self, commander: &mut Commander, name: &str) -> Result<()> {
         if commander
             .get_bookmarks_list(false)?
@@ -317,12 +296,6 @@ impl Component for BookmarkSetPopup<'_> {
                 }
                 KeyCode::Char('c') => {
                     self.on_creating();
-                }
-                KeyCode::Char('a') | KeyCode::Char('A') => {
-                    self.on_ai_generating(commander);
-                }
-                KeyCode::Char('r') | KeyCode::Char('R') => {
-                    self.on_random_naming();
                 }
                 KeyCode::Enter => {
                     if let Some(action) = self
