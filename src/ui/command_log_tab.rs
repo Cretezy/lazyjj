@@ -141,8 +141,7 @@ impl CommandLogTab {
                 .selected()
                 .map(|selected_index| selected_index.saturating_add_signed(scroll))
                 .unwrap_or(0))
-            .min(self.command_history.len() - 1)
-            .max(0),
+            .min(self.command_history.len() - 1),
         );
         self.output_panel.scroll_to(0);
     }

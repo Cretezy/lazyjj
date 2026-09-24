@@ -275,7 +275,7 @@ impl Component for FilesTab {
                 lines.push(Line::default());
 
                 for conflict in &self.conflicts_output {
-                    lines.push(Line::raw(format!("C {}", &conflict.path)).fg(Color::Red));
+                    lines.push(Line::raw(format!("C {}", conflict.path)).fg(Color::Red));
                 }
             }
 
