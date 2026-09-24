@@ -142,6 +142,16 @@ impl<'a> LogTab<'a> {
         self.refresh_head_output(commander);
     }
 
+    /// Sync change details only if the log panel selection moved.
+    /// self.head is a copy of self.log_panel.head. If they are equal,
+    /// for example when scrolling at the top/bottom of the list,
+    /// there is nothing new to show and `jj show` is skipped.
+    fn sync_head_output_if_changed(&mut self, commander: &mut Commander) {
+        if self.head != self.log_panel.head {
+            self.sync_head_output(commander);
+        }
+    }
+
     fn refresh_head_output(&mut self, commander: &mut Commander) {
         let inner_width = self.head_panel.columns() as usize;
         commander.limit_width(inner_width);
@@ -179,7 +189,7 @@ impl<'a> LogTab<'a> {
             | LogTabEvent::ScrollDownHalf
             | LogTabEvent::ScrollUpHalf => {
                 self.log_panel.handle_event(commander, log_tab_event)?;
-                self.sync_head_output(commander);
+                self.sync_head_output_if_changed(commander);
             }
             LogTabEvent::FocusCurrent => {
                 self.set_head(commander, commander.get_current_head()?);
@@ -714,7 +724,7 @@ impl Component for LogTab<'_> {
 
             let input_result = self.log_panel.input(commander, event)?;
             if input_result.is_handled() {
-                self.sync_head_output(commander);
+                self.sync_head_output_if_changed(commander);
                 return Ok(input_result);
             }
 
@@ -725,7 +735,7 @@ impl Component for LogTab<'_> {
         if let Event::Mouse(mouse_event) = event {
             let input_result = self.log_panel.input(commander, event.clone())?;
             if input_result.is_handled() {
-                self.sync_head_output(commander);
+                self.sync_head_output_if_changed(commander);
                 return Ok(input_result);
             }
             if self.head_panel.input_mouse(mouse_event) {
