@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix `ansi-to-tui` git dependency URL (moved to `ratatui/ansi-to-tui`), which broke `cargo install lazyjj` and source builds
+
 ### Added
 
 - Details panel responds to mouse scroll in all tabs
