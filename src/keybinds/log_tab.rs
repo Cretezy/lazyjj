@@ -4,7 +4,7 @@ use ratatui::crossterm::event::KeyEvent;
 
 use crate::{make_keybinds_help, set_keybinds, update_keybinds};
 
-use super::{Shortcut, config::LogTabKeybindsConfig, keybinds_store::KeybindsStore};
+use super::{config::LogTabKeybindsConfig, keybinds_store::KeybindsStore, Shortcut};
 
 #[derive(Debug)]
 pub struct LogTabKeybinds {
@@ -43,6 +43,7 @@ pub enum LogTabEvent {
     Describe,
     EditRevset,
     SetBookmark,
+    CreatePullRequest,
     OpenFiles,
 
     Push {
@@ -89,6 +90,7 @@ impl Default for LogTabKeybinds {
             LogTabEvent::Describe => "d",
             LogTabEvent::EditRevset => "r",
             LogTabEvent::SetBookmark => "b",
+            LogTabEvent::CreatePullRequest => "o",
             LogTabEvent::OpenFiles => "enter",
             event_push(false, false) => "p",
             event_push(false, true) => "ctrl+p",
@@ -135,6 +137,7 @@ impl LogTabKeybinds {
             LogTabEvent::Describe => config.describe,
             LogTabEvent::EditRevset => config.edit_revset,
             LogTabEvent::SetBookmark => config.set_bookmark,
+            LogTabEvent::CreatePullRequest => config.create_pull_request,
             LogTabEvent::OpenFiles => config.open_files,
             LogTabEvent::Rebase => config.rebase,
             event_push(false, false) => config.push,
@@ -166,6 +169,7 @@ impl LogTabKeybinds {
             LogTabEvent::Squash { ignore_immutable: false } => "squash @ into the selected change",
             LogTabEvent::Squash { ignore_immutable: true } => "squash @ into the selected change ignoring immutability",
             LogTabEvent::SetBookmark => "set bookmark",
+            LogTabEvent::CreatePullRequest => "create pull request",
             LogTabEvent::Fetch { all_remotes: false } => "git fetch",
             LogTabEvent::Fetch { all_remotes: true } => "git fetch all remotes",
             event_push(false, false) => "git push",
